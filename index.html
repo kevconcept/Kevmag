@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kevmag – Gestion Complast</title>
+<style>
+  :root{--bg:#f5f3ef;--card:#fff;--ink:#1f2328;--muted:#6b7280;--brand:#8a4b2a;--brand2:#b8693f;--ok:#1f7a4d;--warn:#b45309;--bad:#b91c1c;--line:#e5e1da}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:76px}
+  header{background:var(--brand);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:18px}
+  header small{opacity:.85}
+  main{max-width:900px;margin:0 auto;padding:12px}
+  nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:5}
+  nav button{flex:1;border:0;background:none;padding:10px 4px 12px;font-size:13px;color:var(--muted)}
+  nav button b{display:block;font-size:20px}
+  nav button.on{color:var(--brand);font-weight:600}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  h2{font-size:16px;margin:0 0 10px}
+  label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+  input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;background:#fff}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  .btn{border:0;border-radius:8px;padding:11px 14px;font-size:15px;background:var(--brand);color:#fff;cursor:pointer}
+  .btn.alt{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+  .btn.small{padding:6px 10px;font-size:13px}
+  .btn.bad{background:var(--bad)}
+  .full{width:100%;margin-top:10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  .num{text-align:right;white-space:nowrap}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eee}
+  .tag.low{background:#fef3c7;color:var(--warn)}.tag.out{background:#fee2e2;color:var(--bad)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .kpi span{font-size:12px;color:var(--muted)}.kpi b{display:block;font-size:22px;margin-top:4px}
+  .total{font-size:22px;font-weight:700;text-align:right;margin-top:8px}
+  .muted{color:var(--muted);font-size:13px}
+  .hide{display:none}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kevmag · Complast</h1>
+  <small id="today"></small>
+</header>
+
+<main>
+  <!-- CAISSE -->
+  <section id="v-caisse">
+    <div class="card">
+      <h2>Nouvelle vente</h2>
+      <label>Produit</label>
+      <select id="c-prod"></select>
+      <div class="row">
+        <div><label>Quantité</label><input id="c-qte" type="number" min="1" value="1"></div>
+        <div><label>Prix unitaire</label><input id="c-prix" type="number" min="0" step="any"></div>
+      </div>
+      <button class="btn alt full" onclick="ajouterLigne()">+ Ajouter au panier</button>
+    </div>
+    <div class="card">
+      <h2>Panier</h2>
+      <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th><th></th></tr></thead>
+      <tbody id="c-panier"></tbody></table>
+      <div class="total" id="c-total">0</div>
+      <div class="row">
+        <div><label>Client (facultatif)</label><input id="c-client" placeholder="Nom ou téléphone"></div>
+        <div><label>Paiement</label><select id="c-paie"><option>Espèces</option><option>Mobile money</option><option>Banque</option><option>Crédit</option></select></div>
+      </div>
+      <button class="btn full" onclick="validerVente()">Valider la vente</button>
+    </div>
+  </section>
+
+  <!-- STOCK -->
+  <section id="v-stock" class="hide">
+    <div class="card">
+      <h2 id="p-titre">Ajouter un produit</h2>
+      <input type="hidden" id="p-id">
+      <label>Nom</label><input id="p-nom" placeholder="Ex : Matelas 2 places">
+      <div class="row">
+        <div><label>Catégorie</label>
+          <select id="p-cat"><option>Chambre</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Autre</option></select></div>
+        <div><label>Prix de vente</label><input id="p-prix" type="number" min="0" step="any"></div>
+      </div>
+      <div class="row">
+        <div><label>Stock</label><input id="p-stock" type="number" min="0" value="0"></div>
+        <div><label>Alerte si stock ≤</label><input id="p-seuil" type="number" min="0" value="2"></div>
+      </div>
+      <button class="btn full" onclick="enregistrerProduit()">Enregistrer</button>
+      <button class="btn alt full hide" id="p-annuler" onclick="resetProduit()">Annuler</button>
+    </div>
+    <div class="card">
+      <div class="row" style="align-items:center"><h2 style="margin:0">Stock</h2><input id="s-cherche" placeholder="Rechercher…" oninput="afficherStock()"></div>
+      <table><thead><tr><th>Produit</th><th class="num">Prix</th><th class="num">Stock</th><th></th></tr></thead>
+      <tbody id="s-liste"></tbody></table>
+    </div>
+  </section>
+
+  <!-- RAPPORT -->
+  <section id="v-rapport" class="hide">
+    <div class="card">
+      <label>Jour</label><input id="r-date" type="date" onchange="afficherRapport()">
+    </div>
+    <div class="kpis">
+      <div class="kpi"><span>Chiffre du jour</span><b id="r-ca">0</b></div>
+      <div class="kpi"><span>Ventes</span><b id="r-nb">0</b></div>
+      <div class="kpi"><span>Articles vendus</span><b id="r-art">0</b></div>
+      <div class="kpi"><span>Chiffre du mois</span><b id="r-mois">0</b></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>Ventes du jour</h2>
+      <table><thead><tr><th>Heure</th><th>Détail</th><th class="num">Total</th><th></th></tr></thead>
+      <tbody id="r-ventes"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>À réapprovisionner</h2>
+      <div id="r-alertes" class="muted"></div>
+    </div>
+  </section>
+
+  <!-- REGLAGES -->
+  <section id="v-reglages" class="hide">
+    <div class="card">
+      <h2>Réglages</h2>
+      <label>Devise</label>
+      <select id="g-devise" onchange="changerDevise()"><option value="$">Dollar ($)</option><option value="FC">Franc congolais (FC)</option></select>
+    </div>
+    <div class="card">
+      <h2>Sauvegarde</h2>
+      <p class="muted">Les données sont gardées sur cet appareil. Faites une sauvegarde régulièrement pour ne rien perdre, ou pour passer les données sur un autre appareil.</p>
+      <button class="btn full" onclick="exporter()">Télécharger une sauvegarde</button>
+      <label>Restaurer une sauvegarde</label>
+      <input type="file" accept=".json" onchange="importer(this)">
+      <button class="btn bad full" style="margin-top:20px" onclick="toutEffacer()">Tout effacer</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-v="caisse"><b>🧾</b>Caisse</button>
+  <button data-v="stock"><b>📦</b>Stock</button>
+  <button data-v="rapport"><b>📊</b>Rapport</button>
+  <button data-v="reglages"><b>⚙️</b>Réglages</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const CLE = 'kevmag-v1';
+let db = { produits: [], ventes: [], devise: '$' };
+let panier = [];
+
+function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) db = Object.assign(db, d); }catch(e){} }
+function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
+const $ = id => document.getElementById(id);
+const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const argent = n => (Math.round((+n||0)*100)/100).toLocaleString('fr-FR') + ' ' + db.devise;
+const jour = d => { const x = new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); };
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000); }
+
+/* Navigation */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x===b));
+  document.querySelectorAll('main>section').forEach(s => s.classList.toggle('hide', s.id !== 'v-'+b.dataset.v));
+  rafraichir();
+});
+
+/* Produits */
+function enregistrerProduit(){
+  const nom = $('p-nom').value.trim();
+  if(!nom) return toast('Indiquez le nom du produit');
+  const p = { id: $('p-id').value || id(), nom, cat: $('p-cat').value, prix: +$('p-prix').value||0, stock: parseInt($('p-stock').value)||0, seuil: parseInt($('p-seuil').value)||0 };
+  const i = db.produits.findIndex(x => x.id === p.id);
+  if(i >= 0) db.produits[i] = p; else db.produits.push(p);
+  sauver(); resetProduit(); rafraichir(); toast('Produit enregistré');
+}
+function modifierProduit(pid){
+  const p = db.produits.find(x => x.id === pid); if(!p) return;
+  $('p-id').value=p.id; $('p-nom').value=p.nom; $('p-cat').value=p.cat; $('p-prix').value=p.prix; $('p-stock').value=p.stock; $('p-seuil').value=p.seuil;
+  $('p-titre').textContent='Modifier le produit'; $('p-annuler').classList.remove('hide'); window.scrollTo(0,0);
+}
+function supprimerProduit(pid){
+  if(!confirm('Supprimer ce produit ?')) return;
+  db.produits = db.produits.filter(x => x.id !== pid); sauver(); rafraichir();
+}
+function resetProduit(){
+  ['p-id','p-nom','p-prix'].forEach(k => $(k).value=''); $('p-stock').value=0; $('p-seuil').value=2;
+  $('p-titre').textContent='Ajouter un produit'; $('p-annuler').classList.add('hide');
+}
+function etat(p){ return p.stock<=0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
+function afficherStock(){
+  const q = $('s-cherche').value.toLowerCase();
+  const liste = db.produits.filter(p => (p.nom+' '+p.cat).toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom));
+  $('s-liste').innerHTML = liste.length ? liste.map(p => `<tr>
+    <td>${esc(p.nom)}<br><span class="muted">${esc(p.cat)}</span> ${etat(p)}</td>
+    <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td>
+    <td class="num"><button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">Aucun produit. Ajoutez-en un ci-dessus.</td></tr>';
+}
+
+/* Caisse */
+function remplirProduits(){
+  const sel = $('c-prod'), avant = sel.value;
+  sel.innerHTML = db.produits.length ? db.produits.slice().sort((a,b)=>a.nom.localeCompare(b.nom))
+    .map(p => `<option value="${p.id}">${esc(p.nom)} (stock : ${p.stock})</option>`).join('') : '<option value="">Ajoutez d’abord des produits</option>';
+  if(avant && db.produits.some(p=>p.id===avant)) sel.value = avant;
+  majPrix();
+}
+function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; }
+$('c-prod').onchange = majPrix;
+function ajouterLigne(){
+  const p = db.produits.find(x => x.id === $('c-prod').value); if(!p) return toast('Choisissez un produit');
+  const qte = parseInt($('c-qte').value)||0; if(qte<1) return toast('Quantité invalide');
+  const dejà = panier.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
+  if(qte + dejà > p.stock && !confirm(`Stock insuffisant (${p.stock}). Ajouter quand même ?`)) return;
+  panier.push({ pid:p.id, nom:p.nom, qte, prix:+$('c-prix').value||0 });
+  $('c-qte').value=1; afficherPanier();
+}
+function retirerLigne(i){ panier.splice(i,1); afficherPanier(); }
+function afficherPanier(){
+  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}<br><span class="muted">${argent(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
+  $('c-total').textContent = 'Total : ' + argent(panier.reduce((s,l)=>s+l.qte*l.prix,0));
+}
+function validerVente(){
+  if(!panier.length) return toast('Le panier est vide');
+  const v = { id:id(), date:new Date().toISOString(), lignes:panier, total:panier.reduce((s,l)=>s+l.qte*l.prix,0), client:$('c-client').value.trim(), paiement:$('c-paie').value };
+  v.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock -= l.qte; });
+  db.ventes.push(v); panier=[]; $('c-client').value=''; sauver(); rafraichir(); toast('Vente enregistrée : '+argent(v.total));
+}
+function annulerVente(vid){
+  if(!confirm('Annuler cette vente ? Le stock sera remis.')) return;
+  const v = db.ventes.find(x=>x.id===vid); if(!v) return;
+  v.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += l.qte; });
+  db.ventes = db.ventes.filter(x=>x.id!==vid); sauver(); rafraichir();
+}
+
+/* Rapport */
+function afficherRapport(){
+  const j = $('r-date').value || jour(new Date());
+  const duJour = db.ventes.filter(v => jour(v.date)===j);
+  const duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
+  $('r-ca').textContent = argent(duJour.reduce((s,v)=>s+v.total,0));
+  $('r-nb').textContent = duJour.length;
+  $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
+  $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
+  $('r-ventes').innerHTML = duJour.length ? duJour.slice().reverse().map(v=>`<tr>
+    <td>${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td>
+    <td>${v.lignes.map(l=>esc(l.qte+' × '+l.nom)).join('<br>')}<br><span class="muted">${esc(v.paiement)}${v.client?' · '+esc(v.client):''}</span></td>
+    <td class="num">${argent(v.total)}</td>
+    <td class="num"><button class="btn small alt" onclick="annulerVente('${v.id}')">Annuler</button></td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">Aucune vente ce jour.</td></tr>';
+  const bas = db.produits.filter(p=>p.stock<=p.seuil);
+  $('r-alertes').innerHTML = bas.length ? bas.map(p=>`${esc(p.nom)} : <b>${p.stock}</b> en stock ${etat(p)}`).join('<br>') : 'Tout va bien, aucun produit en alerte.';
+}
+
+/* Réglages */
+function changerDevise(){ db.devise = $('g-devise').value; sauver(); rafraichir(); }
+function exporter(){
+  const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kevmag-sauvegarde-'+jour(new Date())+'.json'; a.click();
+}
+function importer(input){
+  const f = input.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try{ const d = JSON.parse(r.result); if(!Array.isArray(d.produits)||!Array.isArray(d.ventes)) throw 0;
+    if(!confirm('Remplacer les données actuelles par cette sauvegarde ?')) return;
+    db = Object.assign({devise:'$'}, d); sauver(); rafraichir(); toast('Sauvegarde restaurée'); }catch(e){ toast('Fichier invalide'); } };
+  r.readAsText(f); input.value='';
+}
+function toutEffacer(){
+  if(!confirm('Effacer TOUS les produits et ventes ? Faites une sauvegarde avant.')) return;
+  if(!confirm('Êtes-vous vraiment sûr ?')) return;
+  db = { produits:[], ventes:[], devise:db.devise }; panier=[]; sauver(); rafraichir();
+}
+
+function rafraichir(){ remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); $('g-devise').value = db.devise; }
+
+charger();
+$('today').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+$('r-date').value = jour(new Date());
+rafraichir();
+</script>
+</body>
+</html>
