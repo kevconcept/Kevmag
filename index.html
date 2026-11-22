@@ -455,7 +455,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · matelas bébé';
+const VERSION = '2026-11-22 · matelas par taille';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -539,6 +539,15 @@ function devinerGamme(nom){
   if(/\bprestige/.test(n)) return 'Prestige';
   return '';
 }
+// Tri des matelas par taille : longueur, puis largeur, puis épaisseur (« 1900x900x80 » avant « 1900x900x100 »)
+function taille(nom){
+  const m = String(nom).match(/(\d{2,4})\s*[x×*]\s*(\d{2,4})(?:\s*[x×*]\s*(\d{1,4}))?/i);
+  return m ? [+m[1], +m[2], +(m[3]||0)] : [Infinity, Infinity, Infinity];
+}
+function parTaille(a, b){
+  const x = taille(a.nom), y = taille(b.nom);
+  return (x[0]-y[0]) || (x[1]-y[1]) || (x[2]-y[2]) || a.nom.localeCompare(b.nom);
+}
 function gammeDe(g){ const x = sansAccent(g); return GAMMES.find(G => sansAccent(G)===x) || devinerGamme(g); }
 /* Description d'une mousse : « D25 · 190 × 140 × 20 cm » */
 function details(p){
@@ -578,7 +587,7 @@ function afficherStock(){
     && (p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).toLowerCase().includes(q));
   const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort((a,b)=>a.nom.localeCompare(b.nom))]).filter(g => g[1].length);
   const lignesCat = (c,l) => c!=='Matelas' ? l.map(ligneStock).join('')
-    : [...GAMMES, ''].map(g => [g, l.filter(p => (p.gamme||'')===g)]).filter(x => x[1].length)
+    : [...GAMMES, ''].map(g => [g, l.filter(p => (p.gamme||'')===g).sort(parTaille)]).filter(x => x[1].length)
         .map(([g,ll]) => `<tr class="sous"><td colspan="4">${g || 'Autres matelas'}<span>${ll.length}</span></td></tr>` + ll.map(ligneStock).join('')).join('');
   $('s-liste').innerHTML = liste.length ? groupes.map(([c,l]) => `<tr class="groupe"><td colspan="4">${ICONES[c]} ${c}<span>${l.length} produit${l.length>1?'s':''}</span></td></tr>` + lignesCat(c,l)).join('')
     : `<tr><td colspan="4" class="muted">${db.produits.length ? 'Aucun produit trouvé.' : 'Aucun produit. Ajoutez-en un ci-dessus ou importez une liste.'}</td></tr>`;
