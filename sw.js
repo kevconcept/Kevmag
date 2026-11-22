@@ -1,6 +1,6 @@
 // Kevmag : permet d'ouvrir l'application sans internet.
 // Avec internet, la dernière version est toujours chargée ; sinon, la copie gardée sur l'appareil est utilisée.
-const CACHE = 'kevmag-v3';
+const CACHE = 'kevmag-v4';
 const FICHIERS = ['./', './index.html', './manifest.json', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req).then(rep => {
+    fetch(req, { cache: 'no-cache' }).then(rep => {   // toujours vérifier auprès du serveur
       if (rep.ok) { const copie = rep.clone(); caches.open(CACHE).then(c => c.put(req, copie)); }
       return rep;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
