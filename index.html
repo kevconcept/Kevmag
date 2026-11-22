@@ -163,6 +163,22 @@
   .grille2{display:grid;gap:16px}
   @media (min-width:900px){.grille2{grid-template-columns:1fr 1fr}.grille2 .card{margin-bottom:0}}
 
+  /* Import et catégories */
+  .depot{display:block;border:2px dashed var(--line2);border-radius:16px;padding:22px 14px;text-align:center;cursor:pointer;transition:.2s;margin:0}
+  .depot:hover,.depot.survol{border-color:var(--green);background:rgba(46,204,113,.08)}
+  .depot b{display:block;font-size:16px;color:var(--ink);margin:6px 0 4px}
+  .depot input{display:none}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin-top:12px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;border:1px solid var(--line2);background:rgba(255,255,255,.07);color:var(--ink);font-weight:700;font-size:13.5px;padding:8px 13px;border-radius:99px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .chip.on{background:var(--green);border-color:var(--green);color:#063b1e}
+  .chip small{opacity:.75;font-weight:800;margin-left:4px}
+  tr.groupe td{padding:16px 6px 8px;font-weight:800;font-size:15px;color:var(--ink);border-bottom:1px solid var(--line2)}
+  tr.groupe td span{color:var(--muted);font-weight:600;font-size:13px;margin-left:6px}
+  .imp-cat{padding:7px 9px;border-radius:10px;font-size:13.5px;width:auto}
+  .imp-resume{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+  .tag.new{background:rgba(46,204,113,.18);color:#8ef0b4}.tag.maj{background:rgba(79,140,255,.2);color:#a9c8ff}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -330,7 +346,28 @@
       <button class="btn alt full hide" id="p-annuler" onclick="resetProduit()">Annuler</button>
     </div>
     <div class="card">
+      <h2>📥 Importer une liste de produits</h2>
+      <label class="depot" id="i-depot">
+        <input type="file" id="i-fichier" accept=".csv,.xlsx,.xls,.txt" onchange="lireFichier(this.files[0]);this.value=''">
+        <span style="font-size:30px">📄</span>
+        <b>Choisir un fichier Excel ou CSV</b>
+        <span class="muted">Colonnes reconnues : nom, catégorie, prix, stock, alerte, densité, longueur, largeur, épaisseur.<br>Sans catégorie, Kevmag la devine d'après le nom (mousse, matelas, lit…).</span>
+      </label>
+      <button class="lien" style="margin-top:10px;padding:0" onclick="telechargerModele()">⬇️ Télécharger un modèle de fichier</button>
+      <div id="i-apercu" class="hide" style="margin-top:14px">
+        <div class="imp-resume" id="i-resume"></div>
+        <div style="max-height:420px;overflow:auto">
+        <table><thead><tr><th>Produit</th><th>Catégorie</th><th class="num">Prix</th><th class="num">Stock</th></tr></thead><tbody id="i-lignes"></tbody></table>
+        </div>
+        <div class="row">
+          <button class="btn alt full" onclick="annulerImport()">Annuler</button>
+          <button class="btn full" id="i-ok" onclick="confirmerImport()">Importer</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="row" style="align-items:center"><h2 style="margin:0">📦 Stock</h2><input id="s-cherche" placeholder="Rechercher…" oninput="afficherStock()"></div>
+      <div class="chips" id="s-cats"></div>
       <table><thead><tr><th>Produit</th><th class="num">Prix</th><th class="num">Stock</th><th></th></tr></thead>
       <tbody id="s-liste"></tbody></table>
     </div>
@@ -411,7 +448,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · nouveau design';
+const VERSION = '2026-11-22 · import produits';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -472,15 +509,167 @@ function details(p){
   return t.join(' · ');
 }
 function etat(p){ return p.stock<=0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
+const CATS = ['Chambre','Lit','Matelas','Mousse','Table','Canapé','Buffet','Autre'];
+const ICONES = { Chambre:'🚪', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Autre:'📦' };
+let stockCat = 'Tous';
+function choisirCat(c){ stockCat = c; afficherStock(); }
+function ligneStock(p){ return `<tr>
+    <td>${esc(p.nom)}<br><span class="muted">${details(p)?esc(details(p)):esc(p.cat)}</span> ${etat(p)}</td>
+    <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td>
+    <td class="num"><button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`; }
 function afficherStock(){
   const q = $('s-cherche').value.toLowerCase();
-  const liste = db.produits.filter(p => (p.nom+' '+p.cat+' '+details(p)).toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom));
-  $('s-liste').innerHTML = liste.length ? liste.map(p => `<tr>
-    <td>${esc(p.nom)}<br><span class="muted">${esc(p.cat)}${details(p)?' · '+esc(details(p)):''}</span> ${etat(p)}</td>
-    <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td>
-    <td class="num"><button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`).join('')
-    : '<tr><td colspan="4" class="muted">Aucun produit. Ajoutez-en un ci-dessus.</td></tr>';
+  const nb = c => db.produits.filter(p => p.cat===c).length;
+  const presentes = CATS.filter(c => nb(c));
+  if(stockCat!=='Tous' && !presentes.includes(stockCat)) stockCat = 'Tous';
+  $('s-cats').innerHTML = db.produits.length ? `<button class="chip ${stockCat==='Tous'?'on':''}" onclick="choisirCat('Tous')">Tous<small>${db.produits.length}</small></button>`
+    + presentes.map(c => `<button class="chip ${stockCat===c?'on':''}" onclick="choisirCat('${c}')">${ICONES[c]} ${c}<small>${nb(c)}</small></button>`).join('') : '';
+  const liste = db.produits.filter(p => (stockCat==='Tous' || p.cat===stockCat) && (p.nom+' '+p.cat+' '+details(p)).toLowerCase().includes(q));
+  const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort((a,b)=>a.nom.localeCompare(b.nom))]).filter(g => g[1].length);
+  $('s-liste').innerHTML = liste.length ? groupes.map(([c,l]) => `<tr class="groupe"><td colspan="4">${ICONES[c]} ${c}<span>${l.length} produit${l.length>1?'s':''}</span></td></tr>` + l.map(ligneStock).join('')).join('')
+    : `<tr><td colspan="4" class="muted">${db.produits.length ? 'Aucun produit trouvé.' : 'Aucun produit. Ajoutez-en un ci-dessus ou importez une liste.'}</td></tr>`;
 }
+
+/* Import d'une liste de produits (Excel / CSV) */
+let importEnCours = [];
+const sansAccent = t => String(t??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+// Devine la catégorie d'après le nom (l'ordre compte : « matelas mousse » est un matelas, « table de chevet » va en chambre)
+const REGLES = [
+  ['Matelas', /\bmatelas|\bmatela\b/],
+  ['Mousse',  /\bmousse|\bfoam|\bsimba\b/],
+  ['Chambre', /\bchambre|\barmoire|garde.?robe|\bcommode|\bcoiffeuse|\bchevet|table de nuit|\bdressing/],
+  ['Lit',     /\blits?\b|\bsommier|\bcouchette|\bberceau|\btete de lit/],
+  ['Canapé',  /\bcanape|\bsalon|\bfauteuil|\bsofa|\bdivan|\bpouf|\bbanquette/],
+  ['Buffet',  /\bbuffet|\bvaisselier|\bbahut|meuble (tv|tele)|\betagere|\bbibliotheque|\bvitrine/],
+  ['Table',   /\btables?\b|\bbureau|\bchaises?\b|\btabouret|\bconsole|salle a manger/],
+];
+function devinerCat(nom, catFichier){
+  const c = sansAccent(catFichier);
+  if(c){
+    const trouve = CATS.find(x => sansAccent(x)===c || c.startsWith(sansAccent(x)) || sansAccent(x).startsWith(c));
+    if(trouve) return trouve;
+    for(const [cat, re] of REGLES) if(re.test(c)) return cat;
+  }
+  const n = sansAccent(nom);
+  for(const [cat, re] of REGLES) if(re.test(n)) return cat;
+  return 'Autre';
+}
+const nombre = v => { if(typeof v==='number') return v; const t = String(v??'').replace(/[\s\u00a0\u202f$]|fc|usd|cdf/gi,'').replace(/,(?=\d{1,2}$)/,'.').replace(/,/g,''); const x = parseFloat(t); return isNaN(x) ? 0 : x; };
+// Mesures d'une mousse écrites dans le nom : « D25 », « 190x140x20 »
+function mesuresDuNom(nom){
+  const m = {}, n = String(nom);
+  const d = n.match(/\bD\s?(\d{2})\b/i) || n.match(/densit[eé]\s*:?\s*(\d{2})/i); if(d) m.densite = +d[1];
+  const t = n.match(/(\d{2,3})\s*[x×*]\s*(\d{2,3})(?:\s*[x×*]\s*(\d{1,3}))?/i);
+  if(t){ m.long = +t[1]; m.larg = +t[2]; if(t[3]) m.ep = +t[3]; }
+  return m;
+}
+const COLONNES = {
+  nom:['nom','produit','article','designation','libelle','description','name'],
+  cat:['categorie','cat','type','famille','rayon','category'],
+  prix:['prix de vente','prix vente','prix','pu','prix unitaire','tarif','montant','price'],
+  stock:['stock','quantite','qte','qty','nombre','nb'],
+  seuil:['alerte','seuil','stock min','minimum','min'],
+  densite:['densite','dens'], long:['longueur','long'], larg:['largeur','larg'], ep:['epaisseur','ep','hauteur']
+};
+function lireCSV(texte){
+  texte = texte.replace(/^\ufeff/,'');
+  const l1 = texte.split(/\r?\n/)[0] || '';
+  const sep = [';','\t',','].map(c => [c, l1.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const lignes = []; let ligne = [], champ = '', guil = false;
+  for(let i=0;i<texte.length;i++){
+    const ch = texte[i];
+    if(guil){ if(ch==='"'){ if(texte[i+1]==='"'){ champ+='"'; i++; } else guil=false; } else champ+=ch; }
+    else if(ch==='"') guil = true;
+    else if(ch===sep){ ligne.push(champ); champ=''; }
+    else if(ch==='\n' || ch==='\r'){ if(ch==='\r' && texte[i+1]==='\n') i++; ligne.push(champ); lignes.push(ligne); ligne=[]; champ=''; }
+    else champ += ch;
+  }
+  if(champ || ligne.length){ ligne.push(champ); lignes.push(ligne); }
+  return lignes;
+}
+function chargerXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  return new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); });
+}
+async function lireFichier(f){
+  if(!f) return;
+  try{
+    let lignes;
+    if(/\.(xlsx|xls)$/i.test(f.name)){
+      try{ await chargerXLSX(); }catch(e){ return toast('Il faut internet pour lire un fichier Excel. Ou enregistrez-le en CSV.'); }
+      const wb = XLSX.read(await f.arrayBuffer(), { type:'array' });
+      lignes = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, defval:'', raw:true });
+    } else lignes = lireCSV(await f.text());
+    preparerImport(lignes.filter(l => l.some(c => String(c).trim()!=='')));
+  }catch(e){ toast('Impossible de lire ce fichier'); }
+}
+function preparerImport(lignes){
+  if(!lignes.length) return toast('Le fichier est vide');
+  // Trouver la ligne des titres de colonnes (dans les 5 premières lignes)
+  let idx = {}, debut = 0;
+  for(let r=0; r<Math.min(5,lignes.length); r++){
+    const t = lignes[r].map(sansAccent), m = {};
+    for(const [k, noms] of Object.entries(COLONNES)){
+      const c = t.findIndex(x => noms.includes(x)); const c2 = c>=0 ? c : t.findIndex(x => x && noms.some(n => n.length>3 && x.startsWith(n)));
+      if(c2>=0 && !Object.values(m).includes(c2)) m[k] = c2;
+    }
+    if(m.nom!==undefined){ idx = m; debut = r+1; break; }
+  }
+  if(idx.nom===undefined){ idx = { nom:0, prix:1, stock:2 }; debut = 0; }
+  const val = (l,k) => idx[k]!==undefined ? l[idx[k]] : '';
+  importEnCours = lignes.slice(debut).map(l => {
+    const nom = String(val(l,'nom')).trim(); if(!nom) return null;
+    const cat = devinerCat(nom, val(l,'cat'));
+    const p = { nom, cat, prix: nombre(val(l,'prix')), stock: Math.round(nombre(val(l,'stock'))), seuil: idx.seuil!==undefined ? Math.round(nombre(val(l,'seuil'))) : 2 };
+    if(cat==='Mousse'){
+      const m = mesuresDuNom(nom);
+      p.densite = nombre(val(l,'densite')) || m.densite || 0; p.long = nombre(val(l,'long')) || m.long || 0;
+      p.larg = nombre(val(l,'larg')) || m.larg || 0; p.ep = nombre(val(l,'ep')) || m.ep || 0;
+    }
+    p.existe = db.produits.find(x => sansAccent(x.nom)===sansAccent(nom)) ? true : false;
+    return p;
+  }).filter(Boolean);
+  if(!importEnCours.length) return toast('Aucun produit trouvé dans le fichier');
+  afficherImport();
+}
+function afficherImport(){
+  const l = importEnCours;
+  $('i-resume').innerHTML = CATS.filter(c => l.some(p=>p.cat===c)).map(c => `<span class="chip" style="cursor:default">${ICONES[c]} ${c}<small>${l.filter(p=>p.cat===c).length}</small></span>`).join('');
+  const ordre = l.map((p,i)=>[p,i]).sort((a,b) => CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat) || a[0].nom.localeCompare(b[0].nom));
+  $('i-lignes').innerHTML = ordre.map(([p,i]) => `<tr><td>${esc(p.nom)} <span class="tag ${p.existe?'maj':'new'}">${p.existe?'mise à jour':'nouveau'}</span>${details(p)?'<br><span class="muted">'+esc(details(p))+'</span>':''}</td>
+    <td><select class="imp-cat" onchange="importEnCours[${i}].cat=this.value;afficherImport()">${CATS.map(c=>`<option ${c===p.cat?'selected':''}>${c}</option>`).join('')}</select></td>
+    <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td></tr>`).join('');
+  const n = l.filter(p=>!p.existe).length, m = l.length-n;
+  $('i-ok').textContent = 'Importer ' + l.length + ' produit' + (l.length>1?'s':'') + (m ? ` (${n} nouveaux, ${m} mis à jour)` : '');
+  $('i-apercu').classList.remove('hide');
+}
+function annulerImport(){ importEnCours = []; $('i-apercu').classList.add('hide'); }
+function confirmerImport(){
+  let n = 0, m = 0;
+  importEnCours.forEach(src => {
+    const p = { ...src }; delete p.existe;
+    if(p.cat!=='Mousse'){ delete p.densite; delete p.long; delete p.larg; delete p.ep; }
+    else if(p.densite===undefined) Object.assign(p, { densite:0, long:0, larg:0, ep:0 }, mesuresDuNom(p.nom));
+    const ex = db.produits.find(x => sansAccent(x.nom)===sansAccent(p.nom));
+    if(ex){ Object.assign(ex, p); m++; } else { db.produits.push({ id:id(), ...p }); n++; }
+  });
+  sauver(); annulerImport(); stockCat = 'Tous'; rafraichir();
+  toast(`Import terminé : ${n} ajouté${n>1?'s':''}, ${m} mis à jour`);
+}
+function telechargerModele(){
+  const t = 'Nom;Catégorie;Prix;Stock;Alerte;Densité;Longueur;Largeur;Épaisseur\n'
+    + 'Matelas 2 places;Matelas;120;6;2;;;;\n'
+    + 'Mousse D25 190x140x20;Mousse;85;4;2;25;190;140;20\n'
+    + 'Canapé 3 places;;350;2;1;;;;\n'
+    + 'Table basse;;45;3;1;;;;\n';
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff'+t], {type:'text/csv;charset=utf-8'})); a.download = 'kevmag-modele-produits.csv'; a.click();
+}
+// Glisser-déposer un fichier (ordinateur)
+(() => { const z = $('i-depot');
+  ['dragenter','dragover'].forEach(e => z.addEventListener(e, ev => { ev.preventDefault(); z.classList.add('survol'); }));
+  ['dragleave','drop'].forEach(e => z.addEventListener(e, ev => { ev.preventDefault(); z.classList.remove('survol'); }));
+  z.addEventListener('drop', ev => lireFichier(ev.dataTransfer.files[0]));
+})();
 
 /* Caisse */
 function remplirProduits(){
