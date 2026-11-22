@@ -448,7 +448,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · nouvelles catégories';
+const VERSION = '2026-11-22 · chest en dresser table';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -457,7 +457,10 @@ let derniereVente = null, recuOuvert = null;
 function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) db = Object.assign(db, d); }catch(e){}
   // Nouvelles catégories Garde-robe, Dresser table, Nightstand : on y range les produits « Chambre » concernés (une seule fois)
   if(!db.catsV){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Chambre' || p.cat==='Table'){ const c = devinerCat(p.nom); if(['Garde-robe','Dresser table','Nightstand'].includes(c)){ p.cat = c; n++; } } });
-    db.catsV = 2; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
+    db.catsV = 2; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); }
+  // Les « Chest » passent de Chambre à Dresser table (une seule fois)
+  if((db.catsV||0) < 3){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Chambre' && /\bchest\b/i.test(p.nom)){ p.cat = 'Dresser table'; n++; } });
+    db.catsV = 3; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
 function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
@@ -541,9 +544,9 @@ const REGLES = [
   ['Matelas', /\bmatelas|\bmatela\b/],
   ['Mousse',  /\bmousse|\bfoam|\bsimba\b/],
   ['Garde-robe', /garde.?robe|\barmoire|\bwardrobe|\bpenderie/],
-  ['Dresser table', /dress(er|ing)|\bcoiffeuse/],
+  ['Dresser table', /dress(er|ing)|\bcoiffeuse|\bchest\b/],
   ['Nightstand', /night.?stand|\bchevet|table de nuit|\bbedside/],
-  ['Chambre', /\bchambre|\bcommode|\bbedroom|\bchest\b/],
+  ['Chambre', /\bchambre|\bcommode|\bbedroom/],
   ['Lit',     /\blits?\b|\bsommier|\bcouchette|\bberceau|\btete de lit/],
   ['Canapé',  /\bcanape|\bsalon|\bfauteuil|\bsofa|\bdivan|\bpouf|\bbanquette/],
   ['Buffet',  /\bbuffet|\bvaisselier|\bbahut|meuble (tv|tele)|\betagere|\bbibliotheque|\bvitrine/],
