@@ -455,7 +455,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · matelas par taille';
+const VERSION = '2026-11-22 · tri par taille';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -548,6 +548,18 @@ function parTaille(a, b){
   const x = taille(a.nom), y = taille(b.nom);
   return (x[0]-y[0]) || (x[1]-y[1]) || (x[2]-y[2]) || a.nom.localeCompare(b.nom);
 }
+// Mousses : groupées par densité, puis triées par longueur, largeur, épaisseur
+function tailleMousse(p){
+  if(p.long || p.larg || p.ep) return [p.densite||Infinity, p.long||0, p.larg||0, p.ep||0];
+  const t = taille(p.nom); return [p.densite||Infinity, ...t];
+}
+function lignesMousse(l){
+  const tri = l.slice().sort((a,b) => { const x = tailleMousse(a), y = tailleMousse(b); return (x[0]-y[0]) || (x[1]-y[1]) || (x[2]-y[2]) || (x[3]-y[3]) || a.nom.localeCompare(b.nom); });
+  const dens = [...new Set(tri.map(p => p.densite || 0))];
+  if(dens.length < 2 && !dens[0]) return tri.map(ligneStock).join('');
+  return dens.map(d => { const ll = tri.filter(p => (p.densite||0)===d);
+    return `<tr class="sous"><td colspan="4">${d ? 'Densité D'+d : 'Autres mousses'}<span>${ll.length}</span></td></tr>` + ll.map(ligneStock).join(''); }).join('');
+}
 function gammeDe(g){ const x = sansAccent(g); return GAMMES.find(G => sansAccent(G)===x) || devinerGamme(g); }
 /* Description d'une mousse : « D25 · 190 × 140 × 20 cm » */
 function details(p){
@@ -586,7 +598,7 @@ function afficherStock(){
   const liste = db.produits.filter(p => (stockCat==='Tous' || p.cat===stockCat) && (stockCat!=='Matelas' || stockGamme==='Toutes' || (p.gamme||'')===stockGamme)
     && (p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).toLowerCase().includes(q));
   const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort((a,b)=>a.nom.localeCompare(b.nom))]).filter(g => g[1].length);
-  const lignesCat = (c,l) => c!=='Matelas' ? l.map(ligneStock).join('')
+  const lignesCat = (c,l) => c==='Mousse' ? lignesMousse(l) : c!=='Matelas' ? l.map(ligneStock).join('')
     : [...GAMMES, ''].map(g => [g, l.filter(p => (p.gamme||'')===g).sort(parTaille)]).filter(x => x[1].length)
         .map(([g,ll]) => `<tr class="sous"><td colspan="4">${g || 'Autres matelas'}<span>${ll.length}</span></td></tr>` + ll.map(ligneStock).join('')).join('');
   $('s-liste').innerHTML = liste.length ? groupes.map(([c,l]) => `<tr class="groupe"><td colspan="4">${ICONES[c]} ${c}<span>${l.length} produit${l.length>1?'s':''}</span></td></tr>` + lignesCat(c,l)).join('')
