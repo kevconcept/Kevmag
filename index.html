@@ -126,12 +126,22 @@
       <label>Nom</label><input id="p-nom" placeholder="Ex : Matelas 2 places">
       <div class="row">
         <div><label>Catégorie</label>
-          <select id="p-cat"><option>Chambre</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Autre</option></select></div>
+          <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Autre</option></select></div>
         <div><label>Prix de vente</label><input id="p-prix" type="number" min="0" step="any"></div>
       </div>
       <div class="row">
         <div><label>Stock</label><input id="p-stock" type="number" min="0" value="0"></div>
         <div><label>Alerte si stock ≤</label><input id="p-seuil" type="number" min="0" value="2"></div>
+      </div>
+      <div id="p-mousse" class="hide">
+        <div class="row">
+          <div><label>Densité (kg/m³)</label><input id="p-densite" type="number" min="0" step="any" placeholder="Ex : 25"></div>
+          <div><label>Épaisseur (cm)</label><input id="p-ep" type="number" min="0" step="any" placeholder="Ex : 20"></div>
+        </div>
+        <div class="row">
+          <div><label>Longueur (cm)</label><input id="p-long" type="number" min="0" step="any" placeholder="Ex : 190"></div>
+          <div><label>Largeur (cm)</label><input id="p-larg" type="number" min="0" step="any" placeholder="Ex : 140"></div>
+        </div>
       </div>
       <button class="btn full" onclick="enregistrerProduit()">Enregistrer</button>
       <button class="btn alt full hide" id="p-annuler" onclick="resetProduit()">Annuler</button>
@@ -238,6 +248,7 @@ function enregistrerProduit(){
   const nom = $('p-nom').value.trim();
   if(!nom) return toast('Indiquez le nom du produit');
   const p = { id: $('p-id').value || id(), nom, cat: $('p-cat').value, prix: +$('p-prix').value||0, stock: parseInt($('p-stock').value)||0, seuil: parseInt($('p-seuil').value)||0 };
+  if(p.cat==='Mousse'){ p.densite=+$('p-densite').value||0; p.long=+$('p-long').value||0; p.larg=+$('p-larg').value||0; p.ep=+$('p-ep').value||0; }
   const i = db.produits.findIndex(x => x.id === p.id);
   if(i >= 0) db.produits[i] = p; else db.produits.push(p);
   sauver(); resetProduit(); rafraichir(); toast('Produit enregistré');
@@ -245,6 +256,7 @@ function enregistrerProduit(){
 function modifierProduit(pid){
   const p = db.produits.find(x => x.id === pid); if(!p) return;
   $('p-id').value=p.id; $('p-nom').value=p.nom; $('p-cat').value=p.cat; $('p-prix').value=p.prix; $('p-stock').value=p.stock; $('p-seuil').value=p.seuil;
+  $('p-densite').value=p.densite||''; $('p-long').value=p.long||''; $('p-larg').value=p.larg||''; $('p-ep').value=p.ep||''; majChampsMousse();
   $('p-titre').textContent='Modifier le produit'; $('p-annuler').classList.remove('hide'); window.scrollTo(0,0);
 }
 function supprimerProduit(pid){
@@ -252,15 +264,25 @@ function supprimerProduit(pid){
   db.produits = db.produits.filter(x => x.id !== pid); sauver(); rafraichir();
 }
 function resetProduit(){
-  ['p-id','p-nom','p-prix'].forEach(k => $(k).value=''); $('p-stock').value=0; $('p-seuil').value=2;
+  ['p-id','p-nom','p-prix','p-densite','p-long','p-larg','p-ep'].forEach(k => $(k).value=''); majChampsMousse(); $('p-stock').value=0; $('p-seuil').value=2;
   $('p-titre').textContent='Ajouter un produit'; $('p-annuler').classList.add('hide');
+}
+function majChampsMousse(){ $('p-mousse').classList.toggle('hide', $('p-cat').value!=='Mousse'); }
+/* Description d'une mousse : « D25 · 190 × 140 × 20 cm » */
+function details(p){
+  if(!p || p.cat!=='Mousse') return '';
+  const t = [];
+  if(p.densite) t.push('D'+p.densite);
+  const d = [p.long,p.larg,p.ep].filter(Boolean);
+  if(d.length) t.push(d.join(' × ')+' cm');
+  return t.join(' · ');
 }
 function etat(p){ return p.stock<=0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
 function afficherStock(){
   const q = $('s-cherche').value.toLowerCase();
-  const liste = db.produits.filter(p => (p.nom+' '+p.cat).toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom));
+  const liste = db.produits.filter(p => (p.nom+' '+p.cat+' '+details(p)).toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom));
   $('s-liste').innerHTML = liste.length ? liste.map(p => `<tr>
-    <td>${esc(p.nom)}<br><span class="muted">${esc(p.cat)}</span> ${etat(p)}</td>
+    <td>${esc(p.nom)}<br><span class="muted">${esc(p.cat)}${details(p)?' · '+esc(details(p)):''}</span> ${etat(p)}</td>
     <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td>
     <td class="num"><button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Aucun produit. Ajoutez-en un ci-dessus.</td></tr>';
@@ -270,7 +292,7 @@ function afficherStock(){
 function remplirProduits(){
   const sel = $('c-prod'), avant = sel.value;
   sel.innerHTML = db.produits.length ? db.produits.slice().sort((a,b)=>a.nom.localeCompare(b.nom))
-    .map(p => `<option value="${p.id}">${esc(p.nom)} (stock : ${p.stock})</option>`).join('') : '<option value="">Ajoutez d’abord des produits</option>';
+    .map(p => `<option value="${p.id}">${esc(p.nom)}${details(p)?' – '+esc(details(p)):''} (stock : ${p.stock})</option>`).join('') : '<option value="">Ajoutez d’abord des produits</option>';
   if(avant && db.produits.some(p=>p.id===avant)) sel.value = avant;
   majPrix();
 }
@@ -281,12 +303,12 @@ function ajouterLigne(){
   const qte = parseInt($('c-qte').value)||0; if(qte<1) return toast('Quantité invalide');
   const dejà = panier.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
   if(qte + dejà > p.stock && !confirm(`Stock insuffisant (${p.stock}). Ajouter quand même ?`)) return;
-  panier.push({ pid:p.id, nom:p.nom, qte, prix:+$('c-prix').value||0 });
+  panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prix:+$('c-prix').value||0 });
   $('c-qte').value=1; afficherPanier();
 }
 function retirerLigne(i){ panier.splice(i,1); afficherPanier(); }
 function afficherPanier(){
-  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}<br><span class="muted">${argent(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
+  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${argent(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
   $('c-total').textContent = 'Total : ' + argent(panier.reduce((s,l)=>s+l.qte*l.prix,0));
 }
@@ -322,7 +344,7 @@ function htmlRecu(v, format){
     ${v.client?`<div>Client : ${esc(v.client)}</div>`:''}
     <hr>
     <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th></tr></thead><tbody>
-    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}<br><small>${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}<br><small>${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
     <tr class="tot"><td>TOTAL</td><td class="num">${nb}</td><td class="num">${m(v.total)}</td></tr>
     </tbody></table>
     <div>Paiement : ${esc(v.paiement)}</div>
@@ -364,7 +386,7 @@ function afficherRapport(){
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
   $('r-ventes').innerHTML = duJour.length ? duJour.slice().reverse().map(v=>`<tr>
     <td>${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td>
-    <td>${v.lignes.map(l=>esc(l.qte+' × '+l.nom)).join('<br>')}<br><span class="muted">${esc(v.paiement)}${v.client?' · '+esc(v.client):''}</span></td>
+    <td>${v.lignes.map(l=>esc(l.qte+' × '+l.nom+(l.desc?' ('+l.desc+')':''))).join('<br>')}<br><span class="muted">${esc(v.paiement)}${v.client?' · '+esc(v.client):''}</span></td>
     <td class="num">${argent(v.total)}</td>
     <td class="num"><button class="btn small" onclick="voirRecu('${v.id}')">🖨️ Reçu</button><br><button class="btn small alt" style="margin-top:4px" onclick="annulerVente('${v.id}')">Annuler</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Aucune vente ce jour.</td></tr>';
