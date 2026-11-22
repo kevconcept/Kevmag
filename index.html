@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#8a4b2a">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,44 +14,155 @@
 <link rel="manifest" href="manifest.json">
 <title>Kevmag – Gestion Complast</title>
 <style>
-  :root{--bg:#f5f3ef;--card:#fff;--ink:#1f2328;--muted:#6b7280;--brand:#8a4b2a;--brand2:#b8693f;--ok:#1f7a4d;--warn:#b45309;--bad:#b91c1c;--line:#e5e1da}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
-  header{background:var(--brand);color:#fff;padding:calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 14px calc(16px + env(safe-area-inset-left));position:sticky;top:0;z-index:5}
-  header h1{margin:0;font-size:18px}
-  header small{opacity:.85}
-  main{max-width:900px;margin:0 auto;padding:12px}
-  nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:5;padding-bottom:env(safe-area-inset-bottom)}
-  nav button{flex:1;border:0;background:none;padding:10px 4px 12px;font-size:13px;color:var(--muted)}
-  nav button b{display:block;font-size:20px}
-  nav button.on{color:var(--brand);font-weight:600}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
-  h2{font-size:16px;margin:0 0 10px}
-  label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
-  input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;background:#fff}
-  .row{display:flex;gap:8px}.row>*{flex:1}
-  .btn{border:0;border-radius:8px;padding:11px 14px;font-size:15px;background:var(--brand);color:#fff;cursor:pointer}
-  .btn.alt{background:#fff;color:var(--brand);border:1px solid var(--brand)}
-  .btn.small{padding:6px 10px;font-size:13px}
-  .btn.bad{background:var(--bad)}
-  .full{width:100%;margin-top:10px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
-  th{color:var(--muted);font-weight:500;font-size:12px}
+  :root{
+    color-scheme:dark;
+    --bg:#0a1628;--bg2:#0d1d36;--side:#0f2547;--card:#112442;--card2:#16305a;--champ:#0b1a33;
+    --line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.16);
+    --ink:#eef3ff;--muted:#93a4c3;
+    --green:#2ecc71;--green2:#1fa463;--orange:#f5a524;--red:#f25f5c;--blue:#4f8cff;--violet:#8b5cf6;--gold:#f7b733;
+    --r:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:var(--bg)}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1200px 600px at 70% -10%,#16305a 0%,transparent 60%),linear-gradient(180deg,var(--bg2),var(--bg));background-attachment:fixed;color:var(--ink);min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  #ciel{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.8}
+  #ciel svg{width:100%;height:100%}
+  .app{position:relative;z-index:1;display:flex;min-height:100vh}
+
+  /* Menu latéral (ordinateur) */
+  .side{display:none;flex:0 0 270px;flex-direction:column;gap:6px;padding:18px 14px;background:linear-gradient(180deg,#10294f,#0b1f3d);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto}
+  .quick{border:0;border-radius:16px;padding:16px;font-size:17px;font-weight:800;color:#fff;background:linear-gradient(135deg,#34d27b,#1fa463);box-shadow:0 8px 24px rgba(46,204,113,.25);cursor:pointer;margin-bottom:14px}
+  .quick:hover{filter:brightness(1.07)}
+  .item{display:flex;align-items:center;gap:14px;border:0;background:none;color:var(--ink);font-size:17px;padding:13px 16px;border-radius:14px;cursor:pointer;text-align:left;font-family:inherit;border-left:3px solid transparent}
+  .item i{font-style:normal;font-size:20px;width:24px;text-align:center}
+  .item:hover{background:rgba(255,255,255,.05)}
+  .item.on{background:rgba(255,255,255,.1);font-weight:800;border-left-color:var(--orange)}
+  .side .titre-sec{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin:16px 16px 4px}
+  .side .bas-side{margin-top:auto;color:var(--muted);font-size:12px;padding:12px 16px}
+
+  .contenu{flex:1;min-width:0}
+  header.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 14px calc(16px + env(safe-area-inset-left));background:linear-gradient(90deg,rgba(13,58,64,.95),rgba(18,44,86,.95));border-bottom:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  header.top h1{margin:0;font-size:24px;font-weight:800;flex:1}
+  .rond{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font-size:19px;cursor:pointer;display:grid;place-items:center}
+  .rond:hover{background:rgba(255,255,255,.14)}
+  main{max-width:1120px;margin:0 auto;padding:16px}
+
+  /* Barre du bas (téléphone) */
+  nav.bas{position:fixed;bottom:0;left:0;right:0;z-index:6;display:flex;background:rgba(10,22,40,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  nav.bas button{flex:1;border:0;background:none;color:var(--muted);font-size:11.5px;font-family:inherit;padding:6px 2px;border-radius:14px;cursor:pointer}
+  nav.bas button b{display:block;font-size:21px;margin-bottom:2px}
+  nav.bas button.on{color:#fff;font-weight:800;background:rgba(46,204,113,.16)}
+
+  @media (min-width:900px){
+    .side{display:flex}
+    nav.bas{display:none}
+    body{padding-bottom:0}
+    header.top{margin:0 16px;border-radius:0 0 26px 26px;border:1px solid var(--line);border-top:0;padding:18px 26px}
+    header.top h1{font-size:26px}
+    main{padding:24px 32px}
+    .toast{bottom:30px!important}
+  }
+
+  /* Éléments communs */
+  .card{background:linear-gradient(180deg,rgba(22,48,90,.75),rgba(17,36,66,.85));border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  h2{font-size:18px;font-weight:800;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px;font-weight:600}
+  input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line2);border-radius:14px;font-size:16px;background:var(--champ);color:var(--ink);font-family:inherit;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(46,204,113,.18)}
+  input::placeholder,textarea::placeholder{color:#6f81a3}
+  textarea{resize:vertical}
+  .row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+  .btn{border:0;border-radius:14px;padding:13px 16px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#34d27b,#1fa463);cursor:pointer;font-family:inherit}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.alt{background:rgba(255,255,255,.07);border:1px solid var(--line2);color:var(--ink)}
+  .btn.small{padding:7px 11px;font-size:13px;border-radius:11px}
+  .btn.bad{background:linear-gradient(135deg,#f57673,#d9433f)}
+  .full{width:100%;margin-top:14px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{text-align:left;padding:11px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  tbody tr:last-child td{border-bottom:0}
   .num{text-align:right;white-space:nowrap}
-  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eee}
-  .tag.low{background:#fef3c7;color:var(--warn)}.tag.out{background:#fee2e2;color:var(--bad)}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
-  .kpi span{font-size:12px;color:var(--muted)}.kpi b{display:block;font-size:22px;margin-top:4px}
-  .total{font-size:22px;font-weight:700;text-align:right;margin-top:8px}
+  .tag{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.1)}
+  .tag.low{background:rgba(245,165,36,.18);color:var(--orange)}.tag.out{background:rgba(242,95,92,.18);color:var(--red)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:linear-gradient(180deg,rgba(22,48,90,.75),rgba(17,36,66,.85));border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .kpi span{font-size:13px;color:var(--muted);font-weight:600}.kpi b{display:block;font-size:24px;font-weight:800;margin-top:6px}
+  .total{font-size:26px;font-weight:800;text-align:right;margin-top:10px}
   .muted{color:var(--muted);font-size:13px}
-  .hide{display:none}
-  .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:99px;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
+  .hide{display:none!important}
+  .toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1fa463;color:#fff;font-weight:700;padding:12px 18px;border-radius:99px;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:30;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:90vw;text-align:center}
   .toast.show{opacity:1}
-  textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;font-family:inherit;resize:vertical}
-  .derniere{border-color:var(--ok);background:#f0fdf4}
+  .derniere{border-color:rgba(46,204,113,.5);background:linear-gradient(135deg,rgba(46,204,113,.18),rgba(17,36,66,.9))}
   .derniere .row{align-items:center}
+
+  /* Accueil */
+  .hero{position:relative;overflow:hidden;border-radius:28px;padding:22px;margin-bottom:16px;background:linear-gradient(135deg,#1a3263 0%,#233f7c 55%,#2c4f94 100%);border:1px solid var(--line2);box-shadow:0 18px 50px rgba(0,0,0,.35)}
+  .hero .constel{position:absolute;inset:0;pointer-events:none}
+  .hero .constel svg{width:100%;height:100%}
+  .hero-in{position:relative;display:flex;gap:16px}
+  .hero-g{flex:1;min-width:0}
+  .hero-d{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:16px}
+  .salut{font-size:15px;font-weight:600;opacity:.92}
+  .date{font-size:20px;font-weight:800;margin-top:2px}
+  .ca-lib{margin-top:18px;font-size:14px;font-weight:600;opacity:.9}
+  .ca{font-size:clamp(38px,9vw,56px);font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:4px 0 8px}
+  .tendance{display:inline-block;font-size:13px;font-weight:800;padding:5px 12px;border-radius:99px;background:rgba(46,204,113,.2);color:#b9f5cf}
+  .tendance.bas{background:rgba(242,95,92,.22);color:#ffc9c8}
+  .courbe{margin:14px 0 6px;height:60px;max-width:640px}
+  .courbe svg{width:100%;height:100%;overflow:visible}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .pill{border:1px solid var(--line2);background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:14px;padding:9px 15px;border-radius:99px;cursor:pointer;font-family:inherit}
+  .pill.on{background:var(--green);border-color:var(--green);color:#063b1e}
+  .taux{font-size:14px;font-weight:800;padding:8px 14px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid var(--line2);white-space:nowrap}
+  .anneau{position:relative;width:96px;height:96px}
+  .anneau svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .anneau b{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:900}
+  .anneau small{display:block;text-align:center;font-size:11px;font-weight:700;opacity:.85;margin-top:4px}
+  @media (max-width:560px){
+    .hero{padding:18px}
+    .hero .constel{opacity:.45}
+    .hero-in{flex-direction:column}
+    .hero-d{position:absolute;top:0;right:0;gap:10px}
+    .hero-d .taux{display:none}
+    .anneau{width:74px;height:74px}.anneau b{font-size:16px}
+  }
+
+  .cherche{position:relative;margin-bottom:16px}
+  .cherche input{border-radius:99px;padding:16px 20px 16px 50px;background:rgba(11,26,51,.85);font-size:16px}
+  .cherche::before{content:"🔎";position:absolute;left:20px;top:15px;font-size:17px;opacity:.85}
+  .resultats{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:8;background:#10233f;border:1px solid var(--line2);border-radius:18px;padding:6px;box-shadow:0 20px 40px rgba(0,0,0,.45);max-height:60vh;overflow:auto}
+  .res{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;color:var(--ink);text-align:left;padding:10px 12px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:15px}
+  .res:hover{background:rgba(255,255,255,.07)}
+  .res i{font-style:normal;font-size:18px}
+
+  .tuiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  @media (min-width:900px){.tuiles{grid-template-columns:repeat(4,190px)}}
+  .tuile{border:1px solid var(--line);background:linear-gradient(180deg,rgba(22,48,90,.8),rgba(15,32,60,.9));color:#fff;border-radius:20px;padding:16px 6px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit;transition:transform .15s}
+  .tuile:hover{transform:translateY(-2px)}
+  .ico{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:27px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 18px rgba(0,0,0,.3)}
+  .ico.o{background:linear-gradient(135deg,#ff8a65,#e0533d)}.ico.v{background:linear-gradient(135deg,#3ddc84,#1fa463)}
+  .ico.b{background:linear-gradient(135deg,#6aa8ff,#3a6fe0)}.ico.p{background:linear-gradient(135deg,#b69cff,#7c4dff)}
+  @media (max-width:420px){.tuiles{gap:8px}.tuile{font-size:12.5px;padding:12px 2px}.ico{width:48px;height:48px;font-size:23px;border-radius:14px}}
+
+  .entete{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+  .entete h2{margin:0}
+  .lien{border:0;background:none;color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit}
+  .lien:hover{color:#fff}
+  .barre{display:flex;gap:4px;height:14px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.06)}
+  .barre span{border-radius:99px;min-width:0}
+  .legende{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:14px;color:var(--muted)}
+  .legende b{color:var(--ink)}
+  .point{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .vente{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .vente:last-child{border-bottom:0}
+  .vente .av{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:rgba(79,140,255,.18);font-size:19px;flex:0 0 auto}
+  .vente .tx{flex:1;min-width:0}
+  .vente .tx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vente .mt{font-weight:800;white-space:nowrap}
+  .grille2{display:grid;gap:16px}
+  @media (min-width:900px){.grille2{grid-template-columns:1fr 1fr}.grille2 .card{margin-bottom:0}}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -58,7 +170,7 @@
   .r-recu .c{text-align:center}
   .r-recu hr{border:0;border-top:1px dashed #000;margin:6px 0}
   .r-recu table{font-size:12px}
-  .r-recu td,.r-recu th{border:0;padding:2px 0;color:#000}
+  .r-recu td,.r-recu th{border:0;padding:2px 0;color:#000;text-transform:none;letter-spacing:0;font-size:inherit}
   .r-recu th{font-weight:700;border-bottom:1px dashed #000}
   .r-recu .tot td{font-weight:700;font-size:14px;border-top:1px dashed #000;padding-top:4px}
   .r-recu.a4{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;max-width:180mm;margin:0 auto}
@@ -67,12 +179,12 @@
   .r-recu.a4 table{font-size:14px}
   .r-recu.a4 td,.r-recu.a4 th{padding:6px 4px}
   .r-recu.a4 .tot td{font-size:18px}
-  #apercu{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
-  #apercu.hide{display:none}
-  #apercu .feuille{background:#fff;border-radius:8px;padding:16px;width:100%;max-width:340px}
+  #apercu{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+  #apercu .feuille{background:#fff;color:#111;border-radius:18px;padding:18px;width:100%;max-width:360px;box-shadow:0 30px 60px rgba(0,0,0,.5)}
   #apercu .feuille.a4{max-width:640px}
+  #apercu .feuille .btn.alt{background:#fff;color:#1f2a44;border-color:#cfd6e4}
   @media print{
-    body{background:#fff;padding:0}
+    html,body{background:#fff!important;color:#000;padding:0}
     body>*:not(#recu){display:none!important}
     #recu{display:block}
     #recu .ticket{width:72mm;margin:0 auto}
@@ -81,16 +193,87 @@
 <style id="page-print"></style>
 </head>
 <body>
-<header>
-  <h1>Kevmag · Complast</h1>
-  <small id="today"></small>
-</header>
+<div id="ciel"></div>
+<div class="app">
+  <aside class="side">
+    <button class="quick" onclick="aller('caisse')">+ Nouvelle vente</button>
+    <button class="item on" data-v="accueil"><i>🏠</i>Accueil</button>
+    <div class="titre-sec">Ventes et stock</div>
+    <button class="item" data-v="caisse"><i>🧾</i>Caisse</button>
+    <button class="item" data-v="stock"><i>📦</i>Stock</button>
+    <button class="item" data-v="rapport"><i>📊</i>Rapport</button>
+    <div class="titre-sec">Magasin</div>
+    <button class="item" data-v="reglages"><i>⚙️</i>Réglages</button>
+    <div class="bas-side">Kevmag · <span class="v-version"></span></div>
+  </aside>
+
+  <div class="contenu">
+    <header class="top">
+      <h1 id="titre">Accueil</h1>
+      <button class="rond" title="Rechercher" onclick="ouvrirRecherche()">🔎</button>
+      <button class="rond" title="Réglages" onclick="aller('reglages')">⋯</button>
+    </header>
 
 <main>
+  <!-- ACCUEIL -->
+  <section id="v-accueil">
+    <div class="hero">
+      <div class="constel" id="constel"></div>
+      <div class="hero-in">
+        <div class="hero-g">
+          <div class="salut" id="h-salut"></div>
+          <div class="date" id="h-date"></div>
+          <div class="ca-lib">✅ Chiffre d'affaires · <span id="h-lib">ce mois</span></div>
+          <div class="ca" id="h-ca">0 $</div>
+          <span class="tendance" id="h-tend"></span>
+          <div class="courbe" id="h-courbe"></div>
+          <div class="pills" id="h-pills">
+            <button class="pill" data-p="jour">Aujourd'hui</button>
+            <button class="pill" data-p="semaine">Cette semaine</button>
+            <button class="pill on" data-p="mois">Ce mois</button>
+            <button class="pill" data-p="annee">Cette année</button>
+          </div>
+        </div>
+        <div class="hero-d">
+          <div class="taux" id="h-taux"></div>
+          <div>
+            <div class="anneau" id="h-anneau"></div>
+            <small class="anneau-lib" style="display:block;text-align:center;font-size:12px;font-weight:700;opacity:.85;margin-top:6px">stock OK</small>
+          </div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cherche">
+      <input id="q" placeholder="Rechercher produit, client, n° de reçu…" oninput="rechercher()" autocomplete="off">
+      <div class="resultats hide" id="q-res"></div>
+    </div>
+
+    <div class="tuiles">
+      <button class="tuile" onclick="aller('caisse')"><span class="ico o">🧾</span>Vente</button>
+      <button class="tuile" onclick="aller('stock')"><span class="ico v">📦</span>Produit</button>
+      <button class="tuile" onclick="aller('rapport')"><span class="ico b">📊</span>Rapport</button>
+      <button class="tuile" onclick="exporter()"><span class="ico p">💾</span>Sauvegarde</button>
+    </div>
+
+    <div class="grille2">
+      <div class="card">
+        <div class="entete"><h2>📦 Stock</h2><button class="lien" onclick="aller('stock')"><span id="a-nbprod">0 produits</span> · voir ›</button></div>
+        <div class="barre" id="a-barre"></div>
+        <div class="legende" id="a-legende"></div>
+      </div>
+      <div class="card">
+        <div class="entete"><h2>🧾 Dernières ventes</h2><button class="lien" onclick="aller('rapport')">voir ›</button></div>
+        <div id="a-ventes"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- CAISSE -->
-  <section id="v-caisse">
+  <section id="v-caisse" class="hide">
     <div class="card">
-      <h2>Nouvelle vente</h2>
+      <h2>🛒 Nouvelle vente</h2>
       <label>Produit</label>
       <select id="c-prod"></select>
       <div class="row">
@@ -100,7 +283,7 @@
       <button class="btn alt full" onclick="ajouterLigne()">+ Ajouter au panier</button>
     </div>
     <div class="card">
-      <h2>Panier</h2>
+      <h2>🧺 Panier</h2>
       <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th><th></th></tr></thead>
       <tbody id="c-panier"></tbody></table>
       <div class="total" id="c-total">0</div>
@@ -112,7 +295,7 @@
     </div>
     <div class="card derniere hide" id="c-derniere">
       <div class="row">
-        <div><b>Vente enregistrée</b><br><span class="muted" id="c-derniere-info"></span></div>
+        <div><b>✅ Vente enregistrée</b><br><span class="muted" id="c-derniere-info"></span></div>
         <div style="flex:0 0 auto"><button class="btn" onclick="voirRecu(derniereVente)">🖨️ Reçu</button></div>
       </div>
     </div>
@@ -147,7 +330,7 @@
       <button class="btn alt full hide" id="p-annuler" onclick="resetProduit()">Annuler</button>
     </div>
     <div class="card">
-      <div class="row" style="align-items:center"><h2 style="margin:0">Stock</h2><input id="s-cherche" placeholder="Rechercher…" oninput="afficherStock()"></div>
+      <div class="row" style="align-items:center"><h2 style="margin:0">📦 Stock</h2><input id="s-cherche" placeholder="Rechercher…" oninput="afficherStock()"></div>
       <table><thead><tr><th>Produit</th><th class="num">Prix</th><th class="num">Stock</th><th></th></tr></thead>
       <tbody id="s-liste"></tbody></table>
     </div>
@@ -156,21 +339,21 @@
   <!-- RAPPORT -->
   <section id="v-rapport" class="hide">
     <div class="card">
-      <label>Jour</label><input id="r-date" type="date" onchange="afficherRapport()">
+      <label style="margin-top:0">Jour</label><input id="r-date" type="date" onchange="afficherRapport()">
     </div>
     <div class="kpis">
-      <div class="kpi"><span>Chiffre du jour</span><b id="r-ca">0</b></div>
-      <div class="kpi"><span>Ventes</span><b id="r-nb">0</b></div>
-      <div class="kpi"><span>Articles vendus</span><b id="r-art">0</b></div>
-      <div class="kpi"><span>Chiffre du mois</span><b id="r-mois">0</b></div>
+      <div class="kpi"><span>💰 Chiffre du jour</span><b id="r-ca">0</b></div>
+      <div class="kpi"><span>🧾 Ventes</span><b id="r-nb">0</b></div>
+      <div class="kpi"><span>📦 Articles vendus</span><b id="r-art">0</b></div>
+      <div class="kpi"><span>📅 Chiffre du mois</span><b id="r-mois">0</b></div>
     </div>
-    <div class="card" style="margin-top:12px">
+    <div class="card">
       <h2>Ventes du jour</h2>
       <table><thead><tr><th>Heure</th><th>Détail</th><th class="num">Total</th><th></th></tr></thead>
       <tbody id="r-ventes"></tbody></table>
     </div>
     <div class="card">
-      <h2>À réapprovisionner</h2>
+      <h2>⚠️ À réapprovisionner</h2>
       <div id="r-alertes" class="muted"></div>
     </div>
   </section>
@@ -178,13 +361,15 @@
   <!-- REGLAGES -->
   <section id="v-reglages" class="hide">
     <div class="card">
-      <h2>Réglages</h2>
-      <label>Devise</label>
+      <h2>💱 Devise</h2>
+      <label style="margin-top:0">Devise</label>
       <select id="g-devise" onchange="changerDevise()"><option value="$">Dollar ($)</option><option value="FC">Franc congolais (FC)</option></select>
+      <label>Taux du jour (FC pour 1 $) — affiché sur l'accueil</label>
+      <input id="g-taux" type="number" min="0" step="any" placeholder="Ex : 2800" onchange="majTaux()">
     </div>
     <div class="card">
-      <h2>Reçus</h2>
-      <label>Nom du magasin</label><input id="g-nom" onchange="majBoutique()">
+      <h2>🧾 Reçus</h2>
+      <label style="margin-top:0">Nom du magasin</label><input id="g-nom" onchange="majBoutique()">
       <label>Adresse</label><input id="g-adresse" onchange="majBoutique()">
       <label>Téléphone</label><input id="g-tel" type="tel" onchange="majBoutique()">
       <label>Message en bas du reçu</label><textarea id="g-message" rows="2" onchange="majBoutique()"></textarea>
@@ -192,7 +377,7 @@
       <select id="g-format" onchange="majBoutique()"><option value="ticket">Ticket de caisse (imprimante 58/80 mm)</option><option value="a4">Page A4 (imprimante normale ou PDF)</option></select>
     </div>
     <div class="card">
-      <h2>Sauvegarde</h2>
+      <h2>💾 Sauvegarde</h2>
       <p class="muted">Les données sont gardées sur cet appareil. Faites une sauvegarde régulièrement pour ne rien perdre, ou pour passer les données sur un autre appareil.</p>
       <button class="btn full" onclick="exporter()">Télécharger une sauvegarde</button>
       <label>Restaurer une sauvegarde</label>
@@ -202,9 +387,12 @@
     <p class="muted" style="text-align:center">Version : <span id="g-version"></span></p>
   </section>
 </main>
+  </div>
+</div>
 
-<nav>
-  <button class="on" data-v="caisse"><b>🧾</b>Caisse</button>
+<nav class="bas">
+  <button class="on" data-v="accueil"><b>🏠</b>Accueil</button>
+  <button data-v="caisse"><b>🧾</b>Caisse</button>
   <button data-v="stock"><b>📦</b>Stock</button>
   <button data-v="rapport"><b>📊</b>Rapport</button>
   <button data-v="reglages"><b>⚙️</b>Réglages</button>
@@ -223,7 +411,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · mousses';
+const VERSION = '2026-11-22 · nouveau design';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -239,11 +427,15 @@ const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;'
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000); }
 
 /* Navigation */
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x===b));
-  document.querySelectorAll('main>section').forEach(s => s.classList.toggle('hide', s.id !== 'v-'+b.dataset.v));
-  rafraichir();
-});
+const TITRES = { accueil:'Accueil', caisse:'Caisse', stock:'Stock', rapport:'Rapport', reglages:'Réglages' };
+function aller(v){
+  document.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x.dataset.v===v));
+  document.querySelectorAll('main>section').forEach(s => s.classList.toggle('hide', s.id !== 'v-'+v));
+  $('titre').textContent = TITRES[v] || '';
+  $('q-res').classList.add('hide');
+  window.scrollTo(0,0); rafraichir();
+}
+document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => aller(b.dataset.v));
 
 /* Produits */
 function enregistrerProduit(){
@@ -396,7 +588,105 @@ function afficherRapport(){
   $('r-alertes').innerHTML = bas.length ? bas.map(p=>`${esc(p.nom)} : <b>${p.stock}</b> en stock ${etat(p)}`).join('<br>') : 'Tout va bien, aucun produit en alerte.';
 }
 
+/* Accueil */
+let periode = 'mois';
+const LIB = { jour:["aujourd'hui","vs hier"], semaine:['cette semaine','vs la semaine dernière'], mois:['ce mois','vs le mois dernier'], annee:['cette année',"vs l'année dernière"] };
+// Début et fin d'une période (décalage -1 = période précédente)
+function bornes(p, dec=0){
+  const n = new Date(); let a, b;
+  if(p==='jour'){ a = new Date(n.getFullYear(), n.getMonth(), n.getDate()+dec); b = new Date(a); b.setDate(a.getDate()+1); }
+  else if(p==='semaine'){ const l = (n.getDay()+6)%7; a = new Date(n.getFullYear(), n.getMonth(), n.getDate()-l+7*dec); b = new Date(a); b.setDate(a.getDate()+7); }
+  else if(p==='mois'){ a = new Date(n.getFullYear(), n.getMonth()+dec, 1); b = new Date(n.getFullYear(), n.getMonth()+dec+1, 1); }
+  else { a = new Date(n.getFullYear()+dec, 0, 1); b = new Date(n.getFullYear()+dec+1, 0, 1); }
+  return [a, b];
+}
+const ventesEntre = (a, b) => db.ventes.filter(v => { const d = new Date(v.date); return d >= a && d < b; });
+const somme = l => l.reduce((s,v) => s+v.total, 0);
+function courbe(p){
+  const [a, b] = bornes(p), l = ventesEntre(a, b);
+  let n, idx;
+  if(p==='jour'){ n = 24; idx = d => d.getHours(); }
+  else if(p==='semaine'){ n = 7; idx = d => Math.floor((d - a)/864e5); }
+  else if(p==='mois'){ n = new Date(a.getFullYear(), a.getMonth()+1, 0).getDate(); idx = d => d.getDate()-1; }
+  else { n = 12; idx = d => d.getMonth(); }
+  const t = Array(n).fill(0);
+  l.forEach(v => { const i = idx(new Date(v.date)); if(i>=0 && i<n) t[i] += v.total; });
+  const W = 640, H = 60, max = Math.max(...t, 1);
+  const pts = t.map((x,i) => [ (i/(n-1||1))*W, H - 4 - (x/max)*(H-10) ]);
+  const d = pts.map((q,i) => (i?'L':'M')+q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" style="filter:blur(4px)"/><path d="${d}" fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function anneau(pct){
+  const r = 40, c = 2*Math.PI*r;
+  return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="10"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--gold)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(c*pct/100).toFixed(1)} ${c.toFixed(1)}" style="filter:drop-shadow(0 0 6px rgba(247,183,51,.6))"/></svg><b>${pct}%</b>`;
+}
+function afficherAccueil(){
+  const h = new Date().getHours();
+  const nom = (db.boutique && db.boutique.nom) || 'Complast';
+  $('h-salut').textContent = (h<12 ? 'Bonjour ☀️' : h<18 ? 'Bon après-midi 🌤️' : 'Bonsoir 🌙') + ', ' + nom + ' 👋';
+  const dt = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  $('h-date').textContent = dt.replace(/(^|\s)\S/g, c => c.toUpperCase());
+  const [a,b] = bornes(periode), [pa,pb] = bornes(periode,-1);
+  const ca = somme(ventesEntre(a,b)), avant = somme(ventesEntre(pa,pb));
+  $('h-lib').textContent = LIB[periode][0];
+  $('h-ca').textContent = argent(ca);
+  const t = $('h-tend');
+  if(avant > 0){ const pc = Math.round((ca-avant)/avant*100); t.textContent = (pc>=0?'▲ ':'▼ ') + Math.abs(pc) + ' % ' + LIB[periode][1]; t.classList.toggle('bas', pc<0); t.classList.remove('hide'); }
+  else if(ca > 0){ t.textContent = '▲ Premières ventes'; t.classList.remove('bas'); t.classList.remove('hide'); }
+  else t.classList.add('hide');
+  $('h-courbe').innerHTML = courbe(periode);
+  document.querySelectorAll('.pill').forEach(x => x.classList.toggle('on', x.dataset.p===periode));
+  $('h-taux').textContent = db.taux ? '💱 1 $ = ' + (+db.taux).toLocaleString('fr-FR') + ' FC' : '💵 Devise : ' + db.devise;
+  const tot = db.produits.length, out = db.produits.filter(p=>p.stock<=0).length, bas = db.produits.filter(p=>p.stock>0 && p.stock<=p.seuil).length, ok = tot-out-bas;
+  $('h-anneau').innerHTML = anneau(tot ? Math.round(ok/tot*100) : 100);
+  $('a-nbprod').textContent = tot + ' produit' + (tot>1?'s':'');
+  $('a-barre').innerHTML = tot ? [[ok,'var(--green)'],[bas,'var(--orange)'],[out,'var(--red)']].filter(x=>x[0]).map(x=>`<span style="flex:${x[0]};background:${x[1]}"></span>`).join('') : '';
+  $('a-legende').innerHTML = tot ? `<span><i class="point" style="background:var(--green)"></i>En stock <b>${ok}</b></span><span><i class="point" style="background:var(--orange)"></i>Bas <b>${bas}</b></span><span><i class="point" style="background:var(--red)"></i>Épuisés <b>${out}</b></span>` : 'Aucun produit. Ajoutez-en depuis <b>Stock</b>.';
+  const der = db.ventes.slice(-5).reverse();
+  $('a-ventes').innerHTML = der.length ? der.map(v => `<div class="vente"><div class="av">${v.paiement==='Crédit'?'⏳':v.paiement==='Mobile money'?'📱':v.paiement==='Banque'?'🏦':'💵'}</div>
+    <div class="tx"><b>${esc(v.client || v.lignes.map(l=>l.nom).join(', '))}</b><span class="muted">Reçu n° ${numero(v)} · ${new Date(v.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})} ${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="mt">${argent(v.total)}</div><button class="btn small alt" onclick="voirRecu('${v.id}')">🖨️</button></div>`).join('')
+    : '<p class="muted" style="margin:0">Aucune vente pour le moment.</p>';
+}
+document.querySelectorAll('.pill').forEach(b => b.onclick = () => { periode = b.dataset.p; afficherAccueil(); });
+
+/* Recherche */
+function ouvrirRecherche(){ aller('accueil'); setTimeout(() => $('q').focus(), 50); }
+function rechercher(){
+  const q = $('q').value.trim().toLowerCase(), box = $('q-res');
+  if(!q){ box.classList.add('hide'); return; }
+  const prods = db.produits.filter(p => (p.nom+' '+p.cat+' '+details(p)).toLowerCase().includes(q)).slice(0,6);
+  const ventes = db.ventes.filter(v => ((v.client||'')+' '+numero(v)+' '+v.lignes.map(l=>l.nom).join(' ')).toLowerCase().includes(q)).slice(-6).reverse();
+  box.innerHTML = (prods.map(p => `<button class="res" onclick="aller('stock');modifierProduit('${p.id}')"><i>📦</i><span><b>${esc(p.nom)}</b><br><span class="muted">${esc(p.cat)}${details(p)?' · '+esc(details(p)):''} · stock ${p.stock} · ${argent(p.prix)}</span></span></button>`).join('')
+    + ventes.map(v => `<button class="res" onclick="voirRecu('${v.id}')"><i>🧾</i><span><b>Reçu n° ${numero(v)}${v.client?' · '+esc(v.client):''}</b><br><span class="muted">${new Date(v.date).toLocaleDateString('fr-FR')} · ${argent(v.total)}</span></span></button>`).join(''))
+    || '<div class="res muted">Aucun résultat</div>';
+  box.classList.remove('hide');
+}
+document.addEventListener('click', e => { if(!e.target.closest('.cherche')) $('q-res').classList.add('hide'); });
+
+/* Ciel étoilé (fond) et constellation (carte d'accueil) */
+function hasard(g){ return () => (g = (g*16807) % 2147483647) / 2147483647; }
+const ETINCELLE = 'M0,-9 L1.6,-1.6 L9,0 L1.6,1.6 L0,9 L-1.6,1.6 L-9,0 L-1.6,-1.6Z';
+function dessinerCiel(){
+  let r = hasard(7), s = '';
+  for(let i=0;i<110;i++) s += `<circle cx="${(r()*1000).toFixed(1)}" cy="${(r()*1000).toFixed(1)}" r="${(r()*1.3+.3).toFixed(2)}" fill="#fff" opacity="${(r()*.5+.15).toFixed(2)}"/>`;
+  for(let i=0;i<7;i++) s += `<path d="${ETINCELLE}" transform="translate(${(r()*1000).toFixed(0)},${(r()*1000).toFixed(0)}) scale(${(r()*.5+.4).toFixed(2)})" fill="#fff" opacity=".6"/>`;
+  $('ciel').innerHTML = `<svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">${s}</svg>`;
+  r = hasard(42); const pts = [];
+  for(let i=0;i<22;i++) pts.push([380 + r()*600, 20 + r()*300]);
+  let c = '';
+  pts.forEach((p,i) => {
+    pts.map((q,j) => [j, (p[0]-q[0])**2 + (p[1]-q[1])**2]).filter(x => x[0]!==i).sort((x,y)=>x[1]-y[1]).slice(0,2)
+      .forEach(([j]) => { if(j>i) c += `<line x1="${p[0].toFixed(0)}" y1="${p[1].toFixed(0)}" x2="${pts[j][0].toFixed(0)}" y2="${pts[j][1].toFixed(0)}" stroke="rgba(255,255,255,.22)" stroke-width="1"/>`; });
+  });
+  pts.forEach(p => c += `<circle cx="${p[0].toFixed(0)}" cy="${p[1].toFixed(0)}" r="2.2" fill="#fff" opacity=".75"/>`);
+  for(let i=0;i<40;i++) c += `<circle cx="${(r()*1000).toFixed(0)}" cy="${(r()*340).toFixed(0)}" r="${(r()*1.1+.4).toFixed(2)}" fill="#fff" opacity="${(r()*.5+.2).toFixed(2)}"/>`;
+  [[350,10],[860,190],[720,120],[250,260]].forEach(([x,y],i) => c += `<path d="${ETINCELLE}" transform="translate(${x},${y}) scale(${[1,.8,.7,.6][i]})" fill="#fff" style="filter:drop-shadow(0 0 4px #fff)"/>`);
+  $('constel').innerHTML = `<svg viewBox="0 0 1000 340" preserveAspectRatio="xMidYMid slice">${c}</svg>`;
+}
+
 /* Réglages */
+function majTaux(){ db.taux = +$('g-taux').value || 0; sauver(); afficherAccueil(); toast('Taux enregistré'); }
 function changerDevise(){ db.devise = $('g-devise').value; sauver(); rafraichir(); }
 function exporter(){
   const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
@@ -416,12 +706,12 @@ function toutEffacer(){
   db = { produits:[], ventes:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); $('g-devise').value = db.devise;
+function rafraichir(){ remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
-$('g-version').textContent = VERSION;
-$('today').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+$('g-version').textContent = VERSION; document.querySelectorAll('.v-version').forEach(e => e.textContent = VERSION);
+dessinerCiel();
 $('r-date').value = jour(new Date());
 rafraichir();
 
