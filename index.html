@@ -199,6 +199,7 @@
       <input type="file" accept=".json" onchange="importer(this)">
       <button class="btn bad full" style="margin-top:20px" onclick="toutEffacer()">Tout effacer</button>
     </div>
+    <p class="muted" style="text-align:center">Version : <span id="g-version"></span></p>
   </section>
 </main>
 
@@ -222,6 +223,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
+const VERSION = '2026-11-22 · mousses';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -418,12 +420,23 @@ function rafraichir(){ remplirProduits(); afficherPanier(); afficherStock(); aff
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
+$('g-version').textContent = VERSION;
 $('today').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 $('r-date').value = jour(new Date());
 rafraichir();
 
 /* Application installable + fonctionnement sans internet */
-if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  const avaitDeja = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache:'none' }).then(r => r.update()).catch(()=>{});
+  // Une nouvelle version vient d'être installée : on recharge (sauf si une vente est en cours)
+  let recharge = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(!avaitDeja || recharge) return;
+    if(panier.length){ toast('Nouvelle version disponible : rouvrez l’application après la vente'); return; }
+    recharge = true; location.reload();
+  });
+}
 try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
 </script>
 </body>
