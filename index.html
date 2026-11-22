@@ -325,7 +325,7 @@
       <label>Nom</label><input id="p-nom" placeholder="Ex : Matelas 2 places">
       <div class="row">
         <div><label>Catégorie</label>
-          <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Autre</option></select></div>
+          <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Autre</option></select></div>
         <div><label>Prix de vente</label><input id="p-prix" type="number" min="0" step="any"></div>
       </div>
       <div class="row">
@@ -448,13 +448,16 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · import produits';
+const VERSION = '2026-11-22 · nouvelles catégories';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
 let derniereVente = null, recuOuvert = null;
 
-function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) db = Object.assign(db, d); }catch(e){} db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
+function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) db = Object.assign(db, d); }catch(e){}
+  // Nouvelles catégories Garde-robe, Dresser table, Nightstand : on y range les produits « Chambre » concernés (une seule fois)
+  if(!db.catsV){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Chambre' || p.cat==='Table'){ const c = devinerCat(p.nom); if(['Garde-robe','Dresser table','Nightstand'].includes(c)){ p.cat = c; n++; } } });
+    db.catsV = 2; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
 function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
@@ -509,8 +512,8 @@ function details(p){
   return t.join(' · ');
 }
 function etat(p){ return p.stock<=0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
-const CATS = ['Chambre','Lit','Matelas','Mousse','Table','Canapé','Buffet','Autre'];
-const ICONES = { Chambre:'🚪', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Autre:'📦' };
+const CATS = ['Chambre','Garde-robe','Dresser table','Nightstand','Lit','Matelas','Mousse','Table','Canapé','Buffet','Autre'];
+const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Nightstand:'🕯️', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Autre:'📦' };
 let stockCat = 'Tous';
 function choisirCat(c){ stockCat = c; afficherStock(); }
 function ligneStock(p){ return `<tr>
@@ -537,7 +540,10 @@ const sansAccent = t => String(t??'').normalize('NFD').replace(/[\u0300-\u036f]/
 const REGLES = [
   ['Matelas', /\bmatelas|\bmatela\b/],
   ['Mousse',  /\bmousse|\bfoam|\bsimba\b/],
-  ['Chambre', /\bchambre|\barmoire|garde.?robe|\bcommode|\bcoiffeuse|\bchevet|table de nuit|\bdressing/],
+  ['Garde-robe', /garde.?robe|\barmoire|\bwardrobe|\bpenderie/],
+  ['Dresser table', /dress(er|ing)|\bcoiffeuse/],
+  ['Nightstand', /night.?stand|\bchevet|table de nuit|\bbedside/],
+  ['Chambre', /\bchambre|\bcommode|\bbedroom|\bchest\b/],
   ['Lit',     /\blits?\b|\bsommier|\bcouchette|\bberceau|\btete de lit/],
   ['Canapé',  /\bcanape|\bsalon|\bfauteuil|\bsofa|\bdivan|\bpouf|\bbanquette/],
   ['Buffet',  /\bbuffet|\bvaisselier|\bbahut|meuble (tv|tele)|\betagere|\bbibliotheque|\bvitrine/],
@@ -546,9 +552,9 @@ const REGLES = [
 function devinerCat(nom, catFichier){
   const c = sansAccent(catFichier);
   if(c){
-    const trouve = CATS.find(x => sansAccent(x)===c || c.startsWith(sansAccent(x)) || sansAccent(x).startsWith(c));
-    if(trouve) return trouve;
+    const exact = CATS.find(x => sansAccent(x)===c); if(exact) return exact;
     for(const [cat, re] of REGLES) if(re.test(c)) return cat;
+    const proche = CATS.find(x => c.startsWith(sansAccent(x)) || sansAccent(x).startsWith(c)); if(proche) return proche;
   }
   const n = sansAccent(nom);
   for(const [cat, re] of REGLES) if(re.test(n)) return cat;
