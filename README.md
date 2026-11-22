@@ -13,3 +13,14 @@ Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinsh
 Ouvrir `index.html` dans un navigateur (téléphone ou ordinateur). Aucune installation nécessaire.
 
 Les données sont enregistrées dans le navigateur de l'appareil : faire une sauvegarde régulière depuis **Réglages**.
+
+## Installer sur iPhone (comme une application)
+1. Ouvrir **https://kevconcept.github.io/Kevmag/** dans **Safari**.
+2. Toucher le bouton **Partager** (carré avec une flèche vers le haut).
+3. Choisir **Sur l'écran d'accueil**, puis **Ajouter**.
+
+L'icône Kevmag apparaît sur l'écran d'accueil. L'application s'ouvre en plein écran et fonctionne aussi sans internet.
+
+Attention : les données saisies dans Safari et celles de l'icône sont séparées. Utiliser toujours l'icône (ou restaurer une sauvegarde dedans).
+
+Sur Android : ouvrir le site dans Chrome, menu ⋮ → **Installer l'application** (ou **Ajouter à l'écran d'accueil**).
