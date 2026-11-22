@@ -455,7 +455,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · gammes de matelas';
+const VERSION = '2026-11-22 · matelas bébé';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -470,7 +470,10 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
     db.catsV = 3; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); }
   // Gammes de matelas : on les devine d'après le nom (une seule fois)
   if((db.catsV||0) < 4){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
-    db.catsV = 4; sauver(); if(n){ rafraichir(); toast(n + ' matelas rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
+    db.catsV = 4; sauver(); if(n){ rafraichir(); toast(n + ' matelas rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); }
+  // Gammes Bébé D14 / Bébé D16 (une seule fois)
+  if((db.catsV||0) < 5){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
+    db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
 function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
@@ -522,9 +525,11 @@ function majChampsMousse(){
   if(c==='Matelas' && !$('p-gamme').value) $('p-gamme').value = devinerGamme($('p-nom').value);
 }
 /* Gammes de matelas */
-const GAMMES = ['Elengi','Bonheur','Dream','Extra Dream','Orthopédique','Prestige','Super Dream'];
+const GAMMES = ['Elengi','Bonheur','Dream','Extra Dream','Orthopédique','Prestige','Super Dream','Bébé D14','Bébé D16'];
 function devinerGamme(nom){
   const n = sansAccent(nom);
+  if(/\bbebe\b.*\b[bd]\s?-?14\b/.test(n)) return 'Bébé D14';
+  if(/\bbebe\b.*\b[bd]\s?-?16\b/.test(n)) return 'Bébé D16';
   if(/super\s*-?\s*dream/.test(n)) return 'Super Dream';
   if(/extra\s*-?\s*dream/.test(n)) return 'Extra Dream';
   if(/\bdream/.test(n)) return 'Dream';
