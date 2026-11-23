@@ -299,6 +299,8 @@
   .etat-print .sg td{background:#f3f3f3;font-weight:700;padding-left:12px}
   .etat-print .vide td{border:0;height:8px}
   .etat-print td.q{text-align:right;width:70px}
+  .etat-print td.inv{width:90px}
+  .etat-print tr:not(.vide):not(.sg) td{height:17px}
 
   /* Reçu */
   #recu{display:none}
@@ -598,7 +600,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · état du stock';
+const VERSION = '2026-11-23 · état du stock + inventaire';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -1114,23 +1116,24 @@ function afficherEtat(){
 function imprimerEtat(){
   const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
   $('recu').innerHTML = `<div class="etat-print"><h3>${esc(db.boutique.nom)} — État du stock</h3><div style="margin-bottom:8px">${esc(db.boutique.adresse||'')} · Stock du ${dateEtat()}</div>
-    <table><thead><tr><th>Article</th><th>Quantité</th></tr></thead><tbody>`
-    + e.map((c,i) => (i ? '<tr class="vide"><td colspan="2"></td></tr>' : '') + `<tr class="cat"><td>${esc(c.cat)}</td><td class="q">${c.total}</td></tr>`
-      + c.groupes.map(g => (g.titre ? `<tr class="sg"><td colspan="2">${esc(g.titre)}</td></tr>` : '') + g.produits.map(p => `<tr><td>${esc(p.nom)}</td><td class="q">${p.stock}</td></tr>`).join('')).join('')).join('')
-    + `<tr class="vide"><td colspan="2"></td></tr><tr class="cat"><td>Total général</td><td class="q">${tot}</td></tr></tbody></table></div>`;
+    <table><thead><tr><th>Article</th><th>Quantité</th><th>Inventaire</th></tr></thead><tbody>`
+    + e.map((c,i) => (i ? '<tr class="vide"><td colspan="3"></td></tr>' : '') + `<tr class="cat"><td>${esc(c.cat)}</td><td class="q">${c.total}</td><td class="inv"></td></tr>`
+      + c.groupes.map(g => (g.titre ? `<tr class="sg"><td colspan="3">${esc(g.titre)}</td></tr>` : '') + g.produits.map(p => `<tr><td>${esc(p.nom)}</td><td class="q">${p.stock}</td><td class="inv"></td></tr>`).join('')).join('')).join('')
+    + `<tr class="vide"><td colspan="3"></td></tr><tr class="cat"><td>Total général</td><td class="q">${tot}</td><td class="inv"></td></tr></tbody></table>
+    <div style="margin-top:14px;display:flex;justify-content:space-between"><span>Inventaire fait par : ____________________</span><span>Date : ____ / ____ / ________</span><span>Signature : ______________</span></div></div>`;
   $('page-print').textContent = '@page{size:A4;margin:12mm}';
   window.print();
 }
 async function exporterEtat(){
   const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
-  const lignes = [['', db.boutique.nom, 'STOCK ' + dateEtat()], ['', 'Quantité']];
-  e.forEach((c,i) => { if(i) lignes.push([]); lignes.push([c.cat, c.total]);
-    c.groupes.forEach(g => { if(g.titre) lignes.push([g.titre]); g.produits.forEach(p => lignes.push([p.nom, p.stock||0])); }); });
-  lignes.push([], ['Total général', tot]);
+  const lignes = [['', db.boutique.nom, 'STOCK ' + dateEtat()], ['Article', 'Quantité', 'Inventaire']];
+  e.forEach((c,i) => { if(i) lignes.push([]); lignes.push([c.cat, c.total, '']);
+    c.groupes.forEach(g => { if(g.titre) lignes.push([g.titre]); g.produits.forEach(p => lignes.push([p.nom, p.stock||0, ''])); }); });
+  lignes.push([], ['Total général', tot, '']);
   const nom = 'Kevmag-etat-stock-' + dateEtat();
   try{
     await chargerXLSX();
-    const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = [{wch:40},{wch:12},{wch:20}];
+    const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = [{wch:40},{wch:12},{wch:14}];
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Stock'); XLSX.writeFile(wb, nom + '.xlsx');
   }catch(err){
     // Sans internet : fichier CSV (s'ouvre aussi dans Excel)
