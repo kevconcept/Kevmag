@@ -357,17 +357,28 @@
   }
 
   /* Animation des produits en arrière-plan */
-  #anim-fond{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:none;--voile:rgba(8,16,34,.58)}
+  #anim-fond{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:none;--voile:rgba(8,16,34,.34)}
   html.anim #anim-fond{display:block}
-  .af{position:absolute;inset:-6%;background-size:cover;background-position:center;opacity:0;transition:opacity 1.8s ease;filter:blur(1px) saturate(1.15);will-change:opacity,transform}
+  .af{position:absolute;inset:-6%;background-size:cover;background-position:center;opacity:0;transition:opacity 1.8s ease;filter:saturate(1.15);will-change:opacity,transform}
   .af.on{opacity:1;animation:kenburns 10s ease-out forwards}
   .af.on.g{animation-name:kenburns2}
   @keyframes kenburns{from{transform:scale(1) translate(0,0)}to{transform:scale(1.14) translate(-2%,-1%)}}
   @keyframes kenburns2{from{transform:scale(1.14) translate(2%,1%)}to{transform:scale(1) translate(0,0)}}
   .af-voile{position:absolute;inset:0;background:var(--voile)}
-  html.ios #anim-fond{--voile:rgba(238,241,248,.42)}
-  @media (prefers-color-scheme:dark){ html.ios #anim-fond{--voile:rgba(10,10,16,.48)} }
+  html.ios #anim-fond{--voile:rgba(238,241,248,.18)}
+  @media (prefers-color-scheme:dark){ html.ios #anim-fond{--voile:rgba(10,10,16,.28)} }
   html.anim #ciel{display:none}
+  /* Interface plus transparente quand l'animation est active */
+  html.anim.ios{--verre:rgba(255,255,255,.40);--verre2:rgba(255,255,255,.26);--barre:rgba(255,255,255,.58);--champ:rgba(255,255,255,.45)}
+  @media (prefers-color-scheme:dark){ html.anim.ios{--verre:rgba(28,28,36,.40);--verre2:rgba(40,40,50,.28);--barre:rgba(22,22,28,.60);--champ:rgba(118,118,128,.30)} }
+  html.anim.ios .card, html.anim.ios .kpi, html.anim.ios .tuile, html.anim.ios nav.bas, html.anim.ios header.top, html.anim.ios .cherche input{-webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%)}
+  html.anim.ios .hero{background:linear-gradient(135deg,rgba(0,122,255,.72),rgba(88,86,214,.7) 55%,rgba(175,82,222,.68))}
+  html.anim:not(.ios) .card, html.anim:not(.ios) .kpi, html.anim:not(.ios) .tuile{background:linear-gradient(180deg,rgba(22,48,90,.5),rgba(17,36,66,.58));-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  html.anim:not(.ios) .hero{background:linear-gradient(135deg,rgba(26,50,99,.72),rgba(44,79,148,.68))}
+  html.anim:not(.ios) header.top{background:linear-gradient(90deg,rgba(13,58,64,.6),rgba(18,44,86,.6))}
+  html.anim:not(.ios) nav.bas{background:rgba(10,22,40,.6)}
+  /* Texte un peu ombré pour rester lisible sur les photos */
+  html.anim .card h2, html.anim header.top h1{text-shadow:0 1px 2px rgba(0,0,0,.08)}
 
   /* Reçu */
   #recu{display:none}
@@ -690,7 +701,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · animation produits';
+const VERSION = '2026-11-23 · interface transparente';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
