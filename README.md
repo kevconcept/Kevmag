@@ -15,6 +15,7 @@ Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinsh
 - **Reçus** (facture A4 par défaut : logo, mentions légales RCCM/Id. Nat./N° Impôt, encadrés Reçu et Client, tableau, total, montant en lettres, cachet et signature ; ou ticket 58/80 mm) : après chaque vente (bouton 🖨️ Reçu dans la Caisse) ou plus tard depuis le Rapport. Format ticket (imprimante 58/80 mm) ou page A4 / PDF. Nom, adresse, téléphone et message du magasin se règlent dans **Réglages**.
 - **WhatsApp** : bouton « Envoyer sur WhatsApp » sur le reçu (vers le numéro du client s'il est saisi) et « Envoyer le rapport du jour sur WhatsApp » dans Rapport (vers le numéro WhatsApp du gérant, réglé dans Réglages → Reçus). WhatsApp s'ouvre avec le message prêt ; il reste à appuyer sur Envoyer.
 - **Rapport** : chiffre du jour et du mois, liste des ventes (annulables), produits à réapprovisionner.
+- **Animation en arrière-plan** : les photos des produits Complast (dossier `fond/`) défilent doucement derrière l’application (fondu + zoom lent), désactivable dans Réglages → Apparence.
 - **Apparence** : thème « iOS 26 · Liquid Glass » par défaut (verre translucide, barre d’onglets flottante, grands titres, clair/sombre selon l’iPhone) ou « Nuit étoilée », au choix dans Réglages.
 - **Réglages** : devise ($ ou FC), sauvegarde et restauration des données.
 

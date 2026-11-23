@@ -356,6 +356,19 @@
     .fa-signes .cachet{width:90px;height:90px}.fa-signes span{width:110px}
   }
 
+  /* Animation des produits en arrière-plan */
+  #anim-fond{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:none;--voile:rgba(8,16,34,.58)}
+  html.anim #anim-fond{display:block}
+  .af{position:absolute;inset:-6%;background-size:cover;background-position:center;opacity:0;transition:opacity 1.8s ease;filter:blur(1px) saturate(1.15);will-change:opacity,transform}
+  .af.on{opacity:1;animation:kenburns 10s ease-out forwards}
+  .af.on.g{animation-name:kenburns2}
+  @keyframes kenburns{from{transform:scale(1) translate(0,0)}to{transform:scale(1.14) translate(-2%,-1%)}}
+  @keyframes kenburns2{from{transform:scale(1.14) translate(2%,1%)}to{transform:scale(1) translate(0,0)}}
+  .af-voile{position:absolute;inset:0;background:var(--voile)}
+  html.ios #anim-fond{--voile:rgba(238,241,248,.42)}
+  @media (prefers-color-scheme:dark){ html.ios #anim-fond{--voile:rgba(10,10,16,.48)} }
+  html.anim #ciel{display:none}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -387,6 +400,7 @@
 </head>
 <body>
 <div id="ciel"></div>
+<div id="anim-fond" aria-hidden="true"><div class="af"></div><div class="af"></div><div class="af-voile"></div></div>
 <div class="app">
   <aside class="side">
     <button class="quick" onclick="aller('caisse')">+ Nouvelle vente</button>
@@ -603,7 +617,10 @@
   <section id="v-reglages" class="hide">
     <div class="card">
       <h2>🎨 Apparence</h2>
+      <label style="margin-top:0">Thème</label>
       <select id="g-theme" onchange="changerTheme(this.value)"><option value="ios">iOS 26 · Liquid Glass (clair / sombre selon l'iPhone)</option><option value="nuit">Nuit étoilée</option></select>
+      <label>Animation des produits en arrière-plan</label>
+      <select id="g-anim" onchange="db.fondAnim = this.value==='oui'; sauver(); demarrerFond()"><option value="oui">Activée</option><option value="non">Désactivée</option></select>
     </div>
     <div class="card">
       <h2>💱 Devise</h2>
@@ -673,7 +690,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · mentions légales';
+const VERSION = '2026-11-23 · animation produits';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1449,6 +1466,26 @@ function rechercher(){
 }
 document.addEventListener('click', e => { if(!e.target.closest('.cherche')) $('q-res').classList.add('hide'); });
 
+/* Animation des produits en arrière-plan : les photos défilent doucement (zoom + fondu) */
+const FONDS = Array.from({length:16}, (_,i) => 'fond/' + String(i+1).padStart(2,'0') + '.jpg');
+let fondMinuteur = null, fondIdx = 0, fondCouche = 0;
+function demarrerFond(){
+  clearInterval(fondMinuteur);
+  const calme = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const actif = db.fondAnim !== false;
+  document.documentElement.classList.toggle('anim', actif);
+  if(!actif) return;
+  const couches = document.querySelectorAll('#anim-fond .af');
+  const suivant = () => {
+    const url = FONDS[fondIdx % FONDS.length], c = couches[fondCouche], autre = couches[1-fondCouche];
+    const img = new Image();
+    img.onload = () => { c.style.backgroundImage = `url(${url})`; c.classList.remove('on','g'); void c.offsetWidth; c.classList.add('on'); if(fondIdx%2) c.classList.add('g'); autre.classList.remove('on'); fondCouche = 1-fondCouche; fondIdx++; new Image().src = FONDS[fondIdx % FONDS.length]; };
+    img.src = url;
+  };
+  suivant();
+  if(!calme) fondMinuteur = setInterval(() => { if(document.visibilityState==='visible') suivant(); }, 7000);
+}
+
 /* Ciel étoilé (fond) et constellation (carte d'accueil) */
 function hasard(g){ return () => (g = (g*16807) % 2147483647) / 2147483647; }
 const ETINCELLE = 'M0,-9 L1.6,-1.6 L9,0 L1.6,1.6 L0,9 L-1.6,1.6 L-9,0 L-1.6,-1.6Z';
@@ -1492,12 +1529,12 @@ function toutEffacer(){
   db = { produits:[], ventes:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-taux').value = db.taux || '';
+function rafraichir(){ if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
 $('g-version').textContent = VERSION; document.querySelectorAll('.v-version').forEach(e => e.textContent = VERSION);
-dessinerCiel();
+dessinerCiel(); demarrerFond();
 $('p-gamme').innerHTML += GAMMES.map(g => `<option>${g}</option>`).join('');
 $('r-date').value = jour(new Date());
 rafraichir();
