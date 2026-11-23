@@ -277,6 +277,13 @@
   html.ios #i-statut{background:rgba(0,122,255,.14)!important}
   html.ios .kpi b{letter-spacing:-.02em}
 
+  /* Logo du magasin (en haut à droite) */
+  .logo{height:44px;width:auto;padding:5px 10px;background:#fff;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;flex:0 0 auto}
+  header.top h1{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media (max-width:899px){ .logo{height:34px;padding:4px 8px;border-radius:11px} header.top .rond.plus{display:none} }
+  @media (max-width:360px){ .logo{height:28px} }
+  html.ios .logo{box-shadow:0 6px 18px rgba(31,38,80,.15),inset 0 1px 0 #fff}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -324,8 +331,9 @@
   <div class="contenu">
     <header class="top">
       <h1 id="titre">Accueil</h1>
+      <img class="logo" src="logo.png" alt="Complast – Leader des matelas" onclick="aller('accueil')">
       <button class="rond" title="Rechercher" onclick="ouvrirRecherche()">🔎</button>
-      <button class="rond" title="Réglages" onclick="aller('reglages')">⋯</button>
+      <button class="rond plus" title="Réglages" onclick="aller('reglages')">⋯</button>
     </header>
 
 <main>
@@ -566,7 +574,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · design iOS 26';
+const VERSION = '2026-11-23 · logo Complast';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
