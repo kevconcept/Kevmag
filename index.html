@@ -338,6 +338,7 @@
   .fa-table td{padding:9px 10px;border-bottom:1px solid #e3e7ef;color:#1f2a44;vertical-align:top}
   .fa-table small{color:#667}
   .fa-table .n{text-align:right;white-space:nowrap}
+  .fa-table th.n, html.ios .fa-table th.n{text-align:right}
   .fa-sous{display:flex;justify-content:flex-end;gap:60px;padding:10px 10px;font-weight:700}
   .fa-total{display:flex;justify-content:space-between;background:#22307a;color:#fff;padding:11px 12px;font-weight:800;font-size:15px}
   .fa-total span:first-child{flex:1;text-align:center}
@@ -380,6 +381,32 @@
   /* Texte un peu ombré pour rester lisible sur les photos */
   html.anim .card h2, html.anim header.top h1{text-shadow:0 1px 2px rgba(0,0,0,.08)}
 
+  /* Acomptes */
+  .acp{border:1px solid var(--line2);border-radius:18px;padding:14px;margin-bottom:12px;background:rgba(255,255,255,.04)}
+  html.ios .acp{background:var(--verre2)}
+  .acp-t{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .acp-t b{font-size:16px}
+  .acp .barre{margin:10px 0 6px;height:10px}
+  .acp-chiffres{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:14px}
+  .acp-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .acp-vers{display:none;margin-top:10px;padding:10px;border-radius:14px;background:rgba(127,127,127,.12)}
+  .acp-vers.ouvert{display:block}
+  .tag.ok{background:rgba(46,204,113,.2);color:#2ecc71}.tag.ann{background:rgba(150,150,150,.2)}
+
+  /* Échanges */
+  .regle-ech{padding:12px 14px;border-radius:14px;background:rgba(242,95,92,.12);border:1px solid rgba(242,95,92,.35);font-size:14px;line-height:1.5}
+  .e-h{font-size:15px;margin:16px 0 6px}
+  .e-ligne{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .e-ligne .tx{flex:1;min-width:0}
+  .e-ligne input{width:76px;padding:8px;text-align:center}
+  .e-bilan{margin-top:14px;padding:14px;border-radius:16px;background:rgba(127,127,127,.1);font-size:15px;line-height:1.8}
+  .e-bilan .l{display:flex;justify-content:space-between}
+  .e-bilan .res{margin-top:8px;padding:10px 12px;border-radius:12px;font-weight:800}
+  .e-bilan .res.ok{background:rgba(46,204,113,.18);color:var(--green)}
+  .e-bilan .res.plus{background:rgba(79,140,255,.16);color:var(--blue)}
+  .e-bilan .res.non{background:rgba(242,95,92,.16);color:var(--red)}
+  #e-ok:disabled{opacity:.45;cursor:not-allowed}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -419,6 +446,8 @@
     <div class="titre-sec">Ventes et stock</div>
     <button class="item" data-v="caisse"><i>🧾</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>Caisse</button>
     <button class="item" data-v="stock"><i>📦</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Stock</button>
+    <button class="item" data-v="acomptes"><i>⏳</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.3"/></svg>Acomptes</button>
+    <button class="item" data-v="echanges"><i>🔁</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>Échanges</button>
     <button class="item" data-v="rapport"><i>📊</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rapport</button>
     <div class="titre-sec">Magasin</div>
     <button class="item" data-v="reglages"><i>⚙️</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
@@ -475,7 +504,7 @@
     <div class="tuiles">
       <button class="tuile" onclick="aller('caisse')"><span class="ico o">🧾</span>Vente</button>
       <button class="tuile" onclick="aller('stock')"><span class="ico v">📦</span>Produit</button>
-      <button class="tuile" onclick="aller('rapport')"><span class="ico b">📊</span>Rapport</button>
+      <button class="tuile" onclick="aller('echanges')"><span class="ico b">🔁</span>Échange</button>
       <button class="tuile" onclick="exporter()"><span class="ico p">💾</span>Sauvegarde</button>
     </div>
 
@@ -519,12 +548,59 @@
         <div><label>Taux du jour (FC pour 1 $)</label><input id="c-taux" type="number" min="0" step="any" placeholder="Ex : 2800" onchange="$('g-taux').value=this.value;majTaux()"></div>
       </div>
       <button class="btn full" onclick="validerVente()">Valider la vente</button>
+      <button class="btn alt full" onclick="creerAcompte()">⏳ Enregistrer un acompte (réservation)</button>
+      <button class="btn alt full" onclick="aller('echanges')">🔁 Faire un échange</button>
     </div>
     <div class="card derniere hide" id="c-derniere">
       <div class="row">
         <div><b>✅ Vente enregistrée</b><br><span class="muted" id="c-derniere-info"></span></div>
         <div style="flex:0 0 auto"><button class="btn" onclick="voirRecu(derniereVente)">🖨️ Reçu</button></div>
       </div>
+    </div>
+  </section>
+
+  <!-- ACOMPTES -->
+  <section id="v-acomptes" class="hide">
+    <div class="kpis">
+      <div class="kpi"><span>⏳ En cours</span><b id="a-nb">0</b></div>
+      <div class="kpi"><span>💰 Reste à encaisser</span><b id="a-reste">0</b></div>
+      <div class="kpi"><span>✅ Déjà versé</span><b id="a-verse">0</b></div>
+    </div>
+    <div class="card">
+      <p class="muted" style="margin:0 0 10px">Pour créer un acompte : mettez les articles dans le panier à la <b>Caisse</b>, indiquez le client, puis touchez « Enregistrer un acompte ». Les articles sont réservés (retirés du stock).</p>
+      <div class="row" style="align-items:center"><input id="a-cherche" placeholder="Rechercher un client, un n°…" oninput="afficherAcomptes()"></div>
+      <div class="chips" id="a-filtres"></div>
+      <div id="a-liste"></div>
+    </div>
+  </section>
+
+  <!-- ÉCHANGES -->
+  <section id="v-echanges" class="hide">
+    <div class="card">
+      <h2>🔁 Nouvel échange</h2>
+      <div class="regle-ech">🚫 <b>Le magasin ne rembourse pas.</b> Un article peut être échangé contre un article de <b>même prix</b> ou de <b>prix supérieur</b> (le client paie la différence). Pas d'échange contre un article moins cher.</div>
+      <label>1. Retrouver l'achat du client</label>
+      <input id="e-cherche" placeholder="N° de reçu, nom ou téléphone du client" oninput="chercherVenteEch()" autocomplete="off">
+      <div id="e-ventes"></div>
+      <div id="e-etape2" class="hide">
+        <div id="e-achat" class="muted" style="margin:12px 0 4px"></div>
+        <h3 class="e-h">2. Articles rapportés par le client</h3>
+        <div id="e-rendus"></div>
+        <h3 class="e-h">3. Nouveaux articles choisis</h3>
+        <select id="e-prod"></select>
+        <div class="row"><div><label>Quantité</label><input id="e-qte" type="number" min="1" value="1"></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn alt full" style="margin-top:0" onclick="ajouterNouveauEch()">+ Ajouter</button></div></div>
+        <table style="margin-top:8px"><tbody id="e-nouveaux"></tbody></table>
+        <div id="e-bilan" class="e-bilan"></div>
+        <div class="row" id="e-paiement"><div><label>Devise de la différence</label><select id="e-dev" onchange="bilanEch()"><option value="$">Dollar ($)</option><option value="FC">Franc congolais (FC)</option></select></div>
+          <div><label>Paiement</label><select id="e-paie"><option>Espèces</option><option>Mobile money</option><option>Banque</option></select></div></div>
+        <button class="btn full" id="e-ok" onclick="validerEchange()">Valider l'échange</button>
+        <button class="btn alt full" onclick="annulerEch()">Annuler</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📜 Échanges effectués</h2>
+      <div id="e-hist"></div>
     </div>
   </section>
 
@@ -603,6 +679,7 @@
       <div class="kpi"><span>📅 Chiffre du mois</span><b id="r-mois">0</b></div>
       <div class="kpi"><span>💵 Encaissé en dollars</span><b id="r-usd">0 $</b></div>
       <div class="kpi"><span>💴 Encaissé en francs</span><b id="r-fc">0 FC</b></div>
+      <div class="kpi"><span>⏳ Acomptes reçus</span><b id="r-acp">0</b></div>
     </div>
     <button class="btn full wa" style="margin:0 0 16px" onclick="rapportWhatsApp()">📲 Envoyer le rapport du jour sur WhatsApp</button>
     <div class="card">
@@ -679,6 +756,7 @@
   <button class="on" data-v="accueil"><b>🏠</b><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg><span>Accueil</span></button>
   <button data-v="caisse"><b>🧾</b><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg><span>Caisse</span></button>
   <button data-v="stock"><b>📦</b><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span>Stock</span></button>
+  <button data-v="acomptes"><b>⏳</b><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.3"/></svg><span>Acomptes</span></button>
   <button data-v="rapport"><b>📊</b><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Rapport</span></button>
   <button data-v="reglages"><b>⚙️</b><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Réglages</span></button>
 </nav>
@@ -701,10 +779,10 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · interface transparente';
+const VERSION = '2026-11-23 · échanges';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
-let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
+let db = { produits: [], ventes: [], acomptes: [], echanges: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
 let derniereVente = null, recuOuvert = null;
 
@@ -735,7 +813,7 @@ const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;'
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000); }
 
 /* Navigation */
-const TITRES = { accueil:'Accueil', caisse:'Caisse', stock:'Stock', rapport:'Rapport', reglages:'Réglages' };
+const TITRES = { accueil:'Accueil', caisse:'Caisse', stock:'Stock', acomptes:'Acomptes', echanges:'Échanges', rapport:'Rapport', reglages:'Réglages' };
 function aller(v){
   document.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x.dataset.v===v));
   document.querySelectorAll('main>section').forEach(s => s.classList.toggle('hide', s.id !== 'v-'+v));
@@ -1192,6 +1270,19 @@ function montantLettres(x, dev){
   if(c) t += ' et ' + enLettres(c) + (dev==='FC' ? ' centime' : ' cent') + (c>1?'s':'');
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
+function enteteFa(){
+  const b = db.boutique;
+  const legal = [['RCCM',b.rccm],['Id. Nat.',b.idnat],['N° Impôt',b.impot]].filter(x=>x[1]);
+  const contact = [['Siège social',b.adresse],['E-mail',b.email],['Téléphone',b.tel],['WhatsApp',b.whatsapp]].filter(x=>x[1]);
+  return `<div class="fa-tete">
+      <img src="logo.png" alt="" class="fa-logo">
+      <div class="fa-nom"><h1>${esc(b.nom).toUpperCase()}</h1>${b.slogan?`<div>${esc(b.slogan).toUpperCase()}</div>`:''}</div>
+    </div>
+    <div class="fa-infos">
+      <div>${legal.map(x=>`<b>${x[0]} :</b> ${esc(x[1])}`).join('<br>')}</div>
+      <div class="d">${contact.map(x=>`<b>${x[0]} :</b> ${esc(x[1])}`).join('<br>')}</div>
+    </div>`;
+}
 function factureA4(v){
   const b = db.boutique, base = v.devise || db.devise, P = payeDe(v), dev = P.dev, d = new Date(v.date);
   const m = n => fmtDev(convertir(n, base, dev, P.taux), dev);
@@ -1202,17 +1293,8 @@ function factureA4(v){
   const num = 'REC-' + d.getFullYear() + '-' + numero(v);
   const totPaye = convertir(v.total, base, dev, P.taux);
   const taux = P.taux ? `<div class="fa-taux">Taux appliqué : 1 $ = ${(+P.taux).toLocaleString('fr-FR')} FC · équivalent ${fmtDev(convertir(v.total, base, autreDev(dev), P.taux), autreDev(dev))}</div>` : '';
-  const legal = [['RCCM',b.rccm],['Id. Nat.',b.idnat],['N° Impôt',b.impot]].filter(x=>x[1]);
-  const contact = [['Siège social',b.adresse],['E-mail',b.email],['Téléphone',b.tel],['WhatsApp',b.whatsapp]].filter(x=>x[1]);
   return `<div class="fa">
-    <div class="fa-tete">
-      <img src="logo.png" alt="" class="fa-logo">
-      <div class="fa-nom"><h1>${esc(b.nom).toUpperCase()}</h1>${b.slogan?`<div>${esc(b.slogan).toUpperCase()}</div>`:''}</div>
-    </div>
-    <div class="fa-infos">
-      <div>${legal.map(x=>`<b>${x[0]} :</b> ${esc(x[1])}`).join('<br>')}</div>
-      <div class="d">${contact.map(x=>`<b>${x[0]} :</b> ${esc(x[1])}`).join('<br>')}</div>
-    </div>
+    ${enteteFa()}
     <div class="fa-cadres">
       <div><h4>${titre}</h4><b>Numéro :</b> ${num}<br><b>Date :</b> ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}<br><b>Lieu :</b> ${esc(b.lieu||'Kinshasa')}</div>
       <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nomClient||'Client comptant')}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
@@ -1262,14 +1344,18 @@ function htmlRecu(v, format){
 }
 function voirRecu(vid){
   const v = db.ventes.find(x=>x.id===vid); if(!v) return toast('Vente introuvable');
-  recuOuvert = vid;
+  recuOuvert = vid; acompteOuvert = null; echangeOuvert = null;
   const f = db.boutique.format;
   $('apercu-feuille').classList.toggle('a4', f==='a4');
   $('apercu-contenu').innerHTML = htmlRecu(v, f);
   $('apercu').classList.remove('hide');
 }
-function fermerRecu(){ $('apercu').classList.add('hide'); recuOuvert=null; }
+function fermerRecu(){ $('apercu').classList.add('hide'); recuOuvert=null; acompteOuvert=null; echangeOuvert=null; }
 function imprimerRecu(){
+  if(echangeOuvert && !recuOuvert){ const e = (db.echanges||[]).find(x => x.id===echangeOuvert); if(!e) return;
+    $('recu').innerHTML = htmlEchange(e); $('page-print').textContent = '@page{size:A4;margin:15mm}'; return window.print(); }
+  if(acompteOuvert && !recuOuvert){ const a = (db.acomptes||[]).find(x => x.id===acompteOuvert); if(!a) return;
+    $('recu').innerHTML = htmlAcompte(a); $('page-print').textContent = '@page{size:A4;margin:15mm}'; return window.print(); }
   const v = db.ventes.find(x=>x.id===recuOuvert); if(!v) return;
   const f = db.boutique.format;
   $('recu').innerHTML = `<div class="${f==='a4'?'':'ticket'}">${htmlRecu(v, f)}</div>`;
@@ -1299,17 +1385,19 @@ function texteRecu(v){
     + (b.adresse ? `\n\n${b.nom} – ${b.adresse}` : '') + (b.tel ? `\nTél : ${b.tel}` : '') + (b.message ? `\n${b.message}` : '');
 }
 function recuWhatsApp(){
+  if(echangeOuvert && !recuOuvert){ const e = (db.echanges||[]).find(x => x.id===echangeOuvert); if(e) ouvrirWA(numeroWA((String(e.client).match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0]), texteEchange(e)); return; }
+  if(acompteOuvert && !recuOuvert) return acompteWhatsApp(acompteOuvert);
   const v = db.ventes.find(x => x.id===recuOuvert); if(!v) return;
   ouvrirWA(numeroWA((String(v.client||'').match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0]), texteRecu(v));
 }
-function encaisse(l){ const e = { '$':0, FC:0 }; l.forEach(v => { const P = payeDe(v); e[P.dev] = (e[P.dev]||0) + P.montant; }); return e; }
+function encaisse(l){ const e = { '$':0, FC:0 }; l.filter(v => !v.acompte).forEach(v => { const P = payeDe(v); e[P.dev] = (e[P.dev]||0) + P.montant; }); return e; }
 function rapportWhatsApp(){
   const j = $('r-date').value || jour(new Date()), dj = new Date(j+'T12:00');
   const duJour = db.ventes.filter(v => jour(v.date)===j), duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
   const parPaie = {}; duJour.forEach(v => parPaie[v.paiement] = (parPaie[v.paiement]||0) + v.total);
   const bas = db.produits.filter(p => p.stock<=p.seuil);
   const t = `*${db.boutique.nom} – Rapport du ${dj.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}*\n\n`
-    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}`
+    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsDu(j)['$'],'$')}${versementsDu(j).FC ? ' + ' + fmtDev(versementsDu(j).FC,'FC') : ''}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
     + (Object.keys(parPaie).length ? '\n\n*Par paiement*\n' + Object.entries(parPaie).map(([k,x]) => `• ${k} : ${argent(x)}`).join('\n') : '')
     + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
     + (bas.length ? `\n\n⚠️ *À réapprovisionner (${bas.length})*\n` + bas.slice(0,15).map(p => `• ${p.nom} : ${p.stock}`).join('\n') + (bas.length>15 ? `\n… et ${bas.length-15} autres` : '') : '');
@@ -1322,6 +1410,258 @@ function majBoutique(){
   db.boutique = { nom:$('g-nom').value.trim()||'Complast', format:$('g-format').value };
   CHAMPS_B.forEach(([k,id]) => db.boutique[k] = $(id).value.trim());
   sauver(); toast('Réglages des reçus enregistrés');
+}
+
+/* Acomptes (réservations payées en plusieurs fois) */
+let filtreAcp = 'en cours';
+const numAcp = a => 'ACP-' + new Date(a.date).getFullYear() + '-' + String(a.num).padStart(4,'0');
+const verseAcompte = a => a.versements.reduce((s,x) => s + x.base, 0);
+const resteAcompte = a => Math.max(0, Math.round((a.total - verseAcompte(a))*100)/100);
+function versementsDu(j){ const e = { '$':0, FC:0 }; (db.acomptes||[]).forEach(a => a.versements.forEach(x => { if(jour(x.date)===j) e[x.dev] += x.montant; })); return e; }
+function nouveauVersement(montant, dev, mode){
+  const base = convertir(montant, dev, db.devise, db.taux);
+  return { date:new Date().toISOString(), montant, dev, taux: db.taux || 0, base: Math.round(base*100)/100, mode };
+}
+function creerAcompte(){
+  if(!panier.length) return toast('Mettez d’abord les articles dans le panier');
+  const client = $('c-client').value.trim(); if(!client) { $('c-client').focus(); return toast('Indiquez le nom et le téléphone du client'); }
+  const dv = $('c-devise').value || db.devise;
+  if(dv !== db.devise && !db.taux) return toast('Indiquez le taux du jour');
+  const total = panier.reduce((s,l)=>s+l.qte*l.prix,0);
+  const r = prompt(`Acompte de ${client}\nTotal : ${fmtDev(convertir(total, db.devise, dv, db.taux), dv)}\n\nMontant versé maintenant (${dv}) :`, '');
+  if(r===null) return;
+  const montant = nombre(r); if(montant<0) return;
+  db.acomptes = db.acomptes || []; db.numAcompte = (db.numAcompte||0) + 1;
+  const a = { id:id(), num:db.numAcompte, date:new Date().toISOString(), client, lignes:panier, total, devise:db.devise, versements:[], statut:'en cours' };
+  if(montant>0) a.versements.push(nouveauVersement(montant, dv, $('c-paie').value==='Crédit' ? 'Espèces' : $('c-paie').value));
+  a.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock -= l.qte; });   // articles réservés
+  db.acomptes.push(a); panier = []; $('c-client').value = ''; sauver(); rafraichir();
+  toast('Acompte ' + numAcp(a) + ' enregistré'); aller('acomptes'); voirRecuAcompte(a.id);
+}
+function afficherAcomptes(){
+  const L = db.acomptes || [], q = ($('a-cherche').value||'').toLowerCase();
+  const enCours = L.filter(a => a.statut==='en cours');
+  $('a-nb').textContent = enCours.length;
+  $('a-reste').textContent = argent(enCours.reduce((s,a)=>s+resteAcompte(a),0));
+  $('a-verse').textContent = argent(enCours.reduce((s,a)=>s+verseAcompte(a),0));
+  const F = [['en cours','En cours'],['soldé','Livrés'],['annulé','Annulés'],['tous','Tous']];
+  $('a-filtres').innerHTML = F.map(([k,t]) => `<button class="chip ${filtreAcp===k?'on':''}" onclick="filtreAcp='${k}';afficherAcomptes()">${t}<small>${k==='tous'?L.length:L.filter(a=>a.statut===k).length}</small></button>`).join('');
+  const liste = L.filter(a => (filtreAcp==='tous' || a.statut===filtreAcp) && (a.client+' '+numAcp(a)+' '+a.lignes.map(l=>l.nom).join(' ')).toLowerCase().includes(q)).slice().reverse();
+  $('a-liste').innerHTML = liste.length ? liste.map(a => {
+    const v = verseAcompte(a), r = resteAcompte(a), pc = a.total ? Math.min(100, Math.round(v/a.total*100)) : 100;
+    const tag = a.statut==='soldé' ? '<span class="tag ok">Livré</span>' : a.statut==='annulé' ? '<span class="tag ann">Annulé</span>' : r<=0 ? '<span class="tag ok">Payé – à livrer</span>' : '<span class="tag low">En cours</span>';
+    return `<div class="acp">
+      <div class="acp-t"><div><b>${esc(a.client)}</b><br><span class="muted">${numAcp(a)} · ${new Date(a.date).toLocaleDateString('fr-FR')}</span></div>${tag}</div>
+      <div class="muted" style="margin-top:6px">${a.lignes.map(l=>esc(l.qte+' × '+l.nom)).join('<br>')}</div>
+      <div class="barre"><span style="flex:${pc};background:var(--green)"></span><span style="flex:${100-pc};background:transparent"></span></div>
+      <div class="acp-chiffres"><span>Total <b>${argent(a.total)}</b></span><span>Versé <b style="color:var(--green)">${argent(v)}</b></span><span>Reste <b style="color:${r>0?'var(--orange)':'var(--green)'}">${argent(r)}</b></span></div>
+      ${a.statut==='annulé' && v>0 ? `<div class="muted" style="margin-top:6px">À rembourser au client : <b>${argent(v)}</b></div>` : ''}
+      <div class="acp-actions">
+        ${a.statut==='en cours' && r>0 ? `<button class="btn small" onclick="this.closest('.acp').querySelector('.acp-vers').classList.toggle('ouvert')">+ Versement</button>` : ''}
+        ${a.statut==='en cours' && r<=0 ? `<button class="btn small" onclick="livrerAcompte('${a.id}')">📦 Livrer</button>` : ''}
+        <button class="btn small alt" onclick="voirRecuAcompte('${a.id}')">🖨️ Reçu</button>
+        <button class="btn small wa" onclick="acompteWhatsApp('${a.id}')">📲</button>
+        ${a.statut==='en cours' ? `<button class="btn small alt" onclick="annulerAcompte('${a.id}')">Annuler</button>` : ''}
+      </div>
+      <div class="acp-vers">
+        <div class="row"><div><label style="margin-top:0">Montant</label><input type="number" min="0" step="any" class="v-m" placeholder="Reste : ${esc(fmtDev(convertir(r, a.devise, db.devise, db.taux), db.devise))}"></div>
+          <div><label style="margin-top:0">Devise</label><select class="v-d"><option value="$">$</option><option value="FC">FC</option></select></div></div>
+        <div class="row"><div><label>Mode</label><select class="v-p"><option>Espèces</option><option>Mobile money</option><option>Banque</option></select></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn full" style="margin-top:0" onclick="ajouterVersement('${a.id}', this.closest('.acp-vers'))">Enregistrer</button></div></div>
+      </div>
+    </div>`; }).join('') : '<p class="muted">Aucun acompte.</p>';
+}
+function ajouterVersement(aid, box){
+  const a = (db.acomptes||[]).find(x => x.id===aid); if(!a) return;
+  const m = nombre(box.querySelector('.v-m').value), dev = box.querySelector('.v-d').value;
+  if(!(m>0)) return toast('Indiquez le montant versé');
+  if(dev !== db.devise && !db.taux) return toast('Indiquez le taux du jour (Caisse ou Réglages)');
+  const x = nouveauVersement(m, dev, box.querySelector('.v-p').value);
+  if(x.base > resteAcompte(a) + 0.01 && !confirm('Ce versement dépasse le reste à payer. Continuer ?')) return;
+  a.versements.push(x); sauver(); afficherAcomptes(); afficherRapport();
+  toast(resteAcompte(a) <= 0 ? 'Acompte entièrement payé : vous pouvez livrer' : 'Versement enregistré · reste ' + argent(resteAcompte(a)));
+  voirRecuAcompte(aid);
+}
+function livrerAcompte(aid){
+  const a = (db.acomptes||[]).find(x => x.id===aid); if(!a) return;
+  if(!confirm('Livrer les articles à ' + a.client + ' ? L’acompte devient une vente.')) return;
+  const dern = a.versements[a.versements.length-1];
+  const v = { id:id(), date:new Date().toISOString(), lignes:a.lignes, total:a.total, client:a.client, paiement:'Acompte', num: ++db.numRecu, devise:a.devise, acompte:a.id,
+    paye:{ dev: dern ? dern.dev : a.devise, taux: dern ? dern.taux : (db.taux||0), montant: convertir(a.total, a.devise, dern ? dern.dev : a.devise, dern ? dern.taux : db.taux) } };
+  db.ventes.push(v); a.statut = 'soldé'; a.dateSolde = v.date; a.vente = v.id;   // le stock a déjà été retiré à la réservation
+  sauver(); rafraichir(); toast('Livré : vente ' + numero(v) + ' enregistrée'); voirRecu(v.id);
+}
+function annulerAcompte(aid){
+  const a = (db.acomptes||[]).find(x => x.id===aid); if(!a) return;
+  const v = verseAcompte(a);
+  if(!confirm('Annuler l’acompte de ' + a.client + ' ? Les articles retournent en stock.' + (v>0 ? '\nMontant à rembourser : ' + argent(v) : ''))) return;
+  a.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += l.qte; });
+  a.statut = 'annulé'; a.dateAnnul = new Date().toISOString(); sauver(); rafraichir();
+}
+function htmlAcompte(a){
+  const b = db.boutique, d = new Date(a.date), v = verseAcompte(a), r = resteAcompte(a), dev = a.devise;
+  const tel = (String(a.client).match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0], nom = String(a.client).replace(tel,'').replace(/[·,–-]\s*$/,'').trim();
+  const m = x => fmtDev(x, dev);
+  return `<div class="fa">${enteteFa()}
+    <div class="fa-cadres">
+      <div><h4>REÇU D'ACOMPTE</h4><b>Numéro :</b> ${numAcp(a)}<br><b>Date :</b> ${new Date().toLocaleDateString('fr-FR')}<br><b>Réservé le :</b> ${d.toLocaleDateString('fr-FR')}<br><b>Lieu :</b> ${esc(b.lieu||'Kinshasa')}</div>
+      <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nom||a.client)}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
+    </div>
+    <table class="fa-table"><thead><tr><th>Réf.</th><th>Article réservé</th><th class="n">P.U.</th><th class="n">Qté</th><th class="n">Montant</th></tr></thead><tbody>
+      ${a.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}</td><td class="n">${m(l.prix)}</td><td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="fa-sous"><span>Prix total :</span><span>${m(a.total)}</span></div>
+    <table class="fa-table" style="margin-top:6px"><thead><tr><th>Date du versement</th><th>Mode</th><th class="n">Montant versé</th><th class="n">Équivalent</th></tr></thead><tbody>
+      ${a.versements.length ? a.versements.map(x=>`<tr><td>${new Date(x.date).toLocaleDateString('fr-FR')} ${new Date(x.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td><td>${esc(x.mode||'')}</td><td class="n">${fmtDev(x.montant,x.dev)}</td><td class="n">${m(x.base)}</td></tr>`).join('') : '<tr><td colspan="4">Aucun versement</td></tr>'}
+    </tbody></table>
+    <div class="fa-sous"><span>Total versé :</span><span>${m(v)}</span></div>
+    <div class="fa-total"><span>${a.statut==='annulé' ? 'ACOMPTE ANNULÉ – À REMBOURSER' : r>0 ? 'RESTE À PAYER' : 'ENTIÈREMENT PAYÉ'} :</span><span>${m(a.statut==='annulé' ? v : r)}</span></div>
+    ${db.taux ? `<div class="fa-taux">Taux du jour : 1 $ = ${(+db.taux).toLocaleString('fr-FR')} FC${r>0 ? ' · reste en francs : ' + fmtDev(convertir(r, dev, 'FC', db.taux), 'FC') : ''}</div>` : ''}
+    <div class="fa-note">
+      <b>Total versé à ce jour : ${montantLettres(Math.round(v*100)/100, dev)}.</b><br>
+      Les articles ci-dessus sont <b>réservés</b> au nom du client et seront livrés après paiement complet.
+      ${b.message?`<br><i>${esc(b.message).replace(/\n/g,' ')}</i>`:''}
+    </div>
+    <div class="fa-signes"><div>Signature du client<span></span></div><div>Cachet et signature<span class="cachet"></span></div></div>
+    <div class="fa-merci">MERCI POUR VOTRE CONFIANCE</div>
+    <div class="fa-pied">Document généré par Kevmag · ${esc(b.nom)}</div>
+  </div>`;
+}
+let acompteOuvert = null;
+function voirRecuAcompte(aid){
+  const a = (db.acomptes||[]).find(x => x.id===aid); if(!a) return;
+  recuOuvert = null; acompteOuvert = aid; echangeOuvert = null;
+  $('apercu-feuille').classList.add('a4'); $('apercu-contenu').innerHTML = htmlAcompte(a); $('apercu').classList.remove('hide');
+}
+function texteAcompte(a){
+  const v = verseAcompte(a), r = resteAcompte(a);
+  return `*${db.boutique.nom}* – Acompte ${numAcp(a)}\nClient : ${a.client}\n\n` + a.lignes.map(l => `• ${l.qte} × ${l.nom}`).join('\n')
+    + `\n\nPrix total : ${argent(a.total)}\nDéjà versé : ${argent(v)}\n*Reste à payer : ${argent(r)}*` + (db.taux && r>0 ? ` (${fmtDev(convertir(r, a.devise, 'FC', db.taux),'FC')})` : '')
+    + '\n\nVersements :\n' + a.versements.map(x => `• ${new Date(x.date).toLocaleDateString('fr-FR')} : ${fmtDev(x.montant, x.dev)}`).join('\n')
+    + `\n\nVos articles sont réservés jusqu'au paiement complet.` + (db.boutique.tel ? `\nTél : ${db.boutique.tel}` : '');
+}
+function acompteWhatsApp(aid){
+  const a = (db.acomptes||[]).find(x => x.id===aid); if(!a) return;
+  ouvrirWA(numeroWA((String(a.client).match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0]), texteAcompte(a));
+}
+
+/* Échanges de produits (sans remboursement) */
+let ech = { vente:null, rendus:{}, nouveaux:[] };
+const numEch = e => 'ECH-' + new Date(e.date).getFullYear() + '-' + String(e.num).padStart(4,'0');
+function chercherVenteEch(){
+  const q = $('e-cherche').value.trim().toLowerCase(), box = $('e-ventes');
+  if(q.length < 2){ box.innerHTML = ''; return; }
+  const l = db.ventes.filter(v => !v.echange && ((v.client||'')+' '+numero(v)+' '+v.lignes.map(x=>x.nom).join(' ')).toLowerCase().includes(q)).slice(-8).reverse();
+  box.innerHTML = l.length ? l.map(v => `<button class="res" onclick="choisirVenteEch('${v.id}')"><i>🧾</i><span><b>Reçu n° ${numero(v)}${v.client?' · '+esc(v.client):''}</b><br><span class="muted">${new Date(v.date).toLocaleDateString('fr-FR')} · ${v.lignes.map(x=>esc(x.qte+' × '+x.nom)).join(', ')} · ${argent(v.total)}</span></span></button>`).join('')
+    : '<p class="muted">Aucun achat trouvé.</p>';
+}
+function choisirVenteEch(vid){
+  const v = db.ventes.find(x => x.id===vid); if(!v) return;
+  ech = { vente:vid, rendus:{}, nouveaux:[] };
+  $('e-ventes').innerHTML = ''; $('e-cherche').value = '';
+  $('e-achat').innerHTML = `Achat : <b>Reçu n° ${numero(v)}</b> du ${new Date(v.date).toLocaleDateString('fr-FR')}${v.client?' · '+esc(v.client):''}`;
+  $('e-etape2').classList.remove('hide'); $('e-dev').value = db.devise; afficherEch();
+}
+function afficherEch(){
+  const v = db.ventes.find(x => x.id===ech.vente); if(!v) return;
+  $('e-rendus').innerHTML = v.lignes.map((l,i) => { const max = l.qte - (l.rendu||0);
+    return `<div class="e-ligne"><div class="tx"><b>${esc(l.nom)}</b><br><span class="muted">acheté ${l.qte} × ${argent(l.prix)}${l.rendu?' · déjà échangé : '+l.rendu:''}</span></div>
+      ${max>0 ? `<input type="number" min="0" max="${max}" value="${ech.rendus[i]||0}" onchange="ech.rendus[${i}]=Math.max(0,Math.min(${max},parseInt(this.value)||0));this.value=ech.rendus[${i}];bilanEch()">` : '<span class="muted">—</span>'}</div>`; }).join('');
+  $('e-prod').innerHTML = db.produits.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).map(p => `<option value="${p.id}">${esc(p.nom)} · ${argent(p.prix)} (stock : ${p.stock})</option>`).join('');
+  $('e-nouveaux').innerHTML = ech.nouveaux.map((l,i) => `<tr><td>${esc(l.nom)}<br><span class="muted">${l.qte} × ${argent(l.prix)}</span></td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="ech.nouveaux.splice(${i},1);afficherEch()">✕</button></td></tr>`).join('');
+  bilanEch();
+}
+function ajouterNouveauEch(){
+  const p = db.produits.find(x => x.id===$('e-prod').value); if(!p) return;
+  const q = parseInt($('e-qte').value)||0; if(q<1) return toast('Quantité invalide');
+  const deja = ech.nouveaux.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
+  if(q+deja > p.stock && !confirm(`Stock insuffisant (${p.stock}). Ajouter quand même ?`)) return;
+  ech.nouveaux.push({ pid:p.id, nom:p.nom, desc:details(p), qte:q, prix:p.prix }); $('e-qte').value = 1; afficherEch();
+}
+function valeursEch(){
+  const v = db.ventes.find(x => x.id===ech.vente);
+  const rendus = v ? v.lignes.map((l,i) => ({ ...l, qte: ech.rendus[i]||0, idx:i })).filter(l => l.qte>0) : [];
+  const vr = Math.round(rendus.reduce((s,l)=>s+l.qte*l.prix,0)*100)/100, vn = Math.round(ech.nouveaux.reduce((s,l)=>s+l.qte*l.prix,0)*100)/100;
+  return { v, rendus, vr, vn, diff: Math.round((vn-vr)*100)/100 };
+}
+function bilanEch(){
+  const { rendus, vr, vn, diff } = valeursEch(), dv = $('e-dev').value || db.devise;
+  let res, ok = rendus.length && ech.nouveaux.length;
+  if(!rendus.length) res = '<div class="res non">Indiquez la quantité rapportée (étape 2).</div>';
+  else if(!ech.nouveaux.length) res = '<div class="res non">Ajoutez le ou les nouveaux articles (étape 3).</div>';
+  else if(diff < 0){ ok = false; res = `<div class="res non">🚫 Échange refusé : le nouvel article est moins cher. Le magasin ne rembourse pas.<br>Il manque ${argent(-diff)} : choisissez un article de valeur égale ou supérieure.</div>`; }
+  else if(diff === 0) res = '<div class="res ok">✅ Échange à prix égal : rien à payer.</div>';
+  else res = `<div class="res plus">💰 Le client paie la différence : ${fmtDev(convertir(diff, db.devise, dv, db.taux), dv)}${db.taux ? ' <span style="font-weight:600">(' + fmtDev(convertir(diff, db.devise, autreDev(dv), db.taux), autreDev(dv)) + ')</span>' : ''}</div>`;
+  $('e-bilan').innerHTML = `<div class="l"><span>Valeur des articles rapportés</span><b>${argent(vr)}</b></div><div class="l"><span>Valeur des nouveaux articles</span><b>${argent(vn)}</b></div>${res}`;
+  $('e-paiement').classList.toggle('hide', !(diff > 0));
+  $('e-ok').disabled = !ok;
+}
+function annulerEch(){ ech = { vente:null, rendus:{}, nouveaux:[] }; $('e-etape2').classList.add('hide'); }
+function validerEchange(){
+  const { v, rendus, vr, vn, diff } = valeursEch();
+  if(!v || !rendus.length || !ech.nouveaux.length) return toast('Échange incomplet');
+  if(diff < 0) return toast('Le magasin ne rembourse pas : choisissez un article de valeur égale ou supérieure');
+  const dv = $('e-dev').value || db.devise;
+  if(diff > 0 && dv !== db.devise && !db.taux) return toast('Indiquez le taux du jour');
+  if(!confirm(`Valider l'échange ?\nRapporté : ${argent(vr)} · Nouveau : ${argent(vn)}` + (diff>0 ? `\nLe client paie : ${fmtDev(convertir(diff, db.devise, dv, db.taux), dv)}` : '\nRien à payer'))) return;
+  db.echanges = db.echanges || []; db.numEchange = (db.numEchange||0) + 1;
+  const e = { id:id(), num:db.numEchange, date:new Date().toISOString(), vente:v.id, venteNum:numero(v), venteDate:v.date, client:v.client||'',
+    rendus: rendus.map(l => ({ pid:l.pid, nom:l.nom, desc:l.desc, qte:l.qte, prix:l.prix })), nouveaux: ech.nouveaux, valeurRendue:vr, valeurNouvelle:vn, difference:diff, devise:db.devise };
+  // Stock : les articles rapportés reviennent, les nouveaux sortent
+  rendus.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += l.qte; v.lignes[l.idx].rendu = (v.lignes[l.idx].rendu||0) + l.qte; });
+  e.nouveaux.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock -= l.qte; });
+  if(diff > 0){
+    // La différence payée est une vente (comptée dans le chiffre du jour)
+    const vd = { id:id(), date:e.date, lignes:[{ nom:'Différence échange ' + numEch(e) + ' (' + e.nouveaux.map(l=>l.qte+' × '+l.nom).join(', ') + ')', qte:1, prix:diff }], total:diff, client:e.client, paiement:$('e-paie').value, num: ++db.numRecu, devise:db.devise, echange:e.id };
+    vd.paye = { dev:dv, taux:db.taux||0, montant: dv==='FC' ? Math.round(convertir(diff, db.devise, dv, db.taux)) : convertir(diff, db.devise, dv, db.taux) };
+    db.ventes.push(vd); e.venteDiff = vd.id; e.paye = vd.paye; e.paiement = vd.paiement;
+  }
+  db.echanges.push(e); sauver(); annulerEch(); rafraichir();
+  toast('Échange ' + numEch(e) + ' enregistré'); voirBonEchange(e.id);
+}
+function afficherEchanges(){
+  const L = (db.echanges||[]).slice().reverse();
+  $('e-hist').innerHTML = L.length ? L.map(e => `<div class="vente"><div class="av">🔁</div><div class="tx"><b>${numEch(e)}${e.client?' · '+esc(e.client):''}</b><span class="muted">${new Date(e.date).toLocaleDateString('fr-FR')} · rendu : ${e.rendus.map(l=>l.qte+' × '+esc(l.nom)).join(', ')} → ${e.nouveaux.map(l=>l.qte+' × '+esc(l.nom)).join(', ')}</span></div>
+    <div class="mt">${e.difference>0 ? '+'+argent(e.difference) : '='}</div><button class="btn small alt" onclick="voirBonEchange('${e.id}')">🖨️</button></div>`).join('')
+    : '<p class="muted" style="margin:0">Aucun échange pour le moment.</p>';
+}
+function htmlEchange(e){
+  const b = db.boutique, d = new Date(e.date), dev = e.devise, m = x => fmtDev(x, dev);
+  const tel = (String(e.client).match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0], nom = String(e.client).replace(tel,'').replace(/[·,–-]\s*$/,'').trim();
+  const tab = (titre, l) => `<table class="fa-table" style="margin-top:8px"><thead><tr><th>${titre}</th><th class="n">P.U.</th><th class="n">Qté</th><th class="n">Montant</th></tr></thead><tbody>
+    ${l.map(x=>`<tr><td>${esc(x.nom)}${x.desc?`<br><small>${esc(x.desc)}</small>`:''}</td><td class="n">${m(x.prix)}</td><td class="n">${x.qte}</td><td class="n">${m(x.qte*x.prix)}</td></tr>`).join('')}</tbody></table>`;
+  return `<div class="fa">${enteteFa()}
+    <div class="fa-cadres">
+      <div><h4>BON D'ÉCHANGE</h4><b>Numéro :</b> ${numEch(e)}<br><b>Date :</b> ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}<br><b>Achat d'origine :</b> reçu n° ${e.venteNum} du ${new Date(e.venteDate).toLocaleDateString('fr-FR')}</div>
+      <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nom||'Client comptant')}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
+    </div>
+    ${tab('Article(s) rapporté(s)', e.rendus)}
+    <div class="fa-sous"><span>Valeur rapportée :</span><span>${m(e.valeurRendue)}</span></div>
+    ${tab('Article(s) remis au client', e.nouveaux)}
+    <div class="fa-sous"><span>Valeur des nouveaux articles :</span><span>${m(e.valeurNouvelle)}</span></div>
+    <div class="fa-total"><span>${e.difference>0 ? 'DIFFÉRENCE PAYÉE PAR LE CLIENT' : 'ÉCHANGE À PRIX ÉGAL'} :</span><span>${e.difference>0 && e.paye ? fmtDev(e.paye.montant, e.paye.dev) : m(0)}</span></div>
+    ${e.difference>0 && e.paye && e.paye.taux ? `<div class="fa-taux">Taux appliqué : 1 $ = ${(+e.paye.taux).toLocaleString('fr-FR')} FC · équivalent ${fmtDev(convertir(e.difference, dev, autreDev(e.paye.dev), e.paye.taux), autreDev(e.paye.dev))}</div>` : ''}
+    <div class="fa-note">
+      ${e.difference>0 ? `<b>Différence arrêtée à la somme de : ${montantLettres(e.paye.dev==='FC' ? Math.round(e.paye.montant) : Math.round(e.paye.montant*100)/100, e.paye.dev)}</b>, payée en ${esc(e.paiement||'')}.<br>` : ''}
+      <b>Le magasin ne rembourse pas.</b> Les articles sont échangés uniquement contre des articles de valeur égale ou supérieure.
+    </div>
+    <div class="fa-signes"><div>Signature du client<span></span></div><div>Cachet et signature<span class="cachet"></span></div></div>
+    <div class="fa-merci">MERCI POUR VOTRE CONFIANCE</div>
+    <div class="fa-pied">Document généré par Kevmag · ${esc(b.nom)}</div>
+  </div>`;
+}
+let echangeOuvert = null;
+function voirBonEchange(eid){
+  const e = (db.echanges||[]).find(x => x.id===eid); if(!e) return;
+  recuOuvert = null; acompteOuvert = null; echangeOuvert = eid;
+  $('apercu-feuille').classList.add('a4'); $('apercu-contenu').innerHTML = htmlEchange(e); $('apercu').classList.remove('hide');
+}
+function texteEchange(e){
+  return `*${db.boutique.nom}* – Bon d'échange ${numEch(e)}\n${new Date(e.date).toLocaleDateString('fr-FR')}` + (e.client ? `\nClient : ${e.client}` : '')
+    + `\n\nRapporté (reçu n° ${e.venteNum}) :\n` + e.rendus.map(l => `• ${l.qte} × ${l.nom}`).join('\n')
+    + `\n\nRemis au client :\n` + e.nouveaux.map(l => `• ${l.qte} × ${l.nom}`).join('\n')
+    + (e.difference>0 && e.paye ? `\n\n*Différence payée : ${fmtDev(e.paye.montant, e.paye.dev)}*` : '\n\nÉchange à prix égal.')
+    + `\n\nLe magasin ne rembourse pas ; échange contre un article de valeur égale ou supérieure.`;
 }
 
 /* Rapport */
@@ -1390,6 +1730,7 @@ function afficherRapport(){
   $('r-nb').textContent = duJour.length;
   $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
+  const va = versementsDu(j); $('r-acp').textContent = fmtDev(va['$'],'$') + (va.FC ? ' + ' + fmtDev(va.FC,'FC') : '');
   const enc = encaisse(duJour); $('r-usd').textContent = fmtDev(enc['$'], '$'); $('r-fc').textContent = fmtDev(enc.FC, 'FC');
   $('r-ventes').innerHTML = duJour.length ? duJour.slice().reverse().map(v=>`<tr>
     <td>${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td>
@@ -1537,10 +1878,10 @@ function importer(input){
 function toutEffacer(){
   if(!confirm('Effacer TOUS les produits et ventes ? Faites une sauvegarde avant.')) return;
   if(!confirm('Êtes-vous vraiment sûr ?')) return;
-  db = { produits:[], ventes:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
+  db = { produits:[], ventes:[], acomptes:[], echanges:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
+function rafraichir(){ afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
