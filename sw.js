@@ -1,6 +1,6 @@
 // Kevmag : permet d'ouvrir l'application sans internet.
 // Avec internet, la dernière version est toujours chargée ; sinon, la copie gardée sur l'appareil est utilisée.
-const CACHE = 'kevmag-v23';
+const CACHE = 'kevmag-v24';
 const FICHIERS = ['./', './index.html', './manifest.json', './logo.png', './gerant.jpg', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

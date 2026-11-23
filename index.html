@@ -673,9 +673,9 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · ventes $ et FC';
+const VERSION = '2026-11-23 · mentions légales';
 const NUM_GERANT = '+243 810 288 890';
-const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'', idnat:'', impot:'', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
+const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
 let derniereVente = null, recuOuvert = null;
@@ -695,7 +695,9 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
   // Gammes Bébé D14 / Bébé D16 (une seule fois)
   if((db.catsV||0) < 5){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
     db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0;
-  if(!db.gerantV){ if(!db.boutique.whatsapp) db.boutique.whatsapp = NUM_GERANT; db.gerantV = 1; setTimeout(sauver, 0); } }
+  if(!db.gerantV){ if(!db.boutique.whatsapp) db.boutique.whatsapp = NUM_GERANT; db.gerantV = 1; setTimeout(sauver, 0); }
+  // Mentions légales de Complast (remplies une fois si vides)
+  if(!db.legalV){ ['rccm','idnat','impot'].forEach(k => { if(!db.boutique[k]) db.boutique[k] = BOUTIQUE[k]; }); db.legalV = 1; setTimeout(sauver, 0); } }
 function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
