@@ -455,7 +455,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-22 · tri par taille';
+const VERSION = '2026-11-23 · import des prix';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -700,6 +700,8 @@ function preparerImport(lignes){
     const nom = String(val(l,'nom')).trim(); if(!nom) return null;
     const cat = devinerCat(nom, val(l,'cat'));
     const p = { nom, cat, prix: nombre(val(l,'prix')), stock: Math.round(nombre(val(l,'stock'))), seuil: idx.seuil!==undefined ? Math.round(nombre(val(l,'seuil'))) : 2 };
+    // Colonnes absentes ou cases vides : on ne touche pas à ces valeurs pour un produit déjà enregistré
+    p.vides = ['cat','gamme','prix','stock','seuil','densite','long','larg','ep'].filter(k => String(val(l,k)??'').trim()==='');
     if(cat==='Matelas') p.gamme = gammeDe(val(l,'gamme')) || devinerGamme(nom);
     if(cat==='Mousse'){
       const m = mesuresDuNom(nom);
@@ -717,8 +719,8 @@ function afficherImport(){
   $('i-resume').innerHTML = CATS.filter(c => l.some(p=>p.cat===c)).map(c => `<span class="chip" style="cursor:default">${ICONES[c]} ${c}<small>${l.filter(p=>p.cat===c).length}</small></span>`).join('');
   const ordre = l.map((p,i)=>[p,i]).sort((a,b) => CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat) || a[0].nom.localeCompare(b[0].nom));
   $('i-lignes').innerHTML = ordre.map(([p,i]) => `<tr><td>${esc(p.nom)} <span class="tag ${p.existe?'maj':'new'}">${p.existe?'mise à jour':'nouveau'}</span>${details(p)?'<br><span class="muted">'+esc(details(p))+'</span>':''}${p.cat==='Matelas' && (p.gamme||devinerGamme(p.nom))?'<br><span class="muted">Gamme : '+esc(p.gamme||devinerGamme(p.nom))+'</span>':''}</td>
-    <td><select class="imp-cat" onchange="importEnCours[${i}].cat=this.value;afficherImport()">${CATS.map(c=>`<option ${c===p.cat?'selected':''}>${c}</option>`).join('')}</select></td>
-    <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td></tr>`).join('');
+    <td><select class="imp-cat" onchange="importEnCours[${i}].cat=this.value;importEnCours[${i}].vides=importEnCours[${i}].vides.filter(k=>k!=='cat');afficherImport()">${CATS.map(c=>`<option ${c===p.cat?'selected':''}>${c}</option>`).join('')}</select></td>
+    <td class="num">${p.existe && p.vides.includes('prix') ? '<span class="muted">inchangé</span>' : argent(p.prix)}</td><td class="num">${p.existe && p.vides.includes('stock') ? '<span class="muted">inchangé</span>' : p.stock}</td></tr>`).join('');
   const n = l.filter(p=>!p.existe).length, m = l.length-n;
   $('i-ok').textContent = 'Importer ' + l.length + ' produit' + (l.length>1?'s':'') + (m ? ` (${n} nouveaux, ${m} mis à jour)` : '');
   $('i-apercu').classList.remove('hide');
@@ -732,7 +734,8 @@ function confirmerImport(){
     else if(p.densite===undefined) Object.assign(p, { densite:0, long:0, larg:0, ep:0 }, mesuresDuNom(p.nom));
     if(p.cat==='Matelas'){ if(!p.gamme) p.gamme = devinerGamme(p.nom); } else delete p.gamme;
     const ex = db.produits.find(x => sansAccent(x.nom)===sansAccent(p.nom));
-    if(ex){ Object.assign(ex, p); m++; } else { db.produits.push({ id:id(), ...p }); n++; }
+    const vides = p.vides || []; delete p.vides;
+    if(ex){ const maj = { ...p }; vides.forEach(k => delete maj[k]); if(ex.cat==='Matelas' && !ex.gamme && p.gamme) maj.gamme = p.gamme; Object.assign(ex, maj); m++; } else { db.produits.push({ id:id(), ...p }); n++; }
   });
   sauver(); annulerImport(); stockCat = 'Tous'; rafraichir();
   toast(`Import terminé : ${n} ajouté${n>1?'s':''}, ${m} mis à jour`);
