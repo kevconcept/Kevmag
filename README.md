@@ -13,6 +13,7 @@ Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinsh
 - **Stock classé par catégorie** : liste regroupée par catégorie, avec des filtres (Tous, Mousse, Matelas…).
 - **Reçus** : après chaque vente (bouton 🖨️ Reçu dans la Caisse) ou plus tard depuis le Rapport. Format ticket (imprimante 58/80 mm) ou page A4 / PDF. Nom, adresse, téléphone et message du magasin se règlent dans **Réglages**.
 - **Rapport** : chiffre du jour et du mois, liste des ventes (annulables), produits à réapprovisionner.
+- **Apparence** : thème « iOS 26 · Liquid Glass » par défaut (verre translucide, barre d’onglets flottante, grands titres, clair/sombre selon l’iPhone) ou « Nuit étoilée », au choix dans Réglages.
 - **Réglages** : devise ($ ou FC), sauvegarde et restauration des données.
 
 ## Utilisation
