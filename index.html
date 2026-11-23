@@ -410,6 +410,16 @@
   .transfert{padding:12px 14px;border-radius:14px;background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.3);font-size:14px;line-height:1.5;margin:8px 0 4px}
   .transfert ol{margin:6px 0 0;padding-left:20px}
 
+  /* Synchronisation */
+  .sync-etat{display:inline-block;padding:6px 12px;border-radius:99px;font-weight:700;font-size:14px;background:rgba(127,127,127,.15)}
+  .sync-etat.ok{background:rgba(46,204,113,.18);color:var(--green)}
+  .sync-etat.att{background:rgba(245,165,36,.18);color:var(--orange)}
+  .sync-etat.err{background:rgba(242,95,92,.16);color:var(--red)}
+  .sync-guide{margin-top:12px;padding:10px 14px;border-radius:14px;background:rgba(79,140,255,.1);border:1px solid rgba(79,140,255,.25);font-size:14px;line-height:1.55}
+  .sync-guide summary{cursor:pointer;font-weight:700}
+  .sync-guide ol{padding-left:20px;margin:8px 0}
+  #sync-mini{display:block;margin-bottom:4px}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -454,7 +464,7 @@
     <button class="item" data-v="rapport"><i>📊</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rapport</button>
     <div class="titre-sec">Magasin</div>
     <button class="item" data-v="reglages"><i>⚙️</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
-    <div class="bas-side">Kevmag · <span class="v-version"></span></div>
+    <div class="bas-side"><span id="sync-mini"></span>Kevmag · <span class="v-version"></span></div>
   </aside>
 
   <div class="contenu">
@@ -740,6 +750,37 @@
       <label>Format d'impression</label>
       <select id="g-format" onchange="majBoutique()"><option value="ticket">Ticket de caisse (imprimante 58/80 mm)</option><option value="a4">Facture A4 (imprimante normale, PDF, WhatsApp)</option></select>
     </div>
+    <div class="card" id="carte-sync">
+      <h2>☁️ Synchronisation entre appareils</h2>
+      <div class="sync-etat" id="sync-etat">Désactivée</div>
+      <p class="muted" style="margin:8px 0 0">Tous les téléphones et ordinateurs connectés au même compte partagent automatiquement les produits, ventes, acomptes, échanges et réglages du magasin, en quelques secondes. Fonctionne aussi hors ligne : l'envoi se fait au retour d'internet.</p>
+      <div id="sync-form">
+        <details class="sync-guide"><summary>📘 Première installation (une seule fois, ≈ 10 min)</summary>
+          <ol>
+            <li>Sur un ordinateur, allez sur <b>console.firebase.google.com</b> et connectez-vous avec un compte Google.</li>
+            <li><b>Créer un projet</b> → nom : <i>kevmag-complast</i> (Google Analytics : non).</li>
+            <li>Menu <b>Créer → Authentication</b> → Commencer → <b>E-mail/Mot de passe</b> → Activer. Onglet <b>Utilisateurs</b> → Ajouter un utilisateur : l'e-mail et le mot de passe du magasin.</li>
+            <li>Menu <b>Créer → Firestore Database</b> → Créer → mode <b>production</b> → emplacement proche (ex. europe-west).</li>
+            <li>Onglet <b>Règles</b> de Firestore : remplacez tout par le texte ci-dessous (bouton Copier), puis <b>Publier</b>.</li>
+            <li>⚙️ <b>Paramètres du projet</b> → Vos applications → icône <b>&lt;/&gt;</b> (Web) → nom « Kevmag » → Enregistrer. Copiez le bloc <b>firebaseConfig</b> et collez-le ci-dessous.</li>
+          </ol>
+          <label>Règles Firestore à copier</label>
+          <textarea id="sync-regles" rows="7" readonly style="font-family:ui-monospace,monospace;font-size:12px"></textarea>
+          <button class="btn alt small" style="margin-top:6px" onclick="navigator.clipboard&&navigator.clipboard.writeText($('sync-regles').value).then(()=>toast('Règles copiées'))">📋 Copier les règles</button>
+        </details>
+        <label>Configuration Firebase (bloc firebaseConfig)</label>
+        <textarea id="sync-config" rows="4" placeholder="apiKey: &quot;…&quot;, authDomain: &quot;…&quot;, projectId: &quot;…&quot;, …" oninput="majRegles()"></textarea>
+        <div class="row"><div><label>E-mail du magasin</label><input id="sync-email" type="email" autocomplete="username" oninput="majRegles()"></div>
+          <div><label>Mot de passe</label><input id="sync-mdp" type="password" autocomplete="current-password"></div></div>
+        <button class="btn full" onclick="activerSync('envoyer')">☁️ Activer – cet appareil a les bonnes données</button>
+        <button class="btn alt full" onclick="activerSync('recevoir')">⬇️ Activer et récupérer les données du compte</button>
+        <p class="muted" style="margin:8px 0 0">Le <b>premier appareil</b> (celui qui a déjà vos produits) choisit « cet appareil a les bonnes données ». Les <b>autres appareils</b> choisissent « récupérer les données du compte ».</p>
+      </div>
+      <div id="sync-actions" class="hide">
+        <button class="btn full" onclick="syncMaintenant()">🔄 Synchroniser maintenant</button>
+        <button class="btn alt full" onclick="desactiverSync()">Déconnecter cet appareil</button>
+      </div>
+    </div>
     <div class="card">
       <h2>💾 Sauvegarde</h2>
       <p class="muted">Les données sont gardées <b>sur cet appareil seulement</b> (iPhone et ordinateur ont chacun les leurs). Faites une sauvegarde régulièrement pour ne rien perdre.</p>
@@ -794,7 +835,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · transfert entre appareils';
+const VERSION = '2026-11-24 · synchronisation';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -819,7 +860,7 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
   if(!db.gerantV){ if(!db.boutique.whatsapp) db.boutique.whatsapp = NUM_GERANT; db.gerantV = 1; setTimeout(sauver, 0); }
   // Mentions légales de Complast (remplies une fois si vides)
   if(!db.legalV){ ['rccm','idnat','impot'].forEach(k => { if(!db.boutique[k]) db.boutique[k] = BOUTIQUE[k]; }); db.legalV = 1; setTimeout(sauver, 0); } }
-function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
+function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } if(typeof syncPlanifier==='function') syncPlanifier(); }
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const argent = n => (Math.round((+n||0)*100)/100).toLocaleString('fr-FR') + ' ' + db.devise;
@@ -1987,6 +2028,169 @@ dessinerCiel(); demarrerFond();
 $('p-gamme').innerHTML += GAMMES.map(g => `<option>${g}</option>`).join('');
 $('r-date').value = jour(new Date());
 rafraichir();
+
+/* ===== Synchronisation entre appareils (Firebase Firestore) =====
+   Chaque produit, vente, acompte et échange est un document. Les modifications locales sont comparées
+   à la dernière version synchronisée et envoyées ; le stock est envoyé en « +/- différence » pour rester juste
+   quand plusieurs appareils vendent en même temps. Les autres appareils reçoivent les changements en direct. */
+const SYNC_CLE = 'kevmag-sync', SYNC_BASE = 'kevmag-sync-base';
+const SYNC_COLL = ['produits','ventes','acomptes','echanges'];
+const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange'];
+const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
+const Sync = { actif:false, fs:null, timer:null, ecoutes:[], base:null, envoiEnCours:false, aRefaire:false, enLigne:false, derniere:null, erreur:'' };
+function syncParams(){ try{ return JSON.parse(localStorage.getItem(SYNC_CLE)) || null; }catch(e){ return null; } }
+function stable(o){ if(Array.isArray(o)) return '[' + o.map(stable).join(',') + ']'; if(o && typeof o==='object') return '{' + Object.keys(o).filter(k => k!=='maj' && k!=='supprime' && o[k]!==undefined).sort().map(k => JSON.stringify(k)+':'+stable(o[k])).join(',') + '}'; return JSON.stringify(o); }
+function empreinte(o){ const t = stable(o); let h = 5381; for(let i=0;i<t.length;i++) h = ((h<<5)+h+t.charCodeAt(i))|0; return h; }
+function chargerBase(){ try{ Sync.base = JSON.parse(localStorage.getItem(SYNC_BASE)); }catch(e){} if(!Sync.base) Sync.base = { h:{}, stock:{}, depuis:{}, conf:null }; SYNC_COLL.forEach(c => { Sync.base.h[c] = Sync.base.h[c] || {}; }); }
+function sauverBase(){ try{ localStorage.setItem(SYNC_BASE, JSON.stringify(Sync.base)); }catch(e){} }
+function lireConfigFirebase(t){
+  const c = {}; ['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k => { const m = String(t).match(new RegExp(k + '\\s*[:=]\\s*["\']([^"\']+)["\']')); if(m) c[k] = m[1]; });
+  return c.apiKey && c.projectId ? c : null;
+}
+function chargerScript(src){ return new Promise((ok, ko) => { if([...document.scripts].some(x => x.src===src)) return ok(); const x = document.createElement('script'); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); }); }
+async function chargerFirebase(){ for(const f of ['firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js']) await chargerScript(FB + f); }
+function majRegles(){
+  const e = ($('sync-email').value || 'VOTRE-EMAIL').trim();
+  $('sync-regles').value = `rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null\n        && request.auth.token.email == "${e}";\n    }\n  }\n}`;
+}
+function etatSync(t, cls){
+  const e = $('sync-etat'); if(e){ e.textContent = t; e.className = 'sync-etat' + (cls ? ' '+cls : ''); }
+  const m = $('sync-mini'); if(m) m.textContent = Sync.actif ? (cls==='ok' ? '☁️ synchronisé' : cls==='err' ? '⚠️ synchro en erreur' : '☁️ en attente…') : '';
+}
+function afficherSync(){
+  const p = syncParams();
+  $('sync-form').classList.toggle('hide', !!(p && Sync.actif));
+  $('sync-actions').classList.toggle('hide', !(p && Sync.actif));
+  if(p && !$('sync-config').value) $('sync-config').value = Object.entries(p.config||{}).map(([k,v]) => `${k}: "${v}"`).join(',\n');
+  if(p && !$('sync-email').value) $('sync-email').value = p.email || '';
+  majRegles();
+  if(!p) etatSync('Désactivée');
+}
+async function activerSync(mode){
+  const config = lireConfigFirebase($('sync-config').value), email = $('sync-email').value.trim(), mdp = $('sync-mdp').value;
+  if(!config) return toast('Collez la configuration Firebase (apiKey, projectId…)');
+  if(!email || !mdp) return toast('Indiquez l’e-mail et le mot de passe du magasin');
+  if(!navigator.onLine) return toast('Il faut internet pour activer la synchronisation');
+  if(mode==='recevoir' && (db.produits.length || db.ventes.length) && !confirm('Les données de CET appareil seront remplacées par celles du compte. Continuer ?')) return;
+  if(mode==='envoyer' && !confirm('Les données de cet appareil seront envoyées sur le compte et partagées avec les autres appareils. Continuer ?')) return;
+  etatSync('Connexion…', 'att');
+  try{
+    await chargerFirebase();
+    if(!firebase.apps.length) firebase.initializeApp(config);
+    await firebase.auth().signInWithEmailAndPassword(email, mdp);
+  }catch(e){ etatSync('Erreur de connexion', 'err'); return toast(/password|credential|user/i.test(e && (e.code||e.message)) ? 'E-mail ou mot de passe incorrect' : 'Connexion impossible : vérifiez la configuration'); }
+  localStorage.setItem(SYNC_CLE, JSON.stringify({ config, email }));
+  Sync.base = { h:{}, stock:{}, depuis:{}, conf:null }; SYNC_COLL.forEach(c => Sync.base.h[c] = {});
+  if(mode==='recevoir'){ SYNC_COLL.forEach(c => db[c] = []); try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){} }
+  sauverBase(); $('sync-mdp').value = '';
+  await demarrerSync(mode==='envoyer');
+}
+async function demarrerSync(envoyerTout){
+  const p = syncParams(); if(!p) return;
+  chargerBase();
+  try{
+    await chargerFirebase();
+    if(!firebase.apps.length) firebase.initializeApp(p.config);
+    const auth = firebase.auth();
+    if(!auth.currentUser) await new Promise(ok => { const fin = auth.onAuthStateChanged(u => { fin(); ok(u); }); });
+    if(!auth.currentUser){ etatSync('Reconnectez cet appareil (mot de passe)', 'err'); Sync.actif = false; afficherSync(); $('sync-form').classList.remove('hide'); return; }
+    if(!Sync.fs){ Sync.fs = firebase.firestore(); try{ await Sync.fs.enablePersistence({ synchronizeTabs:true }); }catch(e){} }  // envois gardés même si l'appli se ferme hors ligne
+    Sync.actif = true; afficherSync();
+    etatSync('Synchronisation…', 'att');
+    ecouterSync();
+    if(envoyerTout) await pousserSync(); else syncPlanifier();
+  }catch(e){ Sync.actif = false; etatSync(navigator.onLine ? 'Erreur de synchronisation' : 'Hors ligne – en attente', navigator.onLine ? 'err' : 'att'); }
+}
+function ecouterSync(){
+  Sync.ecoutes.forEach(f => { try{ f(); }catch(e){} }); Sync.ecoutes = [];
+  const TS = firebase.firestore.Timestamp;
+  SYNC_COLL.forEach(c => {
+    const q = Sync.fs.collection(c).where('maj', '>', TS.fromMillis(Sync.base.depuis[c] || 0));
+    Sync.ecoutes.push(q.onSnapshot(snap => recevoirSync(c, snap.docChanges()), err => { etatSync('Erreur de synchronisation (règles ?)', 'err'); }));
+  });
+  Sync.ecoutes.push(Sync.fs.collection('config').doc('magasin').onSnapshot(d => { if(d.exists) recevoirConfig(d.data()); }, () => {}));
+}
+let syncRafraichir = null;
+function recevoirSync(c, changes){
+  if(!changes.length){ etatSync('Synchronisé · ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), 'ok'); return; }
+  let modif = false;
+  changes.forEach(ch => {
+    if(ch.type==='removed' || (ch.doc.metadata && ch.doc.metadata.hasPendingWrites)) return;   // nos propres envois pas encore confirmés
+    const d = ch.doc.data(), id = ch.doc.id, ms = d.maj && d.maj.toMillis ? d.maj.toMillis() : 0;
+    if(ms > (Sync.base.depuis[c]||0)) Sync.base.depuis[c] = ms;
+    const i = db[c].findIndex(x => x.id===id);
+    if(d.supprime){ if(i>=0){ db[c].splice(i,1); modif = true; } delete Sync.base.h[c][id]; if(c==='produits') delete Sync.base.stock[id]; return; }
+    const obj = { ...d, id }; delete obj.maj; delete obj.supprime;
+    // Une modification locale pas encore envoyée garde la priorité (sauf le stock, qui vient du serveur)
+    const local = i>=0 ? db[c][i] : null, enAttente = local && Sync.base.h[c][id]!==undefined && empreinte(local)!==Sync.base.h[c][id];
+    if(enAttente && c==='produits'){ const delta = (local.stock||0) - (Sync.base.stock[id]||0); local.stock = (obj.stock||0) + delta; Sync.base.stock[id] = obj.stock||0; modif = true; return; }
+    if(enAttente) return;
+    if(i>=0) db[c][i] = obj; else db[c].push(obj);
+    Sync.base.h[c][id] = empreinte(obj); if(c==='produits') Sync.base.stock[id] = obj.stock||0;
+    modif = true;
+  });
+  sauverBase();
+  if(modif){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){}
+    clearTimeout(syncRafraichir); syncRafraichir = setTimeout(rafraichir, 250); }
+  etatSync('Synchronisé · ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), 'ok');
+}
+function configLocale(){ const o = {}; SYNC_CONFIG_CHAMPS.forEach(k => { if(db[k]!==undefined) o[k] = db[k]; }); return o; }
+function recevoirConfig(d){
+  const avant = empreinte(configLocale()), loc = configLocale();
+  if(Sync.base.conf !== null && avant !== Sync.base.conf) { // réglages modifiés ici et pas encore envoyés : on garde les compteurs au plus haut
+    ['numRecu','numAcompte','numEchange'].forEach(k => { if((d[k]||0) > (db[k]||0)) db[k] = d[k]; });
+  } else {
+    SYNC_CONFIG_CHAMPS.forEach(k => { if(d[k]!==undefined) db[k] = (k.startsWith('num') ? Math.max(d[k]||0, loc[k]||0) : d[k]); });
+    if(d.boutique) db.boutique = Object.assign({...BOUTIQUE}, d.boutique);
+  }
+  Sync.base.conf = empreinte(configLocale()); sauverBase();
+  try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){}
+  clearTimeout(syncRafraichir); syncRafraichir = setTimeout(rafraichir, 250);
+}
+function syncPlanifier(){ if(!Sync.actif) return; clearTimeout(Sync.timer); Sync.timer = setTimeout(pousserSync, 1200); }
+async function pousserSync(){
+  if(!Sync.actif || !Sync.fs) return;
+  if(Sync.envoiEnCours){ Sync.aRefaire = true; return; }
+  Sync.envoiEnCours = true;
+  const FV = firebase.firestore.FieldValue, ops = [], apres = [];
+  SYNC_COLL.forEach(c => {
+    const vus = new Set();
+    (db[c]||[]).forEach(it => {
+      if(!it.id) return; vus.add(it.id);
+      const h = empreinte(it); if(Sync.base.h[c][it.id]===h) return;
+      const data = JSON.parse(JSON.stringify(it)); delete data.id; data.maj = FV.serverTimestamp(); data.supprime = false;
+      if(c==='produits' && Sync.base.stock[it.id]!==undefined){ const delta = (it.stock||0) - Sync.base.stock[it.id]; delete data.stock; if(delta) data.stock = FV.increment(delta); }
+      ops.push([Sync.fs.collection(c).doc(it.id), data]);
+      apres.push(() => { Sync.base.h[c][it.id] = h; if(c==='produits') Sync.base.stock[it.id] = it.stock||0; });
+    });
+    Object.keys(Sync.base.h[c]).forEach(id => { if(!vus.has(id)){ ops.push([Sync.fs.collection(c).doc(id), { supprime:true, maj:FV.serverTimestamp() }]); apres.push(() => { delete Sync.base.h[c][id]; delete Sync.base.stock[id]; }); } });
+  });
+  const conf = configLocale(), hc = empreinte(conf);
+  if(Sync.base.conf !== hc){ ops.push([Sync.fs.collection('config').doc('magasin'), { ...JSON.parse(JSON.stringify(conf)), maj:FV.serverTimestamp() }]); apres.push(() => { Sync.base.conf = hc; }); }
+  // On marque tout de suite comme envoyé (le retour du serveur ne sera pas compté deux fois) ; on annule en cas d'échec
+  const avant = JSON.stringify(Sync.base);
+  apres.forEach(f => f()); sauverBase();
+  try{
+    if(ops.length) etatSync('Envoi de ' + ops.length + ' modification' + (ops.length>1?'s':'') + '…', 'att');
+    for(let i=0; i<ops.length; i+=400){
+      const b = Sync.fs.batch(); ops.slice(i, i+400).forEach(([ref, d]) => b.set(ref, d, { merge:true }));
+      await b.commit();
+    }
+    etatSync('Synchronisé · ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), 'ok');
+  }catch(e){ Sync.base = JSON.parse(avant); sauverBase(); etatSync(navigator.onLine ? 'Erreur d’envoi (droits ou configuration)' : 'Hors ligne – envoi au retour d’internet', navigator.onLine ? 'err' : 'att'); }
+  Sync.envoiEnCours = false;
+  if(Sync.aRefaire){ Sync.aRefaire = false; syncPlanifier(); }
+}
+function syncMaintenant(){ if(!Sync.actif) return demarrerSync(false); ecouterSync(); pousserSync(); }
+async function desactiverSync(){
+  if(!confirm('Déconnecter cet appareil ? Ses données restent sur l’appareil mais ne seront plus partagées.')) return;
+  Sync.ecoutes.forEach(f => { try{ f(); }catch(e){} }); Sync.ecoutes = []; Sync.actif = false;
+  try{ await firebase.auth().signOut(); }catch(e){}
+  localStorage.removeItem(SYNC_CLE); localStorage.removeItem(SYNC_BASE); afficherSync(); etatSync('Désactivée');
+}
+window.addEventListener('online', () => { if(syncParams()) Sync.actif ? pousserSync() : demarrerSync(false); });
+window.addEventListener('offline', () => { if(Sync.actif) etatSync('Hors ligne – en attente', 'att'); });
+if(syncParams()) demarrerSync(false); else afficherSync();
 
 /* Application installable + fonctionnement sans internet */
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){

@@ -27,6 +27,13 @@ Ouvrir `index.html` dans un navigateur (téléphone ou ordinateur). Aucune insta
 
 Les données sont enregistrées dans le navigateur de l'appareil : faire une sauvegarde régulière depuis **Réglages**.
 
+## Synchronisation entre appareils (Firebase)
+Réglages → ☁️ Synchronisation. Un projet Firebase gratuit (Authentication e-mail/mot de passe + Firestore) partage produits, ventes, acomptes, échanges et réglages entre tous les appareils connectés au même compte, en direct et hors ligne (file d'attente Firestore).
+- Chaque élément est un document Firestore (`produits`, `ventes`, `acomptes`, `echanges`, `config/magasin`), avec un champ `maj` (horodatage serveur) ; les suppressions sont « douces » (`supprime: true`).
+- Les changements locaux sont détectés par empreinte et envoyés par lots ; le stock est envoyé en incrément (`+/- différence`) pour rester juste quand plusieurs appareils vendent en même temps.
+- Chaque appareil n'écoute que les documents modifiés depuis sa dernière synchro (peu de lectures).
+- Le guide d'installation et les règles Firestore (limitées à l'e-mail du magasin) sont dans l'application.
+
 ## Installer sur iPhone (comme une application)
 1. Ouvrir **https://kevconcept.github.io/Kevmag/** dans **Safari**.
 2. Toucher le bouton **Partager** (carré avec une flèche vers le haut).
