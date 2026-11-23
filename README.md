@@ -4,6 +4,7 @@ Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinsh
 
 ## Fonctions
 - **Caisse** : panier, client, mode de paiement (espèces, mobile money, banque, crédit). Chaque vente diminue le stock et reçoit un numéro de reçu.
+- **Vente en dollars ou en francs congolais** : à la caisse, choix de la devise de la vente et du taux du jour ; total affiché dans les deux devises ; reçu (A4, ticket, WhatsApp) dans la devise payée avec l'équivalent ; Rapport : encaissé en $ et en FC.
 - **Stock** : produits par catégorie (chambres, lits, matelas, mousses, tables, canapés, buffets…), prix, quantité, seuil d'alerte.
   Pour les mousses : densité, longueur, largeur et épaisseur (affichées dans le stock, la caisse et sur le reçu).
 - **Import de produits** (dans Stock) : fichier Excel (.xlsx) ou CSV. Les colonnes sont reconnues (nom, catégorie, prix, stock, alerte, densité, longueur, largeur, épaisseur). Sans catégorie, Kevmag la devine d'après le nom (mousse, matelas, lit, armoire/wardrobe → Garde-robe, dressing table et chest → Dresser table, night stand → Nightstand, salon…) et lit les mesures des mousses dans le nom (« D25 190x140x20 »). Aperçu avant import, catégorie modifiable ; un produit déjà existant (même nom) est mis à jour, mais seulement pour les colonnes remplies dans le fichier (une liste de prix ne change pas le stock). Un modèle de fichier est téléchargeable.
@@ -11,7 +12,7 @@ Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinsh
 - **Mousses** : groupées par densité (D12, D16, D20…) puis triées par taille (longueur, largeur, épaisseur).
 - **Import d'une photo (JPG/PNG) de liste de prix** : Kevmag lit le texte de la photo (Tesseract.js, internet nécessaire), retrouve les tailles et les prix, devine la catégorie et la gamme (« MATELA BONHEUR 900 »), et relie chaque ligne au produit existant de même taille. Les prix sont modifiables dans l'aperçu ; ceux non lus sont en orange, à compléter. Le stock n'est pas modifié.
 - **Stock classé par catégorie** : liste regroupée par catégorie, avec des filtres (Tous, Mousse, Matelas…).
-- **Reçus** : après chaque vente (bouton 🖨️ Reçu dans la Caisse) ou plus tard depuis le Rapport. Format ticket (imprimante 58/80 mm) ou page A4 / PDF. Nom, adresse, téléphone et message du magasin se règlent dans **Réglages**.
+- **Reçus** (facture A4 par défaut : logo, mentions légales RCCM/Id. Nat./N° Impôt, encadrés Reçu et Client, tableau, total, montant en lettres, cachet et signature ; ou ticket 58/80 mm) : après chaque vente (bouton 🖨️ Reçu dans la Caisse) ou plus tard depuis le Rapport. Format ticket (imprimante 58/80 mm) ou page A4 / PDF. Nom, adresse, téléphone et message du magasin se règlent dans **Réglages**.
 - **WhatsApp** : bouton « Envoyer sur WhatsApp » sur le reçu (vers le numéro du client s'il est saisi) et « Envoyer le rapport du jour sur WhatsApp » dans Rapport (vers le numéro WhatsApp du gérant, réglé dans Réglages → Reçus). WhatsApp s'ouvre avec le message prêt ; il reste à appuyer sur Envoyer.
 - **Rapport** : chiffre du jour et du mois, liste des ventes (annulables), produits à réapprovisionner.
 - **Apparence** : thème « iOS 26 · Liquid Glass » par défaut (verre translucide, barre d’onglets flottante, grands titres, clair/sombre selon l’iPhone) ou « Nuit étoilée », au choix dans Réglages.

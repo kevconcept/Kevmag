@@ -320,6 +320,42 @@
   /* WhatsApp */
   .btn.wa, html.ios .btn.wa{background:#25d366;box-shadow:0 4px 14px rgba(37,211,102,.3);color:#fff}
 
+  /* Reçu – facture A4 */
+  .fa{font-family:Georgia,"Times New Roman",serif;color:#1f2a44;font-size:13px;line-height:1.45;max-width:190mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .fa b{color:#1f2a44}
+  .fa-tete{display:flex;align-items:center;gap:20px;padding-bottom:6px}
+  .fa-logo{height:64px;width:auto}
+  .fa-nom{flex:1;text-align:center}
+  .fa-nom h1{margin:0;font-size:26px;letter-spacing:.04em;color:#22307a}
+  .fa-nom div{font-size:10.5px;letter-spacing:.18em;color:#666;margin-top:4px}
+  .fa-infos{display:flex;justify-content:space-between;gap:16px;font-size:11.5px;padding:10px 0;border-bottom:2px solid #22307a;margin-bottom:14px}
+  .fa-infos .d{text-align:right}
+  .fa-cadres{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .fa-cadres>div{background:#f3f5fa;border:1px solid #dde3ee;padding:12px 14px;font-size:12.5px;line-height:1.7}
+  .fa-cadres h4{margin:0 0 4px;color:#22307a;font-size:13px;letter-spacing:.02em}
+  .fa-table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .fa-table th, html.ios .fa-table th{background:#22307a;color:#fff!important;text-align:left;padding:9px 10px;font-weight:700;text-transform:none;letter-spacing:0;font-size:12.5px}
+  .fa-table td{padding:9px 10px;border-bottom:1px solid #e3e7ef;color:#1f2a44;vertical-align:top}
+  .fa-table small{color:#667}
+  .fa-table .n{text-align:right;white-space:nowrap}
+  .fa-sous{display:flex;justify-content:flex-end;gap:60px;padding:10px 10px;font-weight:700}
+  .fa-total{display:flex;justify-content:space-between;background:#22307a;color:#fff;padding:11px 12px;font-weight:800;font-size:15px}
+  .fa-total span:first-child{flex:1;text-align:center}
+  .fa-taux{text-align:right;font-size:10.5px;color:#666;margin-top:4px}
+  .fa-note{margin-top:16px;background:#fdfaf1;border-left:4px solid #f08a24;padding:12px 16px;font-size:12.5px;line-height:1.7}
+  .fa-signes{display:flex;justify-content:space-between;gap:20px;margin-top:26px;font-size:12px;color:#444}
+  .fa-signes>div{display:flex;flex-direction:column;gap:6px}
+  .fa-signes span{display:block;width:170px;height:46px;border-bottom:1px solid #999}
+  .fa-signes .cachet{width:130px;height:130px;border:2px dashed #b8c1d8;border-radius:50%}
+  .fa-merci{text-align:center;font-weight:700;letter-spacing:.06em;color:#22307a;margin-top:22px}
+  .fa-pied{text-align:right;font-size:9.5px;color:#999;font-style:italic;border-top:1px solid #eee;margin-top:12px;padding-top:6px}
+  @media (max-width:560px){
+    .fa{font-size:11px}.fa-logo{height:40px}.fa-nom h1{font-size:18px}.fa-nom div{font-size:8.5px;letter-spacing:.1em}
+    .fa-infos{font-size:9.5px}.fa-cadres{gap:8px}.fa-cadres>div{padding:8px;font-size:10.5px}
+    .fa-table,.fa-table th{font-size:10px}.fa-table th,.fa-table td{padding:6px 5px}
+    .fa-signes .cachet{width:90px;height:90px}.fa-signes span{width:110px}
+  }
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -448,9 +484,14 @@
       <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th><th></th></tr></thead>
       <tbody id="c-panier"></tbody></table>
       <div class="total" id="c-total">0</div>
+      <div class="muted" id="c-total2" style="text-align:right;font-size:15px;font-weight:600"></div>
       <div class="row">
         <div><label>Client (facultatif)</label><input id="c-client" placeholder="Nom ou téléphone"></div>
         <div><label>Paiement</label><select id="c-paie"><option>Espèces</option><option>Mobile money</option><option>Banque</option><option>Crédit</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Devise de la vente</label><select id="c-devise" onchange="changerDeviseVente()"><option value="$">Dollar ($)</option><option value="FC">Franc congolais (FC)</option></select></div>
+        <div><label>Taux du jour (FC pour 1 $)</label><input id="c-taux" type="number" min="0" step="any" placeholder="Ex : 2800" onchange="$('g-taux').value=this.value;majTaux()"></div>
       </div>
       <button class="btn full" onclick="validerVente()">Valider la vente</button>
     </div>
@@ -535,6 +576,8 @@
       <div class="kpi"><span>🧾 Ventes</span><b id="r-nb">0</b></div>
       <div class="kpi"><span>📦 Articles vendus</span><b id="r-art">0</b></div>
       <div class="kpi"><span>📅 Chiffre du mois</span><b id="r-mois">0</b></div>
+      <div class="kpi"><span>💵 Encaissé en dollars</span><b id="r-usd">0 $</b></div>
+      <div class="kpi"><span>💴 Encaissé en francs</span><b id="r-fc">0 FC</b></div>
     </div>
     <button class="btn full wa" style="margin:0 0 16px" onclick="rapportWhatsApp()">📲 Envoyer le rapport du jour sur WhatsApp</button>
     <div class="card">
@@ -572,12 +615,18 @@
     <div class="card">
       <h2>🧾 Reçus</h2>
       <label style="margin-top:0">Nom du magasin</label><input id="g-nom" onchange="majBoutique()">
-      <label>Adresse</label><input id="g-adresse" onchange="majBoutique()">
+      <label>Slogan (sous le nom)</label><input id="g-slogan" placeholder="Ex : Leader des matelas" onchange="majBoutique()">
+      <label>Adresse (siège)</label><input id="g-adresse" onchange="majBoutique()">
+      <div class="row"><div><label>Ville (lieu du reçu)</label><input id="g-lieu" placeholder="Kinshasa" onchange="majBoutique()"></div>
+        <div><label>E-mail</label><input id="g-email" type="email" onchange="majBoutique()"></div></div>
+      <div class="row"><div><label>RCCM</label><input id="g-rccm" onchange="majBoutique()"></div>
+        <div><label>Id. Nat.</label><input id="g-idnat" onchange="majBoutique()"></div></div>
+      <label>N° Impôt</label><input id="g-impot" onchange="majBoutique()">
       <label>Téléphone</label><input id="g-tel" type="tel" onchange="majBoutique()">
       <label>Numéro WhatsApp (gérant) — reçoit le rapport du jour</label><input id="g-wa" type="tel" placeholder="Ex : 0812345678 ou +243 81 234 5678" onchange="majBoutique()">
       <label>Message en bas du reçu</label><textarea id="g-message" rows="2" onchange="majBoutique()"></textarea>
       <label>Format d'impression</label>
-      <select id="g-format" onchange="majBoutique()"><option value="ticket">Ticket de caisse (imprimante 58/80 mm)</option><option value="a4">Page A4 (imprimante normale ou PDF)</option></select>
+      <select id="g-format" onchange="majBoutique()"><option value="ticket">Ticket de caisse (imprimante 58/80 mm)</option><option value="a4">Facture A4 (imprimante normale, PDF, WhatsApp)</option></select>
     </div>
     <div class="card">
       <h2>💾 Sauvegarde</h2>
@@ -624,8 +673,9 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · WhatsApp';
-const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
+const VERSION = '2026-11-23 · mentions légales';
+const NUM_GERANT = '+243 810 288 890';
+const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
 let derniereVente = null, recuOuvert = null;
@@ -640,9 +690,14 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
   // Gammes de matelas : on les devine d'après le nom (une seule fois)
   if((db.catsV||0) < 4){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
     db.catsV = 4; sauver(); if(n){ rafraichir(); toast(n + ' matelas rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); }
+  // Nouveau modèle de reçu : la facture A4 devient le format par défaut (une seule fois)
+  if(!db.recuV){ db.boutique = db.boutique || {}; db.boutique.format = 'a4'; db.recuV = 1; setTimeout(sauver, 0); }
   // Gammes Bébé D14 / Bébé D16 (une seule fois)
   if((db.catsV||0) < 5){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
-    db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0; }
+    db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0;
+  if(!db.gerantV){ if(!db.boutique.whatsapp) db.boutique.whatsapp = NUM_GERANT; db.gerantV = 1; setTimeout(sauver, 0); }
+  // Mentions légales de Complast (remplies une fois si vides)
+  if(!db.legalV){ ['rccm','idnat','impot'].forEach(k => { if(!db.boutique[k]) db.boutique[k] = BOUTIQUE[k]; }); db.legalV = 1; setTimeout(sauver, 0); } }
 function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e){ toast('Erreur de sauvegarde'); } }
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
@@ -1041,17 +1096,40 @@ function ajouterLigne(){
   $('c-qte').value=1; afficherPanier();
 }
 function retirerLigne(i){ panier.splice(i,1); afficherPanier(); }
+/* Deux devises : les prix sont dans la devise de base (Réglages), la vente peut être payée en $ ou en FC au taux du jour */
+function convertir(x, de, vers, taux){
+  if(de===vers || !taux) return x;
+  return de==='$' ? x*taux : x/taux;
+}
+function fmtDev(x, dev){
+  return dev==='FC' ? Math.round(x).toLocaleString('fr-FR') + ' FC'
+    : (Math.round((+x||0)*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:(x%1?2:0),maximumFractionDigits:2}) + ' $';
+}
+const autreDev = d => d==='$' ? 'FC' : '$';
+// Devise payée et taux d'une vente (anciennes ventes : devise de base)
+function payeDe(v){ return v.paye || { dev: v.devise || db.devise, taux: db.taux || 0, montant: v.total }; }
+function changerDeviseVente(){
+  if($('c-devise').value !== db.devise && !db.taux){ toast('Indiquez d’abord le taux du jour'); $('c-devise').value = db.devise; $('c-taux').focus(); }
+  afficherPanier();
+}
 function afficherPanier(){
   $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${argent(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
-  $('c-total').textContent = 'Total : ' + argent(panier.reduce((s,l)=>s+l.qte*l.prix,0));
+  const tot = panier.reduce((s,l)=>s+l.qte*l.prix,0), dv = $('c-devise').value || db.devise;
+  $('c-total').textContent = 'Total : ' + fmtDev(convertir(tot, db.devise, dv, db.taux), dv);
+  $('c-total2').textContent = db.taux && tot ? '≈ ' + fmtDev(convertir(tot, db.devise, autreDev(dv), db.taux), autreDev(dv)) + ' · taux 1 $ = ' + (+db.taux).toLocaleString('fr-FR') + ' FC' : '';
+  $('c-taux').value = db.taux || '';
 }
 function validerVente(){
   if(!panier.length) return toast('Le panier est vide');
+  const dv = $('c-devise').value || db.devise;
+  if(dv !== db.devise && !db.taux) return toast('Indiquez le taux du jour');
   const v = { id:id(), date:new Date().toISOString(), lignes:panier, total:panier.reduce((s,l)=>s+l.qte*l.prix,0), client:$('c-client').value.trim(), paiement:$('c-paie').value, num: ++db.numRecu, devise: db.devise };
+  v.paye = { dev: dv, taux: db.taux || 0, montant: convertir(v.total, db.devise, dv, db.taux) };
+  if(dv==='FC') v.paye.montant = Math.round(v.paye.montant);
   v.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock -= l.qte; });
-  db.ventes.push(v); panier=[]; $('c-client').value=''; sauver(); rafraichir(); toast('Vente enregistrée : '+argent(v.total));
-  derniereVente = v.id; $('c-derniere-info').textContent = 'Reçu n° '+numero(v)+' · '+argent(v.total); $('c-derniere').classList.remove('hide');
+  db.ventes.push(v); panier=[]; $('c-client').value=''; sauver(); rafraichir(); toast('Vente enregistrée : '+fmtDev(v.paye.montant, dv));
+  derniereVente = v.id; $('c-derniere-info').textContent = 'Reçu n° '+numero(v)+' · '+fmtDev(v.paye.montant, dv); $('c-derniere').classList.remove('hide');
 }
 function annulerVente(vid){
   if(!confirm('Annuler cette vente ? Le stock sera remis.')) return;
@@ -1063,9 +1141,74 @@ function annulerVente(vid){
 
 /* Reçus */
 const numero = v => v.num ? String(v.num).padStart(5,'0') : v.id.slice(-6).toUpperCase();
+/* Montant en lettres (usage RDC : septante, nonante) */
+function enLettres(n){
+  const U = ['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize'];
+  const D = ['','dix','vingt','trente','quarante','cinquante','soixante','septante','quatre-vingt','nonante'];
+  const c100 = n => { if(n<17) return U[n]; if(n<20) return 'dix-'+U[n-10]; const t = Math.floor(n/10), u = n%10;
+    if(!u) return t===8 ? 'quatre-vingts' : D[t]; return D[t] + (u===1 && t!==8 ? ' et un' : '-'+U[u]); };
+  const c1000 = (n, fin) => { const c = Math.floor(n/100), r = n%100; let t = c===0 ? '' : c===1 ? 'cent' : U[c]+' cent'+(r||!fin?'':'s');
+    if(r) t += (t?' ':'') + c100(r); return t; };
+  if(n===0) return 'zéro';
+  const parts = []; const mds = Math.floor(n/1e9), mns = Math.floor(n/1e6)%1000, ks = Math.floor(n/1000)%1000, r = n%1000;
+  if(mds) parts.push(c1000(mds,true) + ' milliard' + (mds>1?'s':''));
+  if(mns) parts.push(c1000(mns,true) + ' million' + (mns>1?'s':''));
+  if(ks) parts.push(ks===1 ? 'mille' : c1000(ks,false) + ' mille');
+  if(r) parts.push(c1000(r,true));
+  return parts.join(' ');
+}
+function montantLettres(x, dev){
+  const e = Math.floor(Math.round(x*100)/100), c = Math.round((x-e)*100);
+  const nom = dev==='FC' ? ['franc congolais','francs congolais'] : ['dollar américain','dollars américains'];
+  let t = enLettres(e) + ' ' + (e>1 ? nom[1] : nom[0]);
+  if(c) t += ' et ' + enLettres(c) + (dev==='FC' ? ' centime' : ' cent') + (c>1?'s':'');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function factureA4(v){
+  const b = db.boutique, base = v.devise || db.devise, P = payeDe(v), dev = P.dev, d = new Date(v.date);
+  const m = n => fmtDev(convertir(n, base, dev, P.taux), dev);
+  const tel = (String(v.client||'').match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0];
+  const nomClient = String(v.client||'').replace(tel,'').replace(/[·,–-]\s*$/,'').trim();
+  const credit = v.paiement==='Crédit';
+  const titre = credit ? 'FACTURE (VENTE À CRÉDIT)' : 'REÇU DE VENTE';
+  const num = 'REC-' + d.getFullYear() + '-' + numero(v);
+  const totPaye = convertir(v.total, base, dev, P.taux);
+  const taux = P.taux ? `<div class="fa-taux">Taux appliqué : 1 $ = ${(+P.taux).toLocaleString('fr-FR')} FC · équivalent ${fmtDev(convertir(v.total, base, autreDev(dev), P.taux), autreDev(dev))}</div>` : '';
+  const legal = [['RCCM',b.rccm],['Id. Nat.',b.idnat],['N° Impôt',b.impot]].filter(x=>x[1]);
+  const contact = [['Siège social',b.adresse],['E-mail',b.email],['Téléphone',b.tel],['WhatsApp',b.whatsapp]].filter(x=>x[1]);
+  return `<div class="fa">
+    <div class="fa-tete">
+      <img src="logo.png" alt="" class="fa-logo">
+      <div class="fa-nom"><h1>${esc(b.nom).toUpperCase()}</h1>${b.slogan?`<div>${esc(b.slogan).toUpperCase()}</div>`:''}</div>
+    </div>
+    <div class="fa-infos">
+      <div>${legal.map(x=>`<b>${x[0]} :</b> ${esc(x[1])}`).join('<br>')}</div>
+      <div class="d">${contact.map(x=>`<b>${x[0]} :</b> ${esc(x[1])}`).join('<br>')}</div>
+    </div>
+    <div class="fa-cadres">
+      <div><h4>${titre}</h4><b>Numéro :</b> ${num}<br><b>Date :</b> ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}<br><b>Lieu :</b> ${esc(b.lieu||'Kinshasa')}</div>
+      <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nomClient||'Client comptant')}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
+    </div>
+    <table class="fa-table"><thead><tr><th>Réf.</th><th>Description</th><th class="n">P.U. (${dev==='$'?'USD':'CDF'})</th><th class="n">Qté</th><th class="n">Montant (${dev==='$'?'USD':'CDF'})</th></tr></thead><tbody>
+      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}</td><td class="n">${m(l.prix)}</td><td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="fa-sous"><span>Total :</span><span>${m(v.total)}</span></div>
+    <div class="fa-total"><span>${credit?'RESTE À PAYER':'TOTAL PAYÉ'} :</span><span>${m(v.total)}</span></div>
+    ${taux}
+    <div class="fa-note">
+      <b>Arrêté${credit?'e la présente facture':' le présent reçu'} à la somme de : ${montantLettres(dev==='FC' ? Math.round(totPaye) : Math.round(totPaye*100)/100, dev)}.</b><br>
+      <b>Mode de règlement :</b> ${esc(v.paiement)}, en ${dev==='FC'?'francs congolais':'dollars'}.${credit?' <b>Montant restant dû par le client.</b>':''}
+      ${b.message?`<br><i>${esc(b.message).replace(/\n/g,' ')}</i>`:''}
+    </div>
+    <div class="fa-signes"><div>Signature du client<span></span></div><div>Cachet et signature<span class="cachet"></span></div></div>
+    <div class="fa-merci">MERCI POUR VOTRE CONFIANCE</div>
+    <div class="fa-pied">Document généré par Kevmag · ${esc(b.nom)}</div>
+  </div>`;
+}
 function htmlRecu(v, format){
-  const b = db.boutique, dev = v.devise || db.devise;
-  const m = n => (Math.round((+n||0)*100)/100).toLocaleString('fr-FR') + ' ' + dev;
+  if(format==='a4') return factureA4(v);
+  const b = db.boutique, P = payeDe(v), dev = P.dev;
+  const m = n => fmtDev(convertir(n, v.devise || db.devise, dev, P.taux), dev);
   const d = new Date(v.date);
   const nb = v.lignes.reduce((s,l)=>s+l.qte,0);
   return `<div class="r-recu ${format==='a4'?'a4':'ticket'}">
@@ -1120,7 +1263,7 @@ function ouvrirWA(numero, texte){
   const w = window.open(url, '_blank'); if(!w) location.href = url;
 }
 function texteRecu(v){
-  const b = db.boutique, dev = v.devise || db.devise, m = n => (Math.round((+n||0)*100)/100).toLocaleString('fr-FR') + ' ' + dev, d = new Date(v.date);
+  const b = db.boutique, P = payeDe(v), dev = P.dev, m = n => fmtDev(convertir(n, v.devise || db.devise, dev, P.taux), dev), d = new Date(v.date);
   return `*${b.nom}* – Reçu n° ${numero(v)}\n${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`
     + (v.client ? `\nClient : ${v.client}` : '') + '\n\n'
     + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}`).join('\n')
@@ -1131,13 +1274,14 @@ function recuWhatsApp(){
   const v = db.ventes.find(x => x.id===recuOuvert); if(!v) return;
   ouvrirWA(numeroWA((String(v.client||'').match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0]), texteRecu(v));
 }
+function encaisse(l){ const e = { '$':0, FC:0 }; l.forEach(v => { const P = payeDe(v); e[P.dev] = (e[P.dev]||0) + P.montant; }); return e; }
 function rapportWhatsApp(){
   const j = $('r-date').value || jour(new Date()), dj = new Date(j+'T12:00');
   const duJour = db.ventes.filter(v => jour(v.date)===j), duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
   const parPaie = {}; duJour.forEach(v => parPaie[v.paiement] = (parPaie[v.paiement]||0) + v.total);
   const bas = db.produits.filter(p => p.stock<=p.seuil);
   const t = `*${db.boutique.nom} – Rapport du ${dj.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}*\n\n`
-    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}`
+    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}`
     + (Object.keys(parPaie).length ? '\n\n*Par paiement*\n' + Object.entries(parPaie).map(([k,x]) => `• ${k} : ${argent(x)}`).join('\n') : '')
     + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
     + (bas.length ? `\n\n⚠️ *À réapprovisionner (${bas.length})*\n` + bas.slice(0,15).map(p => `• ${p.nom} : ${p.stock}`).join('\n') + (bas.length>15 ? `\n… et ${bas.length-15} autres` : '') : '');
@@ -1145,8 +1289,10 @@ function rapportWhatsApp(){
   if(!n) toast('Astuce : ajoutez votre numéro WhatsApp dans Réglages → Reçus');
   ouvrirWA(n, t);
 }
+const CHAMPS_B = [['slogan','g-slogan'],['adresse','g-adresse'],['lieu','g-lieu'],['email','g-email'],['rccm','g-rccm'],['idnat','g-idnat'],['impot','g-impot'],['tel','g-tel'],['whatsapp','g-wa'],['message','g-message']];
 function majBoutique(){
-  db.boutique = { nom:$('g-nom').value.trim()||'Complast', adresse:$('g-adresse').value.trim(), tel:$('g-tel').value.trim(), whatsapp:$('g-wa').value.trim(), message:$('g-message').value.trim(), format:$('g-format').value };
+  db.boutique = { nom:$('g-nom').value.trim()||'Complast', format:$('g-format').value };
+  CHAMPS_B.forEach(([k,id]) => db.boutique[k] = $(id).value.trim());
   sauver(); toast('Réglages des reçus enregistrés');
 }
 
@@ -1216,6 +1362,7 @@ function afficherRapport(){
   $('r-nb').textContent = duJour.length;
   $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
+  const enc = encaisse(duJour); $('r-usd').textContent = fmtDev(enc['$'], '$'); $('r-fc').textContent = fmtDev(enc.FC, 'FC');
   $('r-ventes').innerHTML = duJour.length ? duJour.slice().reverse().map(v=>`<tr>
     <td>${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>${v.lignes.map(l=>esc(l.qte+' × '+l.nom+(l.desc?' ('+l.desc+')':''))).join('<br>')}<br><span class="muted">${esc(v.paiement)}${v.client?' · '+esc(v.client):''}</span></td>
@@ -1324,7 +1471,7 @@ function dessinerCiel(){
 }
 
 /* Réglages */
-function majTaux(){ db.taux = +$('g-taux').value || 0; sauver(); afficherAccueil(); toast('Taux enregistré'); }
+function majTaux(){ db.taux = +$('g-taux').value || 0; sauver(); afficherAccueil(); afficherPanier(); toast('Taux enregistré'); }
 function changerTheme(t){ db.theme = t; sauver(); document.documentElement.classList.toggle('ios', t==='ios'); toast('Apparence modifiée'); }
 function changerDevise(){ db.devise = $('g-devise').value; sauver(); rafraichir(); }
 function exporter(){
@@ -1345,8 +1492,8 @@ function toutEffacer(){
   db = { produits:[], ventes:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-taux').value = db.taux || '';
-  const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; $('g-tel').value=b.tel; $('g-wa').value=b.whatsapp||''; $('g-message').value=b.message; $('g-format').value=b.format; }
+function rafraichir(){ if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-taux').value = db.taux || '';
+  const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
 $('g-version').textContent = VERSION; document.querySelectorAll('.v-version').forEach(e => e.textContent = VERSION);
