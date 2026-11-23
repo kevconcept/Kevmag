@@ -428,7 +428,12 @@
       <input type="file" accept=".json" onchange="importer(this)">
       <button class="btn bad full" style="margin-top:20px" onclick="toutEffacer()">Tout effacer</button>
     </div>
-    <p class="muted" style="text-align:center">Version : <span id="g-version"></span></p>
+    <div class="card" style="text-align:center">
+      <h2 style="justify-content:center">🔄 Mise à jour</h2>
+      <p class="muted" style="margin:0">Version installée : <b id="g-version"></b></p>
+      <button class="btn full" id="g-maj" onclick="verifierMAJ(true)">Vérifier les mises à jour</button>
+      <p class="muted" style="margin:10px 0 0">Vos produits, ventes et réglages sont conservés.</p>
+    </div>
   </section>
 </main>
   </div>
@@ -442,6 +447,10 @@
   <button data-v="reglages"><b>⚙️</b>Réglages</button>
 </nav>
 <div class="toast" id="toast"></div>
+<div id="bandeau-maj" class="hide" style="position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));z-index:25;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#34d27b,#1fa463);color:#fff;padding:12px 14px;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.4);font-weight:700">
+  <span style="flex:1">✨ Nouvelle version de Kevmag disponible</span>
+  <button class="btn small" style="background:#fff;color:#14532d" onclick="installerMAJ()">Mettre à jour</button>
+</div>
 <div id="apercu" class="hide" onclick="if(event.target===this)fermerRecu()">
   <div class="feuille" id="apercu-feuille">
     <div id="apercu-contenu"></div>
@@ -455,7 +464,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · import des prix';
+const VERSION = '2026-11-23 · bouton mise à jour';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -1002,6 +1011,41 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   });
 }
 try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+
+/* Vérification des mises à jour */
+async function versionEnLigne(){
+  const r = await fetch('index.html?v=' + Date.now(), { cache:'no-store' });
+  if(!r.ok) throw 0;
+  const m = (await r.text()).match(/const VERSION = '([^']+)'/);
+  return m ? m[1] : null;
+}
+async function verifierMAJ(manuel){
+  if(!location.protocol.startsWith('http')) return manuel && toast('Mise à jour disponible seulement depuis le site');
+  if(!navigator.onLine) return manuel && toast('Pas de connexion internet');
+  const b = $('g-maj'); if(manuel){ b.disabled = true; b.textContent = 'Vérification…'; }
+  try{
+    const v = await versionEnLigne();
+    if(v && v !== VERSION){ if(manuel) installerMAJ(); else $('bandeau-maj').classList.remove('hide'); }
+    else if(manuel) toast('Vous avez déjà la dernière version ✅');
+  }catch(e){ if(manuel) toast('Impossible de vérifier, réessayez'); }
+  if(manuel){ b.disabled = false; b.textContent = 'Vérifier les mises à jour'; }
+}
+async function installerMAJ(){
+  if(panier.length && !confirm('Une vente est en cours dans le panier. Mettre à jour quand même ? (le panier sera vidé)')) return;
+  toast('Mise à jour en cours…');
+  try{
+    if('caches' in window) for(const k of await caches.keys()) await caches.delete(k);
+    if('serviceWorker' in navigator) for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+  }catch(e){}
+  location.replace(location.pathname + '?maj=' + Date.now());
+}
+// Vérifie au démarrage et chaque fois que l'application revient au premier plan
+if(location.search.includes('maj=')) history.replaceState(null, '', location.pathname);
+setTimeout(() => verifierMAJ(false), 3000);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible'){
+  verifierMAJ(false);
+  if('serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(()=>{});
+} });
 </script>
 </body>
 </html>
