@@ -407,6 +407,9 @@
   .e-bilan .res.non{background:rgba(242,95,92,.16);color:var(--red)}
   #e-ok:disabled{opacity:.45;cursor:not-allowed}
 
+  .transfert{padding:12px 14px;border-radius:14px;background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.3);font-size:14px;line-height:1.5;margin:8px 0 4px}
+  .transfert ol{margin:6px 0 0;padding-left:20px}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -739,10 +742,18 @@
     </div>
     <div class="card">
       <h2>💾 Sauvegarde</h2>
-      <p class="muted">Les données sont gardées sur cet appareil. Faites une sauvegarde régulièrement pour ne rien perdre, ou pour passer les données sur un autre appareil.</p>
-      <button class="btn full" onclick="exporter()">Télécharger une sauvegarde</button>
-      <label>Restaurer une sauvegarde</label>
-      <input type="file" accept=".json" onchange="importer(this)">
+      <p class="muted">Les données sont gardées <b>sur cet appareil seulement</b> (iPhone et ordinateur ont chacun les leurs). Faites une sauvegarde régulièrement pour ne rien perdre.</p>
+      <div class="transfert">
+        <b>📲 ➜ 💻 Passer les données d'un appareil à l'autre</b>
+        <ol>
+          <li>Sur l'appareil qui <b>a</b> les produits : touchez « Envoyer la sauvegarde » et envoyez-la (WhatsApp, e-mail…).</li>
+          <li>Sur l'autre appareil : enregistrez le fichier reçu, puis « Restaurer une sauvegarde » ci-dessous.</li>
+        </ol>
+      </div>
+      <button class="btn full" onclick="partagerSauvegarde()">📲 Envoyer la sauvegarde vers un autre appareil</button>
+      <button class="btn alt full" onclick="exporter()">⬇️ Télécharger une sauvegarde</button>
+      <label>Restaurer une sauvegarde (fichier kevmag-sauvegarde…json)</label>
+      <input type="file" accept=".json,application/json,text/plain" onchange="importer(this)">
       <button class="btn bad full" style="margin-top:20px" onclick="toutEffacer()">Tout effacer</button>
     </div>
     <div class="card" style="text-align:center">
@@ -783,7 +794,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · stock sur WhatsApp';
+const VERSION = '2026-11-24 · transfert entre appareils';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -937,7 +948,7 @@ function afficherStock(){
     : [...GAMMES, ''].map(g => [g, l.filter(p => (p.gamme||'')===g).sort(parTaille)]).filter(x => x[1].length)
         .map(([g,ll]) => `<tr class="sous"><td colspan="4">${g || 'Autres matelas'}<span>${ll.length}</span></td></tr>` + ll.map(ligneStock).join('')).join('');
   $('s-liste').innerHTML = liste.length ? groupes.map(([c,l]) => `<tr class="groupe"><td colspan="4">${ICONES[c]} ${c}<span>${l.length} produit${l.length>1?'s':''}</span></td></tr>` + lignesCat(c,l)).join('')
-    : `<tr><td colspan="4" class="muted">${db.produits.length ? 'Aucun produit trouvé.' : 'Aucun produit. Ajoutez-en un ci-dessus ou importez une liste.'}</td></tr>`;
+    : `<tr><td colspan="4" class="muted">${db.produits.length ? 'Aucun produit trouvé.' : 'Aucun produit <b>sur cet appareil</b>. Ajoutez-en un ci-dessus ou importez une liste.<br>Vos produits sont sur un autre téléphone ou ordinateur ? <button class="lien" style="padding:0" onclick="aller(\'reglages\')">Transférez-les avec la sauvegarde ›</button>'}</td></tr>`;
 }
 
 /* Import d'une liste de produits (Excel / CSV) */
@@ -1941,12 +1952,24 @@ function exporter(){
   const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kevmag-sauvegarde-'+jour(new Date())+'.json'; a.click();
 }
+// Envoie la sauvegarde par le menu de partage (WhatsApp, e-mail, AirDrop…) pour la restaurer sur un autre appareil
+async function partagerSauvegarde(){
+  const nom = 'kevmag-sauvegarde-' + jour(new Date()) + '.json';
+  const fichier = new File([JSON.stringify(db)], nom, { type:'application/json' });
+  const texte = `Sauvegarde Kevmag du ${new Date().toLocaleDateString('fr-FR')} (${db.produits.length} produits, ${db.ventes.length} ventes). Ouvrez Kevmag → Réglages → Restaurer une sauvegarde.`;
+  if(navigator.canShare && navigator.canShare({ files:[fichier] })){
+    try{ await navigator.share({ files:[fichier], title:'Sauvegarde Kevmag', text:texte }); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  exporter(); toast('Sauvegarde téléchargée : envoyez ce fichier sur l’autre appareil');
+}
 function importer(input){
   const f = input.files[0]; if(!f) return;
   const r = new FileReader();
   r.onload = () => { try{ const d = JSON.parse(r.result); if(!Array.isArray(d.produits)||!Array.isArray(d.ventes)) throw 0;
     if(!confirm('Remplacer les données actuelles par cette sauvegarde ?')) return;
-    db = Object.assign({devise:'$', numRecu:0}, d); db.boutique = Object.assign({...BOUTIQUE}, d.boutique); sauver(); rafraichir(); toast('Sauvegarde restaurée'); }catch(e){ toast('Fichier invalide'); } };
+    db = Object.assign({devise:'$', numRecu:0, acomptes:[], echanges:[]}, d); db.boutique = Object.assign({...BOUTIQUE}, d.boutique); sauver(); rafraichir(); demarrerFond();
+    toast('Sauvegarde restaurée : ' + db.produits.length + ' produits, ' + db.ventes.length + ' ventes'); }catch(e){ toast('Fichier invalide'); } };
   r.readAsText(f); input.value='';
 }
 function toutEffacer(){
