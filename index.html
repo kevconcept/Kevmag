@@ -284,6 +284,22 @@
   @media (max-width:360px){ .logo{height:28px} }
   html.ios .logo{box-shadow:0 6px 18px rgba(31,38,80,.15),inset 0 1px 0 #fff}
 
+  /* État du stock (Rapport) */
+  table.etat tr.groupe td{font-size:16px;padding-top:18px}
+  table.etat tr.groupe td.num{font-weight:800}
+  table.etat tr.vide td{border:0;padding:6px}
+  table.etat tr.total td{font-weight:800;font-size:16px;border-top:2px solid var(--line2)}
+  table.etat td.zero{color:var(--muted)}
+  .etat-print{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#000;font-size:11px}
+  .etat-print h3{margin:0 0 2px;font-size:16px}
+  .etat-print table{width:100%;border-collapse:collapse}
+  .etat-print td,.etat-print th{border:1px solid #999;padding:2px 6px;color:#000;text-transform:none;letter-spacing:0;font-size:11px}
+  .etat-print th{background:#eee;font-weight:700}
+  .etat-print .cat td{background:#dfe6f3;font-weight:800;font-size:12px}
+  .etat-print .sg td{background:#f3f3f3;font-weight:700;padding-left:12px}
+  .etat-print .vide td{border:0;height:8px}
+  .etat-print td.q{text-align:right;width:70px}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -506,6 +522,14 @@
       <h2>⚠️ À réapprovisionner</h2>
       <div id="r-alertes" class="muted"></div>
     </div>
+    <div class="card">
+      <div class="entete"><h2>📋 État du stock</h2><span class="muted" id="e-date"></span></div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn alt" onclick="exporterEtat()">⬇️ Excel</button>
+        <button class="btn alt" onclick="imprimerEtat()">🖨️ Imprimer</button>
+      </div>
+      <table class="etat"><thead><tr><th>Article</th><th class="num">Quantité</th></tr></thead><tbody id="e-liste"></tbody></table>
+    </div>
   </section>
 
   <!-- REGLAGES -->
@@ -574,7 +598,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · logo Complast';
+const VERSION = '2026-11-23 · état du stock';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -1060,7 +1084,63 @@ function majBoutique(){
 }
 
 /* Rapport */
+/* État du stock classé : catégorie → sous-groupe (densité / gamme) → articles */
+const ORDRE_ETAT = ['Mousse','Matelas','Lit','Garde-robe','Dresser table','Nightstand','Chambre','Canapé','Table','Buffet','Autre'];
+function etatStock(){
+  return ORDRE_ETAT.map(cat => {
+    const l = db.produits.filter(p => p.cat===cat); if(!l.length) return null;
+    let groupes;
+    if(cat==='Mousse'){
+      const tri = l.slice().sort((a,b) => { const x = tailleMousse(a), y = tailleMousse(b); return (x[0]-y[0]) || (x[1]-y[1]) || (x[2]-y[2]) || (x[3]-y[3]) || a.nom.localeCompare(b.nom); });
+      const dens = [...new Set(tri.map(p => p.densite || 0))].sort((a,b) => a-b);   // sans densité (déchet, flocon) en premier
+      groupes = dens.map(d => ({ titre: d ? 'D'+d : 'Déchet / divers', produits: tri.filter(p => (p.densite||0)===d) }));
+    } else if(cat==='Matelas'){
+      groupes = [...GAMMES, ''].map(g => ({ titre: g || 'Autres matelas', produits: l.filter(p => (p.gamme||'')===g).sort(parTaille) })).filter(g => g.produits.length);
+    } else groupes = [{ titre:'', produits: l.slice().sort(parTaille) }];
+    return { cat, groupes, total: l.reduce((s,p) => s+(p.stock||0), 0) };
+  }).filter(Boolean);
+}
+const dateEtat = () => new Date().toLocaleDateString('fr-FR').replace(/\//g,'-');
+function afficherEtat(){
+  const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
+  $('e-date').textContent = 'Stock du ' + dateEtat();
+  $('e-liste').innerHTML = e.length ? e.map((c,i) => (i ? '<tr class="vide"><td colspan="2"></td></tr>' : '')
+      + `<tr class="groupe"><td>${ICONES[c.cat]||''} ${c.cat}</td><td class="num">${c.total}</td></tr>`
+      + c.groupes.map(g => (g.titre ? `<tr class="sous"><td colspan="2">${esc(g.titre)}<span>${g.produits.reduce((s,p)=>s+(p.stock||0),0)}</span></td></tr>` : '')
+        + g.produits.map(p => `<tr><td>${esc(p.nom)}</td><td class="num ${p.stock>0?'':'zero'}">${p.stock}</td></tr>`).join('')).join('')).join('')
+      + `<tr class="vide"><td colspan="2"></td></tr><tr class="total"><td>Total général</td><td class="num">${tot}</td></tr>`
+    : '<tr><td colspan="2" class="muted">Aucun produit.</td></tr>';
+}
+function imprimerEtat(){
+  const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
+  $('recu').innerHTML = `<div class="etat-print"><h3>${esc(db.boutique.nom)} — État du stock</h3><div style="margin-bottom:8px">${esc(db.boutique.adresse||'')} · Stock du ${dateEtat()}</div>
+    <table><thead><tr><th>Article</th><th>Quantité</th></tr></thead><tbody>`
+    + e.map((c,i) => (i ? '<tr class="vide"><td colspan="2"></td></tr>' : '') + `<tr class="cat"><td>${esc(c.cat)}</td><td class="q">${c.total}</td></tr>`
+      + c.groupes.map(g => (g.titre ? `<tr class="sg"><td colspan="2">${esc(g.titre)}</td></tr>` : '') + g.produits.map(p => `<tr><td>${esc(p.nom)}</td><td class="q">${p.stock}</td></tr>`).join('')).join('')).join('')
+    + `<tr class="vide"><td colspan="2"></td></tr><tr class="cat"><td>Total général</td><td class="q">${tot}</td></tr></tbody></table></div>`;
+  $('page-print').textContent = '@page{size:A4;margin:12mm}';
+  window.print();
+}
+async function exporterEtat(){
+  const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
+  const lignes = [['', db.boutique.nom, 'STOCK ' + dateEtat()], ['', 'Quantité']];
+  e.forEach((c,i) => { if(i) lignes.push([]); lignes.push([c.cat, c.total]);
+    c.groupes.forEach(g => { if(g.titre) lignes.push([g.titre]); g.produits.forEach(p => lignes.push([p.nom, p.stock||0])); }); });
+  lignes.push([], ['Total général', tot]);
+  const nom = 'Kevmag-etat-stock-' + dateEtat();
+  try{
+    await chargerXLSX();
+    const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = [{wch:40},{wch:12},{wch:20}];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Stock'); XLSX.writeFile(wb, nom + '.xlsx');
+  }catch(err){
+    // Sans internet : fichier CSV (s'ouvre aussi dans Excel)
+    const csv = '\ufeff' + lignes.map(l => l.map(x => /[;"\n]/.test(String(x)) ? '"'+String(x).replace(/"/g,'""')+'"' : x).join(';')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download = nom + '.csv'; a.click();
+    toast('Sans internet : état enregistré en CSV');
+  }
+}
 function afficherRapport(){
+  afficherEtat();
   const j = $('r-date').value || jour(new Date());
   const duJour = db.ventes.filter(v => jour(v.date)===j);
   const duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
