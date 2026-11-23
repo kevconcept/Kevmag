@@ -282,7 +282,22 @@
   header.top h1{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   @media (max-width:899px){ .logo{height:34px;padding:4px 8px;border-radius:11px} header.top .rond.plus{display:none} }
   @media (max-width:360px){ .logo{height:28px} }
-  html.ios .logo{box-shadow:0 6px 18px rgba(31,38,80,.15),inset 0 1px 0 #fff}
+  /* Logo + photo du gérant dans une même pastille blanche */
+  .marque{display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:5px 10px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;flex:0 0 auto}
+  .marque .logo{background:none;padding:0;box-shadow:none;border-radius:0}
+  .gerant{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .gerant img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #3a4fa0;display:block}
+  .gerant figcaption{font-size:10px;line-height:1.15;font-weight:700;color:#24357a;text-align:center;white-space:nowrap}
+  @media (max-width:899px){
+    .marque{gap:6px;padding:4px 7px;border-radius:13px}
+    .marque .logo{height:30px}
+    .gerant img{width:32px;height:32px}
+    .gerant figcaption{font-size:8px}
+    .gerant figcaption span{display:block}
+  }
+  @media (max-width:520px){ header.top .rond.loupe{display:none} }
+  @media (max-width:360px){ .marque .logo{height:24px} .gerant img{width:28px;height:28px} }
+  html.ios .marque{box-shadow:0 6px 18px rgba(31,38,80,.15),inset 0 1px 0 #fff}
 
   /* État du stock (Rapport) */
   table.etat tr.groupe td{font-size:16px;padding-top:18px}
@@ -349,8 +364,11 @@
   <div class="contenu">
     <header class="top">
       <h1 id="titre">Accueil</h1>
-      <img class="logo" src="logo.png" alt="Complast – Leader des matelas" onclick="aller('accueil')">
-      <button class="rond" title="Rechercher" onclick="ouvrirRecherche()">🔎</button>
+      <div class="marque" onclick="aller('accueil')">
+        <img class="logo" src="logo.png" alt="Complast – Leader des matelas">
+        <figure class="gerant"><img src="gerant.jpg" alt="Kevin Ilunga, gérant"><figcaption><span>Gérant :</span> <span>Kevin Ilunga</span></figcaption></figure>
+      </div>
+      <button class="rond loupe" title="Rechercher" onclick="ouvrirRecherche()">🔎</button>
       <button class="rond plus" title="Réglages" onclick="aller('reglages')">⋯</button>
     </header>
 
@@ -600,7 +618,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · état du stock + inventaire';
+const VERSION = '2026-11-23 · photo du gérant';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
