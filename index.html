@@ -466,7 +466,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · import photo';
+const VERSION = '2026-11-23 · lecture photo améliorée';
 const BOUTIQUE = { nom:'Complast', adresse:"Bibwa, N'sele, Kinshasa", tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -709,32 +709,39 @@ async function lirePhoto(f){
   let w;
   try{
     await chargerOCR();
+    let etape = 0;
     w = await Tesseract.createWorker('eng', 1, { langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int',
-      logger: m => { if(m.status==='recognizing text') statut('📷 Lecture de la photo… ' + Math.round(m.progress*100) + ' %'); } });
-    // 1re lecture : mot par mot (bonne pour les prix dans les tableaux)
-    await w.setParameters({ tessedit_pageseg_mode:'11' });
-    const a = await w.recognize(f);
-    // 2e lecture : ligne par ligne (bonne pour les tailles et les titres)
-    statut('📷 Deuxième lecture…');
-    await w.setParameters({ tessedit_pageseg_mode:'4' });
-    const b = await w.recognize(f);
+      logger: m => { if(m.status==='recognizing text'){ if(m.progress===0) etape++; statut('📷 Lecture ' + Math.min(etape,3) + '/3… ' + Math.round(m.progress*100) + ' %'); } } });
+    // Trois lectures complémentaires : mot par mot (prix dans les cases), par colonnes, par bloc
+    const passes = [];
+    for(const [n, psm] of [[1,'11'],[2,'4'],[3,'6']]){
+      statut('📷 Lecture ' + n + '/3…');
+      await w.setParameters({ tessedit_pageseg_mode:psm });
+      passes.push((await w.recognize(f)).data);
+    }
     await w.terminate(); w = null; statut('');
-    preparerPhoto(a.data.words, b.data.text);
+    preparerPhoto(passes);
   }catch(e){ if(w) try{ await w.terminate(); }catch(_){} statut(''); toast('Impossible de lire cette photo'); }
 }
-function preparerPhoto(mots, texte){
-  const res = new Map();
-  const ajouter = (t, prix) => { const k = t.join('x'), o = res.get(k); if(!o || (o.prix==null && prix!=null)) res.set(k, { taille:t, prix }); };
-  // Mot par mot : on associe chaque taille au prix situé sur la même ligne, à droite
-  const ws = mots.map(m => ({ t:m.text, x:m.bbox.x0, y:(m.bbox.y0+m.bbox.y1)/2, h:m.bbox.y1-m.bbox.y0 }));
-  const prixMots = ws.filter(m => /^[\[(|]?\d{1,4}[.,]\d{2}[\])|]*$/.test(m.t));
-  ws.filter(m => RE_TAILLE.test(m.t)).forEach(m => {
-    const p = prixMots.filter(q => q.x > m.x && Math.abs(q.y-m.y) < m.h*0.8).sort((x,y) => Math.abs(x.y-m.y)-Math.abs(y.y-m.y))[0];
-    ajouter(m.t.match(RE_TAILLE).slice(1,4).map(Number), p ? lirePrix(p.t) : null);
-  });
-  // Ligne par ligne
-  texte.split('\n').forEach(l => { const m = l.match(RE_TAILLE); if(!m) return; const reste = l.slice(l.indexOf(m[0])+m[0].length);
-    ajouter(m.slice(1,4).map(Number), RE_PRIX.test(reste) ? lirePrix(reste) : null); });
+function preparerPhoto(passes){
+  // Tailles et prix repérés dans toutes les lectures, avec leur hauteur sur la photo
+  const tailles = new Map(), prixLus = [];
+  passes.forEach(d => d.words.forEach(w => {
+    const y = (w.bbox.y0+w.bbox.y1)/2, h = w.bbox.y1-w.bbox.y0, m = w.text.match(RE_TAILLE);
+    if(m){ const k = m.slice(1,4).map(Number).join('x'), o = tailles.get(k); if(!o) tailles.set(k, { k, t:m.slice(1,4).map(Number), ys:[y], h, x:w.bbox.x0 }); else o.ys.push(y); }
+    if(/^[\[(|]?\d{1,4}[.,]\d{2}[\])|]*$/.test(w.text)) prixLus.push({ v:lirePrix(w.text), y, h, x:w.bbox.x0 });
+  }));
+  const T = [...tailles.values()].map(t => ({ ...t, y: t.ys.reduce((a,b)=>a+b,0)/t.ys.length }));
+  const P = []; prixLus.forEach(p => { if(!P.some(q => Math.abs(q.y-p.y) < p.h*0.6 && Math.abs(q.x-p.x) < p.h*3)) P.push(p); });
+  // Chaque prix va à la taille la plus proche en hauteur, à sa droite (les paires les plus proches d'abord)
+  const hMed = T.map(t=>t.h).sort((a,b)=>a-b)[T.length>>1] || 20;
+  const paires = []; T.forEach(t => P.forEach(p => { if(p.x > t.x) paires.push([Math.abs(t.y-p.y), t, p]); }));
+  paires.sort((a,b) => a[0]-b[0]);
+  const res = new Map(), pris = new Set();
+  T.forEach(t => res.set(t.k, { taille:t.t, prix:null }));
+  paires.forEach(([d,t,p]) => { if(d > hMed*0.9 || res.get(t.k).prix!=null || pris.has(p)) return; res.get(t.k).prix = p.v; pris.add(p); });
+  photoLibres = P.filter(p => !pris.has(p)).map(p => p.v);
+  const texte = passes.map(d => d.text).join('\n'), mots = passes[0].words;
   if(!res.size){ toast('Aucune taille ni prix trouvé sur la photo'); return; }
   // Catégorie et gamme d'après le texte de la photo (ex. « MATELA BONHEUR 900 »)
   const tx = sansAccent(texte + ' ' + mots.map(m=>m.text).join(' '));
@@ -743,7 +750,13 @@ function preparerPhoto(mots, texte){
   if(compte['Extra Dream'] || compte['Super Dream']) compte['Dream'] = Math.max(0, (compte['Dream']||0) - (compte['Extra Dream']||0) - (compte['Super Dream']||0));
   const gamme = cat==='Matelas' ? (Object.entries(compte).sort((x,y)=>y[1]-x[1])[0]||[''])[0] : '';
   const dens = (tx.match(/\bd\s?(\d{2})\b/) || [])[1];
-  importEnCours = [...res.values()].map(({taille:t, prix}) => {
+  photoCtx = { cat, gamme, dens };
+  importEnCours = [...res.values()].map(({taille:t, prix}) => lignePhoto(t, prix));
+  afficherPhotoInfo();
+  afficherImport();
+}
+function lignePhoto(t, prix){
+    const { cat, gamme, dens } = photoCtx;
     const ex = db.produits.find(p => p.cat===cat && (cat!=='Matelas' || !gamme || p.gamme===gamme) && (cat!=='Mousse' || !dens || p.densite==dens) && taille(p.nom).join('x')===t.join('x'));
     const nom = ex ? ex.nom : (cat==='Mousse' ? `Mousse${dens?' D'+dens:''} ${t.join('x')}` : `Matelas${gamme?' '+gamme:''} ${t.join('x')}`);
     const p = { nom, cat, prix: prix ?? 0, stock:0, seuil:2, existe: !!ex, ocr:true, manque: prix==null,
@@ -751,14 +764,26 @@ function preparerPhoto(mots, texte){
     if(cat==='Matelas' && gamme) p.gamme = gamme;
     if(cat==='Mousse'){ p.densite = +dens || 0; p.long = t[0]/10; p.larg = t[1]/10; p.ep = t[2]; }
     return p;
-  });
-  const manquants = importEnCours.filter(p => p.manque).length;
-  $('i-photo').innerHTML = `📷 Photo lue : <b>${importEnCours.length}</b> taille${importEnCours.length>1?'s':''}${gamme?' · '+cat+' '+gamme:''}. `
-    + (manquants ? `<b>${manquants}</b> prix à compléter (en orange). ` : '') + `Vérifiez chaque prix avec la photo avant d'importer : la lecture peut se tromper ou oublier une ligne.`;
-  $('i-photo').classList.remove('hide');
-  afficherImport();
 }
-function prixPhoto(i, v){ const p = importEnCours[i]; p.prix = nombre(v); p.manque = v.trim()===''; p.vides = p.vides.filter(k => k!=='prix'); if(p.manque) p.vides.push('prix'); afficherImport(); }
+function afficherPhotoInfo(){
+  const { cat, gamme } = photoCtx, manquants = importEnCours.filter(p => p.manque).length;
+  $('i-photo').innerHTML = `📷 Photo lue : <b>${importEnCours.length}</b> taille${importEnCours.length>1?'s':''}${gamme?' · '+cat+' '+gamme:''}. `
+    + (manquants ? `<b>${manquants}</b> prix à compléter (en orange). ` : '')
+    + (photoLibres.length ? `<br>Prix lus mais non reliés à une taille : <b>${photoLibres.map(v=>v.toFixed(2)).join(' · ')}</b>. ` : '')
+    + `<br>Vérifiez chaque prix avec la photo avant d'importer : la lecture peut se tromper ou oublier une ligne.`
+    + `<br><button class="btn small alt" style="margin-top:8px" onclick="ajouterLignePhoto()">+ Ajouter une taille oubliée</button>`;
+  $('i-photo').classList.remove('hide');
+}
+let photoLibres = [], photoCtx = {};
+function ajouterLignePhoto(){
+  const t = prompt('Taille oubliée (ex : 1900x1800x250)'); if(!t) return;
+  const m = t.match(/(\d{2,4})\s*[-x×*. ]\s*(\d{2,4})\s*[-x×*. ]\s*(\d{1,3})/); if(!m) return toast('Taille non reconnue');
+  const tt = m.slice(1,4).map(Number), v = prompt('Prix pour ' + tt.join(' × ') + ' ($)'); if(v===null) return;
+  const i = importEnCours.findIndex(p => taille(p.nom).join('x')===tt.join('x'));
+  if(i>=0) return prixPhoto(i, v);
+  importEnCours.push(lignePhoto(tt, v.trim()==='' ? null : nombre(v))); afficherPhotoInfo(); afficherImport();
+}
+function prixPhoto(i, v){ const p = importEnCours[i]; p.prix = nombre(v); p.manque = v.trim()===''; p.vides = p.vides.filter(k => k!=='prix'); if(p.manque) p.vides.push('prix'); afficherPhotoInfo(); afficherImport(); }
 
 function preparerImport(lignes){
   if(!lignes.length) return toast('Le fichier est vide');
