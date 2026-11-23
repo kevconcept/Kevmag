@@ -697,6 +697,10 @@
         <button class="btn alt" onclick="exporterEtat()">⬇️ Excel</button>
         <button class="btn alt" onclick="imprimerEtat()">🖨️ Imprimer</button>
       </div>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn wa" onclick="partagerEtat('pdf')">📲 WhatsApp (PDF)</button>
+        <button class="btn wa" onclick="partagerEtat('xlsx')">📲 WhatsApp (Excel)</button>
+      </div>
       <table class="etat"><thead><tr><th>Article</th><th class="num">Quantité</th></tr></thead><tbody id="e-liste"></tbody></table>
     </div>
   </section>
@@ -779,7 +783,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-23 · échanges';
+const VERSION = '2026-11-24 · stock sur WhatsApp';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -820,6 +824,7 @@ function aller(v){
   $('titre').textContent = TITRES[v] || '';
   $('q-res').classList.add('hide');
   window.scrollTo(0,0); rafraichir();
+  if(v==='rapport') prechargerExports();
 }
 document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => aller(b.dataset.v));
 
@@ -1703,17 +1708,86 @@ function imprimerEtat(){
   $('page-print').textContent = '@page{size:A4;margin:12mm}';
   window.print();
 }
-async function exporterEtat(){
+function lignesEtat(){
   const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
   const lignes = [['', db.boutique.nom, 'STOCK ' + dateEtat()], ['Article', 'Quantité', 'Inventaire']];
   e.forEach((c,i) => { if(i) lignes.push([]); lignes.push([c.cat, c.total, '']);
     c.groupes.forEach(g => { if(g.titre) lignes.push([g.titre]); g.produits.forEach(p => lignes.push([p.nom, p.stock||0, ''])); }); });
   lignes.push([], ['Total général', tot, '']);
+  return lignes;
+}
+function blobXLSX(lignes){
+  const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = [{wch:40},{wch:12},{wch:14}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Stock');
+  return new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function chargerPDF(){
+  const sc = src => new Promise((ok, ko) => { const x = document.createElement('script'); x.src = src; x.onload = ok; x.onerror = ko; document.head.appendChild(x); });
+  if(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) return Promise.resolve();
+  return (window.jspdf ? Promise.resolve() : sc('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'))
+    .then(() => sc('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'));
+}
+let logoDataURL = null;
+function chargerLogo(){
+  if(logoDataURL) return Promise.resolve(logoDataURL);
+  return fetch('logo.png').then(r => r.blob()).then(b => new Promise(ok => { const f = new FileReader(); f.onload = () => ok(logoDataURL = f.result); f.readAsDataURL(b); })).catch(() => null);
+}
+// PDF de l'état du stock (même classement que l'écran, colonne Inventaire vide)
+function blobPDF(){
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:'mm', format:'a4' }), b = db.boutique;
+  const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0), BLEU = [34,48,122];
+  if(logoDataURL) try{ doc.addImage(logoDataURL, 'PNG', 14, 10, 42, 16); }catch(_){}
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...BLEU); doc.text((b.nom||'').toUpperCase() + ' – ÉTAT DU STOCK', 196, 17, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90);
+  doc.text([(b.adresse||''), 'Stock du ' + dateEtat()], 196, 23, { align:'right' });
+  const body = [], styles = [];
+  e.forEach((c,i) => {
+    if(i){ body.push(['','','']); styles.push('vide'); }
+    body.push([c.cat, String(c.total), '']); styles.push('cat');
+    c.groupes.forEach(g => { if(g.titre){ body.push([g.titre,'','']); styles.push('sg'); } g.produits.forEach(p => { body.push([p.nom, String(p.stock||0), '']); styles.push(''); }); });
+  });
+  body.push(['','','']); styles.push('vide'); body.push(['Total général', String(tot), '']); styles.push('cat');
+  doc.autoTable({ startY:32, head:[['Article','Quantité','Inventaire']], body, theme:'grid',
+    styles:{ font:'helvetica', fontSize:8.5, cellPadding:1.4, textColor:20, lineColor:[170,170,170], lineWidth:.15 },
+    headStyles:{ fillColor:BLEU, textColor:255, fontStyle:'bold' },
+    columnStyles:{ 1:{ halign:'right', cellWidth:24 }, 2:{ cellWidth:30 } },
+    didParseCell: d => { if(d.section!=='body') return; const t = styles[d.row.index];
+      if(t==='cat'){ d.cell.styles.fillColor = [223,230,243]; d.cell.styles.fontStyle = 'bold'; }
+      else if(t==='sg'){ d.cell.styles.fillColor = [243,243,243]; d.cell.styles.fontStyle = 'bold'; }
+      else if(t==='vide'){ d.cell.styles.lineWidth = 0; d.cell.styles.minCellHeight = 3; } },
+    didDrawPage: d => { doc.setFontSize(8); doc.setTextColor(140); doc.text('Kevmag · ' + (b.nom||'') + ' · page ' + doc.internal.getNumberOfPages(), 196, 290, { align:'right' }); } });
+  let y = doc.lastAutoTable.finalY + 12; if(y > 270){ doc.addPage(); y = 20; }
+  doc.setFontSize(9.5); doc.setTextColor(40);
+  doc.text('Inventaire fait par : ____________________     Date : ___ / ___ / _______     Signature : ______________', 14, y);
+  return doc.output('blob');
+}
+// Envoi sur WhatsApp : menu de partage du téléphone (WhatsApp, puis le contact) ; sinon téléchargement
+async function partagerEtat(format){
+  const nom = 'Kevmag-etat-stock-' + dateEtat() + (format==='pdf' ? '.pdf' : '.xlsx');
+  let blob;
+  try{
+    if(format==='pdf'){ await Promise.all([chargerPDF(), chargerLogo()]); blob = blobPDF(); }
+    else { await chargerXLSX(); blob = blobXLSX(lignesEtat()); }
+  }catch(err){ return toast('Il faut internet pour préparer le fichier'); }
+  const fichier = new File([blob], nom, { type: blob.type });
+  const texte = `${db.boutique.nom} – État du stock du ${dateEtat()}`;
+  if(navigator.canShare && navigator.canShare({ files:[fichier] })){
+    try{ await navigator.share({ files:[fichier], title:texte, text:texte }); return; }
+    catch(err){ if(err && err.name==='AbortError') return; }
+  }
+  // Pas de partage de fichier possible : on télécharge le fichier et on ouvre WhatsApp
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; a.click();
+  toast('Fichier téléchargé : joignez-le dans WhatsApp (📎)');
+  setTimeout(() => ouvrirWA(numeroWA(db.boutique.whatsapp), texte + ' (fichier joint)'), 1200);
+}
+// Prépare les bibliothèques à l'avance (le partage doit suivre vite le geste sur iPhone)
+function prechargerExports(){ if(navigator.onLine && location.protocol.startsWith('http')){ chargerXLSX().catch(()=>{}); chargerPDF().catch(()=>{}); chargerLogo(); } }
+async function exporterEtat(){
+  const lignes = lignesEtat();
   const nom = 'Kevmag-etat-stock-' + dateEtat();
   try{
     await chargerXLSX();
-    const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = [{wch:40},{wch:12},{wch:14}];
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Stock'); XLSX.writeFile(wb, nom + '.xlsx');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blobXLSX(lignes)); a.download = nom + '.xlsx'; a.click();
   }catch(err){
     // Sans internet : fichier CSV (s'ouvre aussi dans Excel)
     const csv = '\ufeff' + lignes.map(l => l.map(x => /[;"\n]/.test(String(x)) ? '"'+String(x).replace(/"/g,'""')+'"' : x).join(';')).join('\n');
