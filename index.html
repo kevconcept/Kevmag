@@ -369,6 +369,34 @@
   html.ios #anim-fond{--voile:rgba(238,241,248,.18)}
   @media (prefers-color-scheme:dark){ html.ios #anim-fond{--voile:rgba(10,10,16,.28)} }
   html.anim #ciel{display:none}
+  /* Arrière-plan « Ciel » : couleur selon l'heure, soleil / lune, nuages qui défilent, étoiles la nuit */
+  #fond-ciel{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:none}
+  html.cielmode #fond-ciel{display:block}
+  html.cielmode #anim-fond{display:none}
+  .fc-degrade{position:absolute;inset:0;transition:background 3s ease;background:linear-gradient(180deg,#3a8be0 0%,#7ec3f5 55%,#d6eeff 100%)}
+  #fond-ciel[data-moment="aube"] .fc-degrade{background:linear-gradient(180deg,#46679e 0%,#e9a07f 55%,#ffdca8 100%)}
+  #fond-ciel[data-moment="soir"] .fc-degrade{background:linear-gradient(180deg,#2a3778 0%,#b9567c 50%,#f6a25a 100%)}
+  #fond-ciel[data-moment="nuit"] .fc-degrade{background:linear-gradient(180deg,#040a1d 0%,#0f1d45 55%,#1f3168 100%)}
+  .fc-etoiles{position:absolute;inset:0;opacity:0;transition:opacity 3s}
+  #fond-ciel[data-moment="nuit"] .fc-etoiles{opacity:1}
+  .fc-etoiles i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:scintille 3s ease-in-out infinite alternate}
+  @keyframes scintille{from{opacity:.25}to{opacity:1}}
+  .fc-astre{position:absolute;width:110px;height:110px;border-radius:50%;transition:all 3s ease;left:72%;top:9%;
+    background:radial-gradient(circle,#fff9d6 0%,#ffe27a 45%,rgba(255,214,90,.35) 62%,rgba(255,214,90,0) 72%)}
+  #fond-ciel[data-moment="aube"] .fc-astre{left:10%;top:46%;background:radial-gradient(circle,#fff1cc 0%,#ffb35c 45%,rgba(255,150,80,.35) 62%,rgba(255,150,80,0) 72%)}
+  #fond-ciel[data-moment="soir"] .fc-astre{left:78%;top:50%;width:130px;height:130px;background:radial-gradient(circle,#ffe7c2 0%,#ff8a4c 45%,rgba(255,110,70,.35) 62%,rgba(255,110,70,0) 72%)}
+  #fond-ciel[data-moment="nuit"] .fc-astre{left:78%;top:8%;width:80px;height:80px;background:radial-gradient(circle at 40% 40%,#fdfdf5 0%,#e9ecf5 48%,rgba(220,228,255,.25) 60%,rgba(220,228,255,0) 70%)}
+  .fc-nuage{position:absolute;left:0;opacity:.92;animation:derive linear infinite;will-change:transform}
+  .fc-nuage svg{display:block;width:100%;height:100%}
+  #fond-ciel[data-moment="soir"] .fc-nuage{opacity:.8;filter:sepia(.5) saturate(2.2) hue-rotate(-25deg) brightness(.95)}
+  #fond-ciel[data-moment="aube"] .fc-nuage{opacity:.85;filter:sepia(.35) saturate(1.6) hue-rotate(-15deg)}
+  #fond-ciel[data-moment="nuit"] .fc-nuage{opacity:.22;filter:brightness(.6)}
+  @keyframes derive{from{transform:translateX(-40vw)}to{transform:translateX(110vw)}}
+  .fc-voile{position:absolute;inset:0;background:rgba(255,255,255,.06)}
+  /* La nuit (mode clair) : panneaux plus opaques pour garder le texte lisible */
+  @media (prefers-color-scheme:light){ html.ios.ciel-nuit{--verre:rgba(255,255,255,.66);--verre2:rgba(255,255,255,.55);--barre:rgba(255,255,255,.8)} }
+  html.ciel-nuit header.top h1{text-shadow:none}
+  @media (prefers-reduced-motion: reduce){ .fc-nuage,.fc-etoiles i{animation:none} }
   /* Interface plus transparente quand l'animation est active */
   html.anim.ios{--verre:rgba(255,255,255,.40);--verre2:rgba(255,255,255,.26);--barre:rgba(255,255,255,.58);--champ:rgba(255,255,255,.45)}
   @media (prefers-color-scheme:dark){ html.anim.ios{--verre:rgba(28,28,36,.40);--verre2:rgba(40,40,50,.28);--barre:rgba(22,22,28,.60);--champ:rgba(118,118,128,.30)} }
@@ -451,6 +479,7 @@
 </head>
 <body>
 <div id="ciel"></div>
+<div id="fond-ciel" aria-hidden="true"><div class="fc-degrade"></div><div class="fc-etoiles"></div><div class="fc-astre"></div><div class="fc-nuages"></div><div class="fc-voile"></div></div>
 <div id="anim-fond" aria-hidden="true"><div class="af"></div><div class="af"></div><div class="af-voile"></div></div>
 <div class="app">
   <aside class="side">
@@ -742,8 +771,8 @@
       <h2>🎨 Apparence</h2>
       <label style="margin-top:0">Thème</label>
       <select id="g-theme" onchange="changerTheme(this.value)"><option value="ios">iOS 26 · Liquid Glass (clair / sombre selon l'iPhone)</option><option value="nuit">Nuit étoilée</option></select>
-      <label>Animation des produits en arrière-plan</label>
-      <select id="g-anim" onchange="db.fondAnim = this.value==='oui'; sauver(); demarrerFond()"><option value="oui">Activée</option><option value="non">Désactivée</option></select>
+      <label>Arrière-plan</label>
+      <select id="g-anim" onchange="db.fond = this.value; db.fondAnim = this.value!=='aucun'; sauver(); demarrerFond()"><option value="produits">Produits Complast animés</option><option value="ciel">Ciel (selon l'heure : matin, jour, soir, nuit)</option><option value="aucun">Aucun</option></select>
     </div>
     <div class="card">
       <h2>🏷️ Remises à la caisse</h2>
@@ -861,7 +890,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · remises';
+const VERSION = '2026-11-24 · fond ciel';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -2066,11 +2095,27 @@ document.addEventListener('click', e => { if(!e.target.closest('.cherche')) $('q
 /* Animation des produits en arrière-plan : les photos défilent doucement (zoom + fondu) */
 const FONDS = Array.from({length:16}, (_,i) => 'fond/' + String(i+1).padStart(2,'0') + '.jpg');
 let fondMinuteur = null, fondIdx = 0, fondCouche = 0;
+function modeFond(){ return db.fond || (db.fondAnim===false ? 'aucun' : 'produits'); }
+let cielMinuteur = null;
+function momentCiel(){ const n = new Date(), h = n.getHours() + n.getMinutes()/60; return h < 5.5 || h >= 19.5 ? 'nuit' : h < 7.5 ? 'aube' : h < 17 ? 'jour' : 'soir'; }
+function construireCiel(){
+  const box = document.querySelector('.fc-nuages'); if(box.childElementCount) return;
+  const nuage = '<svg viewBox="0 0 200 80"><g fill="#fff"><ellipse cx="60" cy="52" rx="48" ry="24"/><ellipse cx="100" cy="38" rx="42" ry="32"/><ellipse cx="140" cy="50" rx="44" ry="26"/><ellipse cx="100" cy="58" rx="80" ry="20"/></g></svg>';
+  let r = hasard(11), html = '';
+  for(let i=0;i<8;i++){ const w = 140 + r()*220, dur = 70 + r()*90;
+    html += `<div class="fc-nuage" style="top:${(r()*62).toFixed(1)}%;width:${w.toFixed(0)}px;height:${(w*.4).toFixed(0)}px;animation-duration:${dur.toFixed(0)}s;animation-delay:-${(r()*dur).toFixed(0)}s;opacity:${(.65+r()*.3).toFixed(2)}">${nuage}</div>`; }
+  box.innerHTML = html;
+  let e = ''; r = hasard(5); for(let i=0;i<90;i++) e += `<i style="left:${(r()*100).toFixed(1)}%;top:${(r()*70).toFixed(1)}%;animation-delay:-${(r()*3).toFixed(1)}s;transform:scale(${(.6+r()*1.2).toFixed(2)})"></i>`;
+  document.querySelector('.fc-etoiles').innerHTML = e;
+}
+function majCiel(){ const m = momentCiel(); $('fond-ciel').dataset.moment = m; document.documentElement.classList.toggle('ciel-nuit', m==='nuit'); }
 function demarrerFond(){
-  clearInterval(fondMinuteur);
+  clearInterval(fondMinuteur); clearInterval(cielMinuteur);
   const calme = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const actif = db.fondAnim !== false;
+  const mode = modeFond(), actif = mode !== 'aucun';
   document.documentElement.classList.toggle('anim', actif);
+  document.documentElement.classList.toggle('cielmode', mode==='ciel'); if(mode!=='ciel') document.documentElement.classList.remove('ciel-nuit');
+  if(mode==='ciel'){ construireCiel(); majCiel(); cielMinuteur = setInterval(majCiel, 5*60*1000); return; }
   if(!actif) return;
   const couches = document.querySelectorAll('#anim-fond .af');
   const suivant = () => {
@@ -2138,7 +2183,7 @@ function toutEffacer(){
   db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
