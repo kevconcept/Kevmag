@@ -625,7 +625,7 @@
       <label>Nom</label><input id="p-nom" placeholder="Ex : Matelas 2 places" onchange="majChampsMousse()">
       <div class="row">
         <div><label>Catégorie</label>
-          <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Autre</option></select></div>
+          <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Oreillers</option><option>Autre</option></select></div>
         <div><label>Prix de vente</label><input id="p-prix" type="number" min="0" step="any"></div>
       </div>
       <div class="row">
@@ -835,7 +835,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · synchronisation';
+const VERSION = '2026-11-24 · oreillers et Hospital SHP';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -856,7 +856,12 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
   if(!db.recuV){ db.boutique = db.boutique || {}; db.boutique.format = 'a4'; db.recuV = 1; setTimeout(sauver, 0); }
   // Gammes Bébé D14 / Bébé D16 (une seule fois)
   if((db.catsV||0) < 5){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
-    db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0;
+    db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); }
+  // Catégorie Oreillers et gamme Hospital SHP (une seule fois)
+  if((db.catsV||0) < 6){ setTimeout(() => { let n = 0; db.produits.forEach(p => {
+      if(p.cat==='Autre' && devinerCat(p.nom)==='Oreillers'){ p.cat = 'Oreillers'; n++; }
+      if(p.cat==='Matelas' && !p.gamme && devinerGamme(p.nom)==='Hospital SHP'){ p.gamme = 'Hospital SHP'; n++; } });
+    db.catsV = 6; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' (Oreillers / Hospital SHP)'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0;
   if(!db.gerantV){ if(!db.boutique.whatsapp) db.boutique.whatsapp = NUM_GERANT; db.gerantV = 1; setTimeout(sauver, 0); }
   // Mentions légales de Complast (remplies une fois si vides)
   if(!db.legalV){ ['rccm','idnat','impot'].forEach(k => { if(!db.boutique[k]) db.boutique[k] = BOUTIQUE[k]; }); db.legalV = 1; setTimeout(sauver, 0); } }
@@ -912,9 +917,10 @@ function majChampsMousse(){
   if(c==='Matelas' && !$('p-gamme').value) $('p-gamme').value = devinerGamme($('p-nom').value);
 }
 /* Gammes de matelas */
-const GAMMES = ['Elengi','Bonheur','Dream','Extra Dream','Orthopédique','Prestige','Super Dream','Bébé D14','Bébé D16'];
+const GAMMES = ['Elengi','Bonheur','Dream','Extra Dream','Orthopédique','Prestige','Super Dream','Hospital SHP','Bébé D14','Bébé D16'];
 function devinerGamme(nom){
   const n = sansAccent(nom);
+  if(/\bhospital\b|\bshp\b|\bhopital\b/.test(n)) return 'Hospital SHP';
   if(/\bbebe\b.*\b[bd]\s?-?14\b/.test(n)) return 'Bébé D14';
   if(/\bbebe\b.*\b[bd]\s?-?16\b/.test(n)) return 'Bébé D16';
   if(/super\s*-?\s*dream/.test(n)) return 'Super Dream';
@@ -958,8 +964,8 @@ function details(p){
   return t.join(' · ');
 }
 function etat(p){ return p.stock<=0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
-const CATS = ['Chambre','Garde-robe','Dresser table','Nightstand','Lit','Matelas','Mousse','Table','Canapé','Buffet','Autre'];
-const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Nightstand:'🕯️', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Autre:'📦' };
+const CATS = ['Chambre','Garde-robe','Dresser table','Nightstand','Lit','Matelas','Mousse','Oreillers','Table','Canapé','Buffet','Autre'];
+const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Nightstand:'🕯️', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Oreillers:'☁️', Autre:'📦' };
 let stockCat = 'Tous', stockGamme = 'Toutes';
 function choisirCat(c){ stockCat = c; stockGamme = 'Toutes'; afficherStock(); }
 function choisirGamme(g){ stockGamme = g; afficherStock(); }
@@ -999,6 +1005,7 @@ const sansAccent = t => String(t??'').normalize('NFD').replace(/[\u0300-\u036f]/
 const REGLES = [
   ['Matelas', /\bmatelas|\bmatela\b/],
   ['Mousse',  /\bmousse|\bfoam|\bsimba\b/],
+  ['Oreillers', /\boreillers?\b|\bcoussins?\b|\bcouettes?\b|\bdraps?\b|\betok[oe]\b|\btraversins?\b|\bprotege.?matelas|\bpillows?\b/],
   ['Garde-robe', /garde.?robe|\barmoire|\bwardrobe|\bpenderie/],
   ['Dresser table', /dress(er|ing)|\bcoiffeuse|\bchest\b/],
   ['Nightstand', /night.?stand|\bchevet|table de nuit|\bbedside/],
@@ -1723,7 +1730,7 @@ function texteEchange(e){
 
 /* Rapport */
 /* État du stock classé : catégorie → sous-groupe (densité / gamme) → articles */
-const ORDRE_ETAT = ['Mousse','Matelas','Lit','Garde-robe','Dresser table','Nightstand','Chambre','Canapé','Table','Buffet','Autre'];
+const ORDRE_ETAT = ['Mousse','Matelas','Oreillers','Lit','Garde-robe','Dresser table','Nightstand','Chambre','Canapé','Table','Buffet','Autre'];
 function etatStock(){
   return ORDRE_ETAT.map(cat => {
     const l = db.produits.filter(p => p.cat===cat); if(!l.length) return null;
