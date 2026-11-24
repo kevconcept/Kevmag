@@ -649,6 +649,19 @@
       <button class="btn full" onclick="enregistrerProduit()">Enregistrer</button>
       <button class="btn alt full hide" id="p-annuler" onclick="resetProduit()">Annuler</button>
     </div>
+    <div class="card" id="carte-entree">
+      <h2>📦 Entrée de marchandises</h2>
+      <p class="muted" style="margin:0 0 6px">Ajoutez au stock les articles reçus (livraison, retour d'usine…).</p>
+      <label>Article</label>
+      <input id="en-cherche" placeholder="Rechercher : nom, taille, D16, Bonheur…" oninput="filtrerEntree()" autocomplete="off">
+      <select id="en-prod" style="margin-top:6px"></select>
+      <div class="row">
+        <div><label>Quantité reçue</label><input id="en-qte" type="number" min="1" value="1" inputmode="numeric"></div>
+        <div><label>Note (fournisseur, n° de bon…)</label><input id="en-note" placeholder="Facultatif"></div>
+      </div>
+      <button class="btn full" onclick="enregistrerEntree()">+ Ajouter au stock</button>
+      <details style="margin-top:12px"><summary class="muted" style="cursor:pointer">📜 Dernières entrées</summary><div id="en-hist" style="margin-top:8px"></div></details>
+    </div>
     <div class="card">
       <h2>📥 Importer une liste de produits</h2>
       <label class="depot" id="i-depot">
@@ -693,6 +706,7 @@
       <div class="kpi"><span>💵 Encaissé en dollars</span><b id="r-usd">0 $</b></div>
       <div class="kpi"><span>💴 Encaissé en francs</span><b id="r-fc">0 FC</b></div>
       <div class="kpi"><span>⏳ Acomptes reçus</span><b id="r-acp">0</b></div>
+      <div class="kpi"><span>📦 Articles reçus</span><b id="r-entrees">0</b></div>
     </div>
     <button class="btn full wa" style="margin:0 0 16px" onclick="rapportWhatsApp()">📲 Envoyer le rapport du jour sur WhatsApp</button>
     <div class="card">
@@ -835,10 +849,10 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · oreillers et Hospital SHP';
+const VERSION = '2026-11-24 · entrées de marchandises';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
-let db = { produits: [], ventes: [], acomptes: [], echanges: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
+let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
 let derniereVente = null, recuOuvert = null;
 
@@ -972,8 +986,49 @@ function choisirGamme(g){ stockGamme = g; afficherStock(); }
 function ligneStock(p){ return `<tr>
     <td>${esc(p.nom)}<br><span class="muted">${details(p)?esc(details(p)):esc(p.cat==='Matelas' && p.gamme ? 'Matelas · '+p.gamme : p.cat)}</span> ${etat(p)}</td>
     <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td>
-    <td class="num"><button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`; }
+    <td class="num"><button class="btn small" title="Ajouter des articles" onclick="entreeRapide('${p.id}')">＋</button> <button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`; }
+/* Entrées de marchandises : ajout de quantités au stock, avec historique */
+function filtrerEntree(){
+  const q = sansAccent($('en-cherche').value), sel = $('en-prod'), avant = sel.value;
+  const l = db.produits.filter(p => !q || sansAccent(p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).includes(q)).sort((a,b) => a.nom.localeCompare(b.nom)).slice(0,300);
+  sel.innerHTML = l.length ? l.map(p => `<option value="${p.id}">${esc(p.nom)} — stock : ${p.stock}</option>`).join('') : '<option value="">Aucun article trouvé</option>';
+  if(l.some(p => p.id===avant)) sel.value = avant; else if(l.length===1) sel.value = l[0].id;
+}
+function ajouterEntree(pid, qte, note){
+  const p = db.produits.find(x => x.id===pid); if(!p) return null;
+  p.stock = (p.stock||0) + qte;
+  db.entrees = db.entrees || [];
+  const e = { id:id(), date:new Date().toISOString(), pid, nom:p.nom, cat:p.cat, qte, note:note||'' };
+  db.entrees.push(e); sauver(); rafraichir();
+  toast(`+${qte} · ${p.nom} → stock ${p.stock}`);
+  return e;
+}
+function enregistrerEntree(){
+  const pid = $('en-prod').value; if(!pid) return toast('Choisissez l’article');
+  const q = parseInt($('en-qte').value)||0; if(q<1) return toast('Quantité invalide');
+  ajouterEntree(pid, q, $('en-note').value.trim());
+  $('en-qte').value = 1; $('en-qte').focus();
+}
+function entreeRapide(pid){
+  const p = db.produits.find(x => x.id===pid); if(!p) return;
+  const r = prompt(`Ajouter au stock : ${p.nom}\nStock actuel : ${p.stock}\n\nQuantité reçue :`, '1'); if(r===null) return;
+  const q = parseInt(r)||0; if(q<1) return toast('Quantité invalide');
+  ajouterEntree(pid, q, '');
+}
+function annulerEntree(eid){
+  const e = (db.entrees||[]).find(x => x.id===eid); if(!e) return;
+  if(!confirm(`Annuler l’entrée de ${e.qte} × ${e.nom} ? Le stock sera diminué de ${e.qte}.`)) return;
+  const p = db.produits.find(x => x.id===e.pid); if(p) p.stock -= e.qte;
+  db.entrees = db.entrees.filter(x => x.id!==eid); sauver(); rafraichir();
+}
+function afficherEntrees(){
+  if(!$('en-prod').options.length || $('en-cherche').value==='') filtrerEntree();
+  const L = (db.entrees||[]).slice(-30).reverse();
+  $('en-hist').innerHTML = L.length ? L.map(e => `<div class="vente"><div class="av">📦</div><div class="tx"><b>+${e.qte} · ${esc(e.nom)}</b><span class="muted">${new Date(e.date).toLocaleDateString('fr-FR')} ${new Date(e.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${e.note?' · '+esc(e.note):''}</span></div><button class="btn small alt" onclick="annulerEntree('${e.id}')">Annuler</button></div>`).join('')
+    : '<p class="muted" style="margin:0">Aucune entrée pour le moment.</p>';
+}
 function afficherStock(){
+  afficherEntrees();
   const q = $('s-cherche').value.toLowerCase();
   const nb = c => db.produits.filter(p => p.cat===c).length;
   const presentes = CATS.filter(c => nb(c));
@@ -1863,6 +1918,7 @@ function afficherRapport(){
   $('r-nb').textContent = duJour.length;
   $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
+  $('r-entrees').textContent = (db.entrees||[]).filter(e => jour(e.date)===j).reduce((s,e)=>s+e.qte,0) + ' pièce(s)';
   const va = versementsDu(j); $('r-acp').textContent = fmtDev(va['$'],'$') + (va.FC ? ' + ' + fmtDev(va.FC,'FC') : '');
   const enc = encaisse(duJour); $('r-usd').textContent = fmtDev(enc['$'], '$'); $('r-fc').textContent = fmtDev(enc.FC, 'FC');
   $('r-ventes').innerHTML = duJour.length ? duJour.slice().reverse().map(v=>`<tr>
@@ -2016,14 +2072,14 @@ function importer(input){
   const r = new FileReader();
   r.onload = () => { try{ const d = JSON.parse(r.result); if(!Array.isArray(d.produits)||!Array.isArray(d.ventes)) throw 0;
     if(!confirm('Remplacer les données actuelles par cette sauvegarde ?')) return;
-    db = Object.assign({devise:'$', numRecu:0, acomptes:[], echanges:[]}, d); db.boutique = Object.assign({...BOUTIQUE}, d.boutique); sauver(); rafraichir(); demarrerFond();
+    db = Object.assign({devise:'$', numRecu:0, acomptes:[], echanges:[], entrees:[]}, d); db.boutique = Object.assign({...BOUTIQUE}, d.boutique); sauver(); rafraichir(); demarrerFond();
     toast('Sauvegarde restaurée : ' + db.produits.length + ' produits, ' + db.ventes.length + ' ventes'); }catch(e){ toast('Fichier invalide'); } };
   r.readAsText(f); input.value='';
 }
 function toutEffacer(){
   if(!confirm('Effacer TOUS les produits et ventes ? Faites une sauvegarde avant.')) return;
   if(!confirm('Êtes-vous vraiment sûr ?')) return;
-  db = { produits:[], ventes:[], acomptes:[], echanges:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
+  db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
 function rafraichir(){ afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
@@ -2041,7 +2097,7 @@ rafraichir();
    à la dernière version synchronisée et envoyées ; le stock est envoyé en « +/- différence » pour rester juste
    quand plusieurs appareils vendent en même temps. Les autres appareils reçoivent les changements en direct. */
 const SYNC_CLE = 'kevmag-sync', SYNC_BASE = 'kevmag-sync-base';
-const SYNC_COLL = ['produits','ventes','acomptes','echanges'];
+const SYNC_COLL = ['produits','ventes','acomptes','echanges','entrees'];
 const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange'];
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const Sync = { actif:false, fs:null, timer:null, ecoutes:[], base:null, envoiEnCours:false, aRefaire:false, enLigne:false, derniere:null, erreur:'' };
