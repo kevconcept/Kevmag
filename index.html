@@ -775,6 +775,7 @@
         <div style="max-height:420px;overflow:auto">
         <table><thead id="i-tete"></thead><tbody id="i-lignes"></tbody></table>
         </div>
+        <label style="display:flex;gap:10px;align-items:center;margin-top:12px;font-weight:600;color:var(--ink)"><input type="checkbox" id="i-maj-seul" style="width:auto" onchange="afficherImport()"> Mettre à jour seulement les produits existants (ne pas ajouter de nouveaux produits)</label>
         <div class="row">
           <button class="btn alt full" onclick="annulerImport()">Annuler</button>
           <button class="btn full" id="i-ok" onclick="confirmerImport()">Importer</button>
@@ -955,7 +956,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · entrées usine et magasins';
+const VERSION = '2026-11-25 · prix des mousses';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1448,12 +1449,14 @@ function preparerImport(lignes){
     return p;
   }).filter(Boolean);
   if(!importEnCours.length) return toast('Aucun produit trouvé dans le fichier');
+  $('i-maj-seul').checked = idx.stock===undefined;   // liste de prix sans stock : on n'ajoute rien
   afficherImport();
 }
 function afficherImport(){
-  const l = importEnCours;
+  const seul = $('i-maj-seul').checked && !importEnCours.some(p => p.ocr);
+  const l = seul ? importEnCours.filter(p => p.existe) : importEnCours, ignores = importEnCours.length - l.length;
   $('i-resume').innerHTML = CATS.filter(c => l.some(p=>p.cat===c)).map(c => `<span class="chip" style="cursor:default">${ICONES[c]} ${c}<small>${l.filter(p=>p.cat===c).length}</small></span>`).join('');
-  const ordre = l.map((p,i)=>[p,i]).sort((a,b) => CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat) || parTaille(a[0], b[0]));
+  const ordre = importEnCours.map((p,i)=>[p,i]).filter(([p]) => !seul || p.existe).sort((a,b) => CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat) || parTaille(a[0], b[0]));
   const photo = l.length && l.every(p => p.ocr);
   $('i-tete').innerHTML = photo ? '<tr><th>Taille</th><th class="num">Prix ($)</th></tr>' : '<tr><th>Produit</th><th>Catégorie</th><th class="num">Prix</th><th class="num">Stock</th></tr>';
   if(photo){
@@ -1464,13 +1467,16 @@ function afficherImport(){
     <td><select class="imp-cat" onchange="importEnCours[${i}].cat=this.value;importEnCours[${i}].vides=importEnCours[${i}].vides.filter(k=>k!=='cat');afficherImport()">${CATS.map(c=>`<option ${c===p.cat?'selected':''}>${c}</option>`).join('')}</select></td>
     <td class="num">${p.existe && p.vides.includes('prix') ? '<span class="muted">inchangé</span>' : argent2h(p.prix)}</td><td class="num">${p.existe && p.vides.includes('stock') ? '<span class="muted">inchangé</span>' : p.stock}</td></tr>`).join('');
   const n = l.filter(p=>!p.existe).length, m = l.length-n;
-  $('i-ok').textContent = 'Importer ' + l.length + ' produit' + (l.length>1?'s':'') + (m ? ` (${n} nouveaux, ${m} mis à jour)` : '');
+  $('i-ok').textContent = seul ? `Mettre à jour ${m} produit${m>1?'s':''}` : 'Importer ' + l.length + ' produit' + (l.length>1?'s':'') + (m ? ` (${n} nouveaux, ${m} mis à jour)` : '');
+  $('i-resume').innerHTML += ignores ? `<span class="chip" style="cursor:default">🚫 ${ignores} absent${ignores>1?'s':''} du stock, ignoré${ignores>1?'s':''}</span>` : '';
   $('i-apercu').classList.remove('hide');
 }
 function annulerImport(){ importEnCours = []; $('i-apercu').classList.add('hide'); $('i-photo').classList.add('hide'); }
 function confirmerImport(){
   let n = 0, m = 0;
+  const seul = $('i-maj-seul').checked && !importEnCours.some(x => x.ocr);
   importEnCours.forEach(src => {
+    if(seul && !src.existe) return;   // on n'ajoute pas les produits absents du stock
     const p = { ...src }; delete p.existe;
     if(p.cat!=='Mousse'){ delete p.densite; delete p.long; delete p.larg; delete p.ep; }
     else if(p.densite===undefined) Object.assign(p, { densite:0, long:0, larg:0, ep:0 }, mesuresDuNom(p.nom));
@@ -1516,7 +1522,7 @@ function remiseDe(p){
   if(p.cat==='Matelas'){ const g = p.gamme || devinerGamme(p.nom); if(g==='Elengi') return r.elengi; if(g==='Orthopédique') return r.ortho; }
   return r.defaut;
 }
-const prixRemise = (prix, pc) => Math.round((+prix||0) * (1 - (+pc||0)/100) * 100) / 100;
+const prixRemise = (prix, pc) => +pc ? Math.round((+prix||0) * (1 - (+pc)/100) * 100) / 100 : (+prix||0);   // sans remise : prix exact (ex. prix fixés en FC)
 function infoRemise(){
   const p = db.produits.find(x => x.id === $('c-prod').value), pc = remiseDe(p), v = +$('c-prix').value || 0;
   $('c-remise').textContent = p && v ? (pc ? `Remise ${pc} % → ${argent2(prixRemise(v, pc))}` : 'Pas de remise sur cet article') : '';
