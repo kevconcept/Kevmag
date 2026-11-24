@@ -956,7 +956,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · mousses classées';
+const VERSION = '2026-11-25 · ventes sans stock';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1108,7 +1108,12 @@ function details(p){
   if(d.length) t.push(d.join(' × ')+' cm');
   return t.join(' · ');
 }
-function etat(p){ return p.stock<=0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
+function etat(p){
+  if(p.stock < 0) return `<span class="tag out">⚠️ −${-p.stock} vendu${p.stock<-1?'s':''} · à livrer</span>`;
+  return p.stock===0 ? '<span class="tag out">Épuisé</span>' : p.stock<=p.seuil ? '<span class="tag low">Bas</span>' : ''; }
+// Pièces déjà vendues sans stock qu'un arrivage va servir : « stock −3 → 7 · 3 servies aux ventes en attente »
+function txtArrivage(st, q){ const servi = st < 0 ? Math.min(-st, q) : 0; return `stock ${st} → ${st+q}` + (servi ? ` · <b style="color:var(--orange)">${servi} servie${servi>1?'s':''} aux ventes en attente</b>` : ''); }
+const servis = l => l.reduce((s,x) => { const p = db.produits.find(y=>y.id===x.pid); return s + (p && p.stock < 0 ? Math.min(-p.stock, x.qte) : 0); }, 0);
 const CATS = ['Chambre','Garde-robe','Dresser table','Nightstand','Lit','Matelas','Mousse','Oreillers','Table','Canapé','Buffet','Autre'];
 const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Nightstand:'🕯️', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Oreillers:'☁️', Autre:'📦' };
 let stockCat = 'Tous', stockGamme = 'Toutes';
@@ -1116,7 +1121,7 @@ function choisirCat(c){ stockCat = c; stockGamme = 'Toutes'; afficherStock(); }
 function choisirGamme(g){ stockGamme = g; afficherStock(); }
 function ligneStock(p){ return `<tr>
     <td>${esc(p.nom)}<br><span class="muted">${details(p)?esc(details(p)):esc(p.cat==='Matelas' && p.gamme ? 'Matelas · '+p.gamme : p.cat)}</span> ${etat(p)}</td>
-    <td class="num">${argent2h(p.prix)}</td><td class="num">${p.stock}</td>
+    <td class="num">${argent2h(p.prix)}</td><td class="num">${p.stock<0 ? `<b style="color:var(--red)">${p.stock}</b>` : p.stock}</td>
     <td class="num acts"><button class="btn small" title="Ajouter des articles (entrée usine)" onclick="entreeRapide('${p.id}')">＋</button><button class="btn small alt" title="Modifier" onclick="modifierProduit('${p.id}')">✏️</button><button class="btn small bad" title="Supprimer" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`; }
 /* Entrées de marchandises : ajout de quantités au stock, avec historique */
 /* Entrées d'articles : de l'usine (bon de réception) ou d'un autre magasin (enregistré comme transfert reçu) */
@@ -1141,7 +1146,7 @@ function ajouterLigneEn(){
 }
 function afficherLignesEn(){
   $('en-lignes').innerHTML = enLignes.length ? enLignes.map((l,i) => { const p = db.produits.find(x=>x.id===l.pid), st = p ? p.stock : 0;
-    return `<tr><td>${esc(l.nom)}<br><span class="muted">stock ${st} → ${st+l.qte}</span></td><td class="num"><b style="color:var(--green)">+${l.qte}</b></td><td class="num"><button class="btn small alt" onclick="enLignes.splice(${i},1);afficherLignesEn()">✕</button></td></tr>`; }).join('')
+    return `<tr><td>${esc(l.nom)}<br><span class="muted">${txtArrivage(st, l.qte)}</span></td><td class="num"><b style="color:var(--green)">+${l.qte}</b></td><td class="num"><button class="btn small alt" onclick="enLignes.splice(${i},1);afficherLignesEn()">✕</button></td></tr>`; }).join('')
     + `<tr><td><b>Total</b></td><td class="num"><b>${enLignes.reduce((s,l)=>s+l.qte,0)} pièce(s)</b></td><td></td></tr>`
     : '<tr><td class="muted">Aucun article ajouté.</td></tr>';
 }
@@ -1162,20 +1167,21 @@ function validerEntree(){
     if(!confirm(`Entrer ${n} pièce(s) reçues de ${mag} ?`)) return;
     db.transferts = db.transferts || []; db.numTransfert = (db.numTransfert||0) + 1;
     const t = { id:id(), num:db.numTransfert, date:new Date().toISOString(), sens:'reception', magasin:mag, lignes:enLignes.map(l=>({...l})), note, statut:'fait', viaEntree:true };
-    t.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += l.qte; });
+    const sv = servis(t.lignes); t.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += l.qte; });
     db.magasins = [...new Set([mag, ...(db.magasins||[])])].slice(0,30);
     db.transferts.push(t); enLignes = []; $('en-note').value = ''; sauver(); rafraichir();
-    toast(numTr(t) + ' : ' + n + ' pièce(s) entrées'); return voirBonTransfert(t.id);
+    toast(numTr(t) + ' : ' + n + ' pièce(s) entrées' + (sv ? ' · dont ' + sv + ' déjà vendue(s) déduite(s)' : '')); return voirBonTransfert(t.id);
   }
   if(!confirm(`Entrer ${n} pièce(s) reçues de l’usine ?`)) return;
-  const bon = entreeUsine(enLignes, note); enLignes = []; $('en-note').value = ''; afficherLignesEn();
-  toast(n + ' pièce(s) entrées en stock'); voirBonReception(bon);
+  const sv = servis(enLignes), bon = entreeUsine(enLignes, note); enLignes = []; $('en-note').value = ''; afficherLignesEn();
+  toast(n + ' pièce(s) entrées' + (sv ? ' · dont ' + sv + ' déjà vendue(s) déduite(s)' : '')); voirBonReception(bon);
 }
 function entreeRapide(pid){
   const p = db.produits.find(x => x.id===pid); if(!p) return;
   const r = prompt(`Entrée de l’usine : ${p.nom}\nStock actuel : ${p.stock}\n\nQuantité reçue :`, '1'); if(r===null) return;
   const q = parseInt(r)||0; if(q<1) return toast('Quantité invalide');
-  entreeUsine([{ pid:p.id, nom:p.nom, cat:p.cat, qte:q }], 'ajout rapide'); toast(`+${q} · ${p.nom} → stock ${p.stock}`);
+  const sv = p.stock < 0 ? Math.min(-p.stock, q) : 0;
+  entreeUsine([{ pid:p.id, nom:p.nom, cat:p.cat, qte:q }], 'ajout rapide'); toast(`+${q} · ${p.nom} → stock ${p.stock}` + (sv ? ` (${sv} déjà vendue(s) déduite(s))` : ''));
 }
 // Bons d'entrée usine (les anciennes entrées sans bon forment chacune leur propre bon)
 function bonsUsine(){
@@ -1235,9 +1241,11 @@ function texteReception(b){
 function afficherStock(){
   const q = $('s-cherche').value.toLowerCase();
   const nb = c => db.produits.filter(p => p.cat===c).length;
-  const presentes = CATS.filter(c => nb(c));
-  if(stockCat!=='Tous' && !presentes.includes(stockCat)) stockCat = 'Tous';
+  const presentes = CATS.filter(c => nb(c)), aLivrer = db.produits.filter(p => p.stock < 0);
+  if(stockCat!=='Tous' && stockCat!=='ALIVRER' && !presentes.includes(stockCat)) stockCat = 'Tous';
+  if(stockCat==='ALIVRER' && !aLivrer.length) stockCat = 'Tous';
   $('s-cats').innerHTML = db.produits.length ? `<button class="chip ${stockCat==='Tous'?'on':''}" onclick="choisirCat('Tous')">Tous<small>${db.produits.length}</small></button>`
+    + (aLivrer.length ? `<button class="chip ${stockCat==='ALIVRER'?'on':''}" style="${stockCat==='ALIVRER'?'':'border-color:var(--red);color:var(--red)'}" onclick="choisirCat('ALIVRER')">⚠️ À livrer<small>${aLivrer.reduce((s,p)=>s-p.stock,0)}</small></button>` : '')
     + presentes.map(c => `<button class="chip ${stockCat===c?'on':''}" onclick="choisirCat('${c}')">${ICONES[c]} ${c}<small>${nb(c)}</small></button>`).join('') : '';
   // Sous-filtres des gammes quand on regarde les matelas
   const mats = db.produits.filter(p => p.cat==='Matelas'), gams = GAMMES.filter(g => mats.some(p => p.gamme===g)), sansG = mats.filter(p => !p.gamme).length;
@@ -1247,7 +1255,7 @@ function afficherStock(){
       + (sansG ? `<button class="chip ${stockGamme===''?'on':''}" onclick="choisirGamme('')">Autres<small>${sansG}</small></button>` : '');
     $('s-gammes').classList.remove('hide');
   } else $('s-gammes').classList.add('hide');
-  const liste = db.produits.filter(p => (stockCat==='Tous' || p.cat===stockCat) && (stockCat!=='Matelas' || stockGamme==='Toutes' || (p.gamme||'')===stockGamme)
+  const liste = db.produits.filter(p => (stockCat==='Tous' || p.cat===stockCat || (stockCat==='ALIVRER' && p.stock < 0)) && (stockCat!=='Matelas' || stockGamme==='Toutes' || (p.gamme||'')===stockGamme)
     && (p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).toLowerCase().includes(q));
   const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort((a,b)=>a.nom.localeCompare(b.nom))]).filter(g => g[1].length);
   const lignesCat = (c,l) => c==='Mousse' ? lignesMousse(l) : c!=='Matelas' ? l.map(ligneStock).join('')
@@ -1549,7 +1557,8 @@ function ajouterLigne(){
   const p = db.produits.find(x => x.id === $('c-prod').value); if(!p) return toast('Choisissez un produit');
   const qte = parseInt($('c-qte').value)||0; if(qte<1) return toast('Quantité invalide');
   const dejà = panier.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
-  if(qte + dejà > p.stock && !confirm(`Stock insuffisant (${p.stock}). Ajouter quand même ?`)) return;
+  if(qte + dejà > p.stock){ const manque = qte + dejà - Math.max(0, p.stock);
+    if(!confirm(`Stock disponible : ${Math.max(0,p.stock)}${p.stock<0 ? ' (déjà ' + (-p.stock) + ' vendu(s) à livrer)' : ''}.\n\nVendre quand même ?\n${manque} pièce(s) seront notées « −${manque} vendue(s) · à livrer » et seront déduites automatiquement à l'arrivage.`)) return; }
   const base = +$('c-prix').value||0, pc = remiseDe(p);
   panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prixBase:base, remise:pc, prix:prixRemise(base, pc) });
   $('c-qte').value=1; afficherPanier();
@@ -1588,8 +1597,11 @@ function validerVente(){
   const v = { id:id(), date:new Date().toISOString(), lignes:panier, total:panier.reduce((s,l)=>s+l.qte*l.prix,0), client:$('c-client').value.trim(), paiement:$('c-paie').value, num: ++db.numRecu, devise: db.devise };
   v.paye = { dev: dv, taux: db.taux || 0, montant: convertir(v.total, db.devise, dv, db.taux) };
   if(dv==='FC') v.paye.montant = Math.round(v.paye.montant);
-  v.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock -= l.qte; });
-  db.ventes.push(v); panier=[]; $('c-client').value=''; sauver(); rafraichir(); toast('Vente enregistrée : '+fmtDev(v.paye.montant, dv));
+  let attente = 0;
+  v.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(!p) return;
+    const dispo = Math.max(0, p.stock); if(l.qte > dispo){ l.aLivrer = l.qte - dispo; attente += l.aLivrer; }   // vendu sans stock : à livrer à l'arrivage
+    p.stock -= l.qte; });
+  db.ventes.push(v); panier=[]; $('c-client').value=''; sauver(); rafraichir(); toast('Vente enregistrée : '+fmtDev(v.paye.montant, dv) + (attente ? ' · ' + attente + ' pièce(s) à livrer à l’arrivage' : ''));
   derniereVente = v.id; $('c-derniere-info').textContent = 'Reçu n° '+numero(v)+' · '+fmtDev(v.paye.montant, dv); $('c-derniere').classList.remove('hide');
 }
 function annulerVente(vid){
@@ -1656,7 +1668,7 @@ function factureA4(v){
       <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nomClient||'Client comptant')}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
     </div>
     <table class="fa-table"><thead><tr><th>Réf.</th><th>Description</th><th class="n">P.U. (${dev==='$'?'USD':'CDF'})</th>${aRem?'<th class="n">Remise</th>':''}<th class="n">Qté</th><th class="n">Montant (${dev==='$'?'USD':'CDF'})</th></tr></thead><tbody>
-      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}</td><td class="n">${m(l.prixBase||l.prix)}</td>${aRem?`<td class="n">${l.remise?'−'+l.remise+' %':'—'}</td>`:''}<td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
+      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}${l.aLivrer?`<br><small><b>⚠️ ${l.aLivrer} à livrer à l'arrivage</b></small>`:''}</td><td class="n">${m(l.prixBase||l.prix)}</td>${aRem?`<td class="n">${l.remise?'−'+l.remise+' %':'—'}</td>`:''}<td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
     </tbody></table>
     ${aRem?`<div class="fa-sous"><span>Total avant remise :</span><span>${m(brut)}</span></div><div class="fa-sous"><span>Remises :</span><span>− ${m(brut-v.total)}</span></div>`:''}
     <div class="fa-sous"><span>Total :</span><span>${m(v.total)}</span></div>
@@ -1689,7 +1701,7 @@ function htmlRecu(v, format){
     ${v.client?`<div>Client : ${esc(v.client)}</div>`:''}
     <hr>
     <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th></tr></thead><tbody>
-    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}<br><small>${l.remise?m(l.prixBase)+' −'+l.remise+' % = ':''}${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}${l.aLivrer?'<br><small><b>À LIVRER À L\'ARRIVAGE : '+l.aLivrer+'</b></small>':''}<br><small>${l.remise?m(l.prixBase)+' −'+l.remise+' % = ':''}${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
     <tr class="tot"><td>TOTAL</td><td class="num">${nb}</td><td class="num">${m(v.total)}</td></tr>
     </tbody></table>
     <div>Paiement : ${esc(v.paiement)}</div>
@@ -1741,7 +1753,7 @@ function texteRecu(v){
   const b = db.boutique, P = payeDe(v), dev = P.dev, m = n => fmtDev(convertir(n, v.devise || db.devise, dev, P.taux), dev), d = new Date(v.date);
   return `*${b.nom}* – Reçu n° ${numero(v)}\n${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`
     + (v.client ? `\nClient : ${v.client}` : '') + '\n\n'
-    + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}${l.remise?' (remise '+l.remise+' %)':''}`).join('\n')
+    + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}${l.remise?' (remise '+l.remise+' %)':''}${l.aLivrer?' — ⚠️ '+l.aLivrer+' à livrer à l\'arrivage':''}`).join('\n')
     + `\n\n*TOTAL : ${m(v.total)}*\nPaiement : ${v.paiement}` + (v.paiement==='Crédit' ? `\nReste à payer : ${m(v.total)}` : '')
     + (b.adresse ? `\n\n${b.nom} – ${b.adresse}` : '') + (b.tel ? `\nTél : ${b.tel}` : '') + (b.message ? `\n${b.message}` : '');
 }
@@ -2053,7 +2065,7 @@ function ajouterLigneTr(){
 }
 function afficherLignesTr(){
   $('tr-lignes').innerHTML = trLignes.length ? trLignes.map((l,i) => { const p = db.produits.find(x=>x.id===l.pid), st = p ? p.stock : 0;
-    return `<tr><td>${esc(l.nom)}<br><span class="muted">stock ${st} → ${trSens==='envoi' ? st-l.qte : st+l.qte}</span></td><td class="num"><b>${trSens==='envoi'?'−':'+'}${l.qte}</b></td><td class="num"><button class="btn small alt" onclick="trLignes.splice(${i},1);afficherLignesTr()">✕</button></td></tr>`; }).join('')
+    return `<tr><td>${esc(l.nom)}<br><span class="muted">${trSens==='envoi' ? `stock ${st} → ${st-l.qte}` : txtArrivage(st, l.qte)}</span></td><td class="num"><b>${trSens==='envoi'?'−':'+'}${l.qte}</b></td><td class="num"><button class="btn small alt" onclick="trLignes.splice(${i},1);afficherLignesTr()">✕</button></td></tr>`; }).join('')
     + `<tr><td><b>Total</b></td><td class="num"><b>${trLignes.reduce((s,l)=>s+l.qte,0)} pièce(s)</b></td><td></td></tr>`
     : '<tr><td class="muted">Aucun article ajouté.</td></tr>';
 }
@@ -2065,10 +2077,11 @@ function validerTransfert(){
   if(!confirm(`${trSens==='envoi' ? 'Envoyer' : 'Recevoir'} ${n} pièce(s) ${trSens==='envoi' ? 'vers' : 'de'} ${mag} ?`)) return;
   db.transferts = db.transferts || []; db.numTransfert = (db.numTransfert||0) + 1;
   const t = { id:id(), num:db.numTransfert, date:new Date().toISOString(), sens:trSens, magasin:mag, lignes:trLignes.map(l=>({...l})), note:$('tr-note').value.trim(), statut:'fait' };
+  const sv = t.sens==='reception' ? servis(t.lignes) : 0;
   t.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += (t.sens==='envoi' ? -l.qte : l.qte); });
   db.magasins = [...new Set([mag, ...(db.magasins||[])])].slice(0,30);
   db.transferts.push(t); trLignes = []; $('tr-note').value = ''; sauver(); rafraichir();
-  toast(numTr(t) + ' enregistré'); voirBonTransfert(t.id);
+  toast(numTr(t) + ' enregistré' + (sv ? ' · ' + sv + ' déjà vendue(s) déduite(s)' : '')); voirBonTransfert(t.id);
 }
 function annulerTransfert(tid){
   const t = (db.transferts||[]).find(x => x.id===tid); if(!t || t.statut==='annulé') return;
