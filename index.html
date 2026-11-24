@@ -542,7 +542,7 @@
       <select id="c-prod"></select>
       <div class="row">
         <div><label>Quantité</label><input id="c-qte" type="number" min="1" value="1"></div>
-        <div><label>Prix unitaire (<span class="dev-base">$</span>)</label><input id="c-prix" type="number" min="0" step="any" oninput="eqPrix('c-prix','c-prix-eq')"><div class="muted" id="c-prix-eq" style="margin-top:4px"></div></div>
+        <div><label>Prix unitaire (<span class="dev-base">$</span>)</label><input id="c-prix" type="number" min="0" step="any" oninput="eqPrix('c-prix','c-prix-eq');infoRemise()"><div class="muted" id="c-prix-eq" style="margin-top:4px"></div><div id="c-remise" style="margin-top:4px;font-weight:700;color:var(--green)"></div></div>
       </div>
       <button class="btn alt full" onclick="ajouterLigne()">+ Ajouter au panier</button>
     </div>
@@ -550,6 +550,7 @@
       <h2>🧺 Panier</h2>
       <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th><th></th></tr></thead>
       <tbody id="c-panier"></tbody></table>
+      <div id="c-eco" style="text-align:right;font-weight:700;color:var(--green);margin-top:8px"></div>
       <div class="total" id="c-total">0</div>
       <div class="muted" id="c-total2" style="text-align:right;font-size:15px;font-weight:600"></div>
       <div class="row">
@@ -745,6 +746,14 @@
       <select id="g-anim" onchange="db.fondAnim = this.value==='oui'; sauver(); demarrerFond()"><option value="oui">Activée</option><option value="non">Désactivée</option></select>
     </div>
     <div class="card">
+      <h2>🏷️ Remises à la caisse</h2>
+      <p class="muted" style="margin:0 0 4px">Appliquées automatiquement quand un article est ajouté au panier.</p>
+      <div class="row"><div><label>Tous les articles (%)</label><input id="g-rem-def" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
+        <div><label>Mousses (%)</label><input id="g-rem-mousse" type="number" min="0" max="100" step="any" onchange="majRemises()"></div></div>
+      <div class="row"><div><label>Matelas Elengi (%)</label><input id="g-rem-elengi" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
+        <div><label>Matelas Orthopédique (%)</label><input id="g-rem-ortho" type="number" min="0" max="100" step="any" onchange="majRemises()"></div></div>
+    </div>
+    <div class="card">
       <h2>💱 Devise</h2>
       <label style="margin-top:0">Devise</label>
       <select id="g-devise" onchange="changerDevise()"><option value="$">Dollar ($)</option><option value="FC">Franc congolais (FC)</option></select>
@@ -852,7 +861,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · prix en $ et FC';
+const VERSION = '2026-11-24 · remises';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1329,7 +1338,29 @@ function remplirProduits(){
   if(avant && db.produits.some(p=>p.id===avant)) sel.value = avant;
   majPrix();
 }
-function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; eqPrix('c-prix','c-prix-eq'); }
+function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; eqPrix('c-prix','c-prix-eq'); infoRemise(); }
+/* Remises : 3 % sur tout, sauf mousses et matelas Elengi (0 %) ; matelas Orthopédique 10 % */
+const REMISES = { defaut:3, mousse:0, elengi:0, ortho:10 };
+function remises(){ return Object.assign({...REMISES}, db.remises||{}); }
+function remiseDe(p){
+  const r = remises();
+  if(!p) return r.defaut;
+  if(p.cat==='Mousse') return r.mousse;
+  if(p.cat==='Matelas'){ const g = p.gamme || devinerGamme(p.nom); if(g==='Elengi') return r.elengi; if(g==='Orthopédique') return r.ortho; }
+  return r.defaut;
+}
+const prixRemise = (prix, pc) => Math.round((+prix||0) * (1 - (+pc||0)/100) * 100) / 100;
+function infoRemise(){
+  const p = db.produits.find(x => x.id === $('c-prod').value), pc = remiseDe(p), v = +$('c-prix').value || 0;
+  $('c-remise').textContent = p && v ? (pc ? `Remise ${pc} % → ${argent2(prixRemise(v, pc))}` : 'Pas de remise sur cet article') : '';
+  $('c-remise').style.color = pc ? 'var(--green)' : 'var(--muted)';
+}
+function majRemises(){
+  db.remises = { defaut:+$('g-rem-def').value||0, mousse:+$('g-rem-mousse').value||0, elengi:+$('g-rem-elengi').value||0, ortho:+$('g-rem-ortho').value||0 };
+  sauver(); infoRemise(); toast('Remises enregistrées');
+}
+// Texte « remise » d'une ligne vendue (pour les reçus)
+const txtRemise = l => l.remise ? `remise ${l.remise} % (${argent(l.prixBase)} → ${argent(l.prix)})` : '';
 function eqPrix(src, cible){ const v = +$(src).value || 0; $(cible).textContent = v && db.taux ? '≈ ' + autreMontant(v) : ''; }
 $('c-prod').onchange = majPrix;
 function ajouterLigne(){
@@ -1337,7 +1368,8 @@ function ajouterLigne(){
   const qte = parseInt($('c-qte').value)||0; if(qte<1) return toast('Quantité invalide');
   const dejà = panier.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
   if(qte + dejà > p.stock && !confirm(`Stock insuffisant (${p.stock}). Ajouter quand même ?`)) return;
-  panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prix:+$('c-prix').value||0 });
+  const base = +$('c-prix').value||0, pc = remiseDe(p);
+  panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prixBase:base, remise:pc, prix:prixRemise(base, pc) });
   $('c-qte').value=1; afficherPanier();
 }
 function retirerLigne(i){ panier.splice(i,1); afficherPanier(); }
@@ -1358,10 +1390,12 @@ function changerDeviseVente(){
   afficherPanier();
 }
 function afficherPanier(){
-  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
+  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${l.remise ? '<s>'+argent(l.prixBase)+'</s> <b style="color:var(--green)">−'+l.remise+' %</b> ' : ''}${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
   const tot = panier.reduce((s,l)=>s+l.qte*l.prix,0), dv = $('c-devise').value || db.devise;
+  const eco = Math.round(panier.reduce((s,l)=>s+l.qte*((l.prixBase||l.prix)-l.prix),0)*100)/100;
   $('c-total').textContent = 'Total : ' + fmtDev(convertir(tot, db.devise, dv, db.taux), dv);
+  $('c-eco').textContent = eco>0 ? 'Remises : −' + fmtDev(convertir(eco, db.devise, dv, db.taux), dv) : '';
   $('c-total2').textContent = db.taux && tot ? '≈ ' + fmtDev(convertir(tot, db.devise, autreDev(dv), db.taux), autreDev(dv)) + ' · taux 1 $ = ' + (+db.taux).toLocaleString('fr-FR') + ' FC' : '';
   $('c-taux').value = db.taux || '';
 }
@@ -1431,6 +1465,7 @@ function factureA4(v){
   const titre = credit ? 'FACTURE (VENTE À CRÉDIT)' : 'REÇU DE VENTE';
   const num = 'REC-' + d.getFullYear() + '-' + numero(v);
   const totPaye = convertir(v.total, base, dev, P.taux);
+  const aRem = v.lignes.some(l => l.remise), brut = Math.round(v.lignes.reduce((s,l)=>s+l.qte*(l.prixBase||l.prix),0)*100)/100;
   const taux = P.taux ? `<div class="fa-taux">Taux appliqué : 1 $ = ${(+P.taux).toLocaleString('fr-FR')} FC · équivalent ${fmtDev(convertir(v.total, base, autreDev(dev), P.taux), autreDev(dev))}</div>` : '';
   return `<div class="fa">
     ${enteteFa()}
@@ -1438,9 +1473,10 @@ function factureA4(v){
       <div><h4>${titre}</h4><b>Numéro :</b> ${num}<br><b>Date :</b> ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}<br><b>Lieu :</b> ${esc(b.lieu||'Kinshasa')}</div>
       <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nomClient||'Client comptant')}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
     </div>
-    <table class="fa-table"><thead><tr><th>Réf.</th><th>Description</th><th class="n">P.U. (${dev==='$'?'USD':'CDF'})</th><th class="n">Qté</th><th class="n">Montant (${dev==='$'?'USD':'CDF'})</th></tr></thead><tbody>
-      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}</td><td class="n">${m(l.prix)}</td><td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    <table class="fa-table"><thead><tr><th>Réf.</th><th>Description</th><th class="n">P.U. (${dev==='$'?'USD':'CDF'})</th>${aRem?'<th class="n">Remise</th>':''}<th class="n">Qté</th><th class="n">Montant (${dev==='$'?'USD':'CDF'})</th></tr></thead><tbody>
+      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}</td><td class="n">${m(l.prixBase||l.prix)}</td>${aRem?`<td class="n">${l.remise?'−'+l.remise+' %':'—'}</td>`:''}<td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
     </tbody></table>
+    ${aRem?`<div class="fa-sous"><span>Total avant remise :</span><span>${m(brut)}</span></div><div class="fa-sous"><span>Remises :</span><span>− ${m(brut-v.total)}</span></div>`:''}
     <div class="fa-sous"><span>Total :</span><span>${m(v.total)}</span></div>
     <div class="fa-total"><span>${credit?'RESTE À PAYER':'TOTAL PAYÉ'} :</span><span>${m(v.total)}</span></div>
     ${taux}
@@ -1471,7 +1507,7 @@ function htmlRecu(v, format){
     ${v.client?`<div>Client : ${esc(v.client)}</div>`:''}
     <hr>
     <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th></tr></thead><tbody>
-    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}<br><small>${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}<br><small>${l.remise?m(l.prixBase)+' −'+l.remise+' % = ':''}${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
     <tr class="tot"><td>TOTAL</td><td class="num">${nb}</td><td class="num">${m(v.total)}</td></tr>
     </tbody></table>
     <div>Paiement : ${esc(v.paiement)}</div>
@@ -1519,7 +1555,7 @@ function texteRecu(v){
   const b = db.boutique, P = payeDe(v), dev = P.dev, m = n => fmtDev(convertir(n, v.devise || db.devise, dev, P.taux), dev), d = new Date(v.date);
   return `*${b.nom}* – Reçu n° ${numero(v)}\n${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`
     + (v.client ? `\nClient : ${v.client}` : '') + '\n\n'
-    + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}`).join('\n')
+    + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}${l.remise?' (remise '+l.remise+' %)':''}`).join('\n')
     + `\n\n*TOTAL : ${m(v.total)}*\nPaiement : ${v.paiement}` + (v.paiement==='Crédit' ? `\nReste à payer : ${m(v.total)}` : '')
     + (b.adresse ? `\n\n${b.nom} – ${b.adresse}` : '') + (b.tel ? `\nTél : ${b.tel}` : '') + (b.message ? `\n${b.message}` : '');
 }
@@ -1715,7 +1751,7 @@ function ajouterNouveauEch(){
   const q = parseInt($('e-qte').value)||0; if(q<1) return toast('Quantité invalide');
   const deja = ech.nouveaux.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
   if(q+deja > p.stock && !confirm(`Stock insuffisant (${p.stock}). Ajouter quand même ?`)) return;
-  ech.nouveaux.push({ pid:p.id, nom:p.nom, desc:details(p), qte:q, prix:p.prix }); $('e-qte').value = 1; afficherEch();
+  const pc = remiseDe(p); ech.nouveaux.push({ pid:p.id, nom:p.nom, desc:details(p), qte:q, prixBase:p.prix, remise:pc, prix:prixRemise(p.prix, pc) }); $('e-qte').value = 1; afficherEch();
 }
 function valeursEch(){
   const v = db.ventes.find(x => x.id===ech.vente);
@@ -2102,7 +2138,7 @@ function toutEffacer(){
   db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
@@ -2118,7 +2154,7 @@ rafraichir();
    quand plusieurs appareils vendent en même temps. Les autres appareils reçoivent les changements en direct. */
 const SYNC_CLE = 'kevmag-sync', SYNC_BASE = 'kevmag-sync-base';
 const SYNC_COLL = ['produits','ventes','acomptes','echanges','entrees'];
-const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange'];
+const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange','remises'];
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const Sync = { actif:false, fs:null, timer:null, ecoutes:[], base:null, envoiEnCours:false, aRefaire:false, enLigne:false, derniere:null, erreur:'' };
 function syncParams(){ try{ return JSON.parse(localStorage.getItem(SYNC_CLE)) || null; }catch(e){ return null; } }
