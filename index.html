@@ -956,7 +956,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · ventes sans stock';
+const VERSION = '2026-11-25 · mousses D12 D16 D20';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1119,6 +1119,7 @@ const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Ni
 let stockCat = 'Tous', stockGamme = 'Toutes';
 function choisirCat(c){ stockCat = c; stockGamme = 'Toutes'; afficherStock(); }
 function choisirGamme(g){ stockGamme = g; afficherStock(); }
+const densiteDe = p => p.densite || mesuresDuNom(p.nom).densite || 0;
 function ligneStock(p){ return `<tr>
     <td>${esc(p.nom)}<br><span class="muted">${details(p)?esc(details(p)):esc(p.cat==='Matelas' && p.gamme ? 'Matelas · '+p.gamme : p.cat)}</span> ${etat(p)}</td>
     <td class="num">${argent2h(p.prix)}</td><td class="num">${p.stock<0 ? `<b style="color:var(--red)">${p.stock}</b>` : p.stock}</td>
@@ -1254,8 +1255,17 @@ function afficherStock(){
       + gams.map(g => `<button class="chip ${stockGamme===g?'on':''}" onclick="choisirGamme('${g}')">${g}<small>${mats.filter(p=>p.gamme===g).length}</small></button>`).join('')
       + (sansG ? `<button class="chip ${stockGamme===''?'on':''}" onclick="choisirGamme('')">Autres<small>${sansG}</small></button>` : '');
     $('s-gammes').classList.remove('hide');
+  } else if(stockCat==='Mousse'){
+    // Sous-filtres des mousses par densité : D12, D16, D20…
+    const mous = db.produits.filter(p => p.cat==='Mousse'), dens = [...new Set(mous.map(densiteDe))].sort((a,b) => (a||999)-(b||999));
+    const pcs = l => l.reduce((s,p)=>s+(p.stock||0),0);
+    $('s-gammes').innerHTML = `<button class="chip ${stockGamme==='Toutes'?'on':''}" onclick="choisirGamme('Toutes')">Toutes<small>${mous.length} · ${pcs(mous)} pcs</small></button>`
+      + dens.map(d => { const l = mous.filter(p => densiteDe(p)===d), k = d ? 'D'+d : 'divers';
+        return `<button class="chip ${stockGamme===k?'on':''}" onclick="choisirGamme('${k}')">${d ? 'D'+d : 'Déchet / divers'}<small>${l.length} · ${pcs(l)} pcs</small></button>`; }).join('');
+    $('s-gammes').classList.remove('hide');
   } else $('s-gammes').classList.add('hide');
   const liste = db.produits.filter(p => (stockCat==='Tous' || p.cat===stockCat || (stockCat==='ALIVRER' && p.stock < 0)) && (stockCat!=='Matelas' || stockGamme==='Toutes' || (p.gamme||'')===stockGamme)
+    && (stockCat!=='Mousse' || stockGamme==='Toutes' || (densiteDe(p) ? 'D'+densiteDe(p) : 'divers')===stockGamme)
     && (p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).toLowerCase().includes(q));
   const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort((a,b)=>a.nom.localeCompare(b.nom))]).filter(g => g[1].length);
   const lignesCat = (c,l) => c==='Mousse' ? lignesMousse(l) : c!=='Matelas' ? l.map(ligneStock).join('')
