@@ -393,6 +393,10 @@
   #fond-ciel[data-moment="nuit"] .fc-nuage{opacity:.22;filter:brightness(.6)}
   @keyframes derive{from{transform:translateX(-40vw)}to{transform:translateX(110vw)}}
   .fc-voile{position:absolute;inset:0;background:rgba(255,255,255,.06)}
+  #ciel-gl{position:absolute;inset:0;width:100%;height:100%;display:none}
+  #fond-ciel.gl #ciel-gl{display:block}
+  #fond-ciel.gl .fc-degrade, #fond-ciel.gl .fc-etoiles, #fond-ciel.gl .fc-astre, #fond-ciel.gl .fc-nuages{display:none}
+  #fond-ciel.gl .fc-voile{background:rgba(255,255,255,.04)}
   /* La nuit (mode clair) : panneaux plus opaques pour garder le texte lisible */
   @media (prefers-color-scheme:light){ html.ios.ciel-nuit{--verre:rgba(255,255,255,.66);--verre2:rgba(255,255,255,.55);--barre:rgba(255,255,255,.8)} }
   html.ciel-nuit header.top h1{text-shadow:none}
@@ -479,7 +483,7 @@
 </head>
 <body>
 <div id="ciel"></div>
-<div id="fond-ciel" aria-hidden="true"><div class="fc-degrade"></div><div class="fc-etoiles"></div><div class="fc-astre"></div><div class="fc-nuages"></div><div class="fc-voile"></div></div>
+<div id="fond-ciel" aria-hidden="true"><canvas id="ciel-gl"></canvas><div class="fc-degrade"></div><div class="fc-etoiles"></div><div class="fc-astre"></div><div class="fc-nuages"></div><div class="fc-voile"></div></div>
 <div id="anim-fond" aria-hidden="true"><div class="af"></div><div class="af"></div><div class="af-voile"></div></div>
 <div class="app">
   <aside class="side">
@@ -890,7 +894,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · fond ciel';
+const VERSION = '2026-11-24 · ciel réaliste';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -2108,6 +2112,93 @@ function construireCiel(){
   let e = ''; r = hasard(5); for(let i=0;i<90;i++) e += `<i style="left:${(r()*100).toFixed(1)}%;top:${(r()*70).toFixed(1)}%;animation-delay:-${(r()*3).toFixed(1)}s;transform:scale(${(.6+r()*1.2).toFixed(2)})"></i>`;
   document.querySelector('.fc-etoiles').innerHTML = e;
 }
+/* Ciel réaliste en WebGL : nuages volumétriques (bruit fractal), éclairés par le soleil, en perspective,
+   poussés par le vent ; couleurs du ciel interpolées selon l'heure (aube, jour, soir, nuit étoilée avec lune). */
+const CIEL_CLES = [ // heure, haut du ciel, horizon, soleil/lune, nuage éclairé, nuage ombré, position astre (x,y), nuit, couverture
+  [0,   [.01,.02,.07],[.06,.10,.22],[.75,.80,.95],[.40,.44,.55],[.07,.08,.13],[.78,.82],1,.47],
+  [5,   [.01,.02,.07],[.06,.10,.22],[.75,.80,.95],[.40,.44,.55],[.07,.08,.13],[.78,.82],1,.47],
+  [6.2, [.22,.30,.58],[.98,.68,.48],[1,.62,.32], [1,.83,.70], [.46,.40,.52],[.18,.16],0,.43],
+  [8,   [.16,.40,.84],[.62,.80,.95],[1,.95,.82], [1,1,1],     [.60,.66,.76],[.30,.62],0,.41],
+  [13,  [.12,.38,.86],[.58,.79,.96],[1,.97,.88], [1,1,1],     [.62,.68,.78],[.60,.90],0,.40],
+  [16.5,[.16,.40,.82],[.66,.80,.93],[1,.92,.76], [1,.98,.94], [.58,.62,.72],[.74,.55],0,.41],
+  [18.2,[.16,.18,.46],[.98,.50,.28],[1,.48,.20], [1,.70,.50], [.35,.27,.40],[.82,.14],0,.43],
+  [19.6,[.05,.07,.20],[.30,.22,.38],[.85,.70,.80],[.55,.45,.58],[.12,.11,.20],[.80,.70],.7,.46],
+  [20.5,[.01,.02,.07],[.06,.10,.22],[.75,.80,.95],[.40,.44,.55],[.07,.08,.13],[.78,.82],1,.47],
+  [24,  [.01,.02,.07],[.06,.10,.22],[.75,.80,.95],[.40,.44,.55],[.07,.08,.13],[.78,.82],1,.47]];
+function paramsCiel(h){
+  let i = 0; while(i < CIEL_CLES.length-2 && CIEL_CLES[i+1][0] <= h) i++;
+  const a = CIEL_CLES[i], b = CIEL_CLES[i+1], t = Math.min(1, Math.max(0, (h-a[0])/(b[0]-a[0]))), k = t*t*(3-2*t);
+  const L = (x,y) => Array.isArray(x) ? x.map((v,j) => v + (y[j]-v)*k) : x + (y-x)*k;
+  return a.slice(1).map((x,j) => L(x, b[j+1]));
+}
+const CIEL_VS = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
+const CIEL_FS = `precision highp float;
+uniform vec2 R;uniform float T;uniform vec3 top,hor,sunC,lit,shade;uniform vec2 sunP;uniform float night,cover;
+float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+ return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+float fbm(vec2 p){float v=0.,a=.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<5;i++){v+=a*noise(p);p=m*p;a*=.5;}return v;}
+float clouds(vec2 p){vec2 q=vec2(fbm(p+vec2(0.,T*.008)),fbm(p+vec2(5.2,1.3)-T*.004));
+ float f=fbm(p+1.6*q)+.12*(fbm(p*2.3-q)-.5);return smoothstep(cover,cover+.26,f);}
+void main(){
+ vec2 uv=gl_FragCoord.xy/R;float asp=R.x/R.y;
+ vec3 sky=mix(hor,top,pow(uv.y,.65));
+ vec2 dd=(uv-sunP)*vec2(asp,1.);float sd=length(dd);
+ sky+=sunC*(exp(-sd*5.)*.45+exp(-sd*28.)*.6)*(1.-night*.6);
+ if(night>.4){vec2 g=floor(gl_FragCoord.xy/1.5);float h=hash(g);
+  sky+=vec3(step(.9975,h))*(.55+.45*sin(T*1.7+h*90.))*smoothstep(.15,.6,uv.y)*night;
+  sky=mix(sky,vec3(.96,.96,.9),smoothstep(.034,.028,sd)*night);}
+ else{sky=mix(sky,vec3(1.,.98,.9),smoothstep(.03,.022,sd));}
+ float depth=1./(uv.y*.75+.3);
+ vec2 p=vec2((uv.x-.5)*asp*depth*1.5,depth*2.6)+vec2(T*.010,0.);
+ float c=clouds(p);
+ vec2 toS=normalize(vec2((sunP.x-uv.x)*asp,sunP.y-uv.y)+1e-4);
+ float c2=clouds(p+toS*.14);
+ float l=clamp(1.-c2*.95,0.,1.);
+ vec3 col=mix(shade,lit,l);
+ col+=sunC*exp(-sd*3.5)*.55*(1.-c2)*(1.-night*.5);
+ col=mix(col,hor,(1.-smoothstep(0.,.3,uv.y))*.45);
+ gl_FragColor=vec4(mix(sky,col,c*.96),1.);}`;
+const CielGL = { gl:null, prog:null, u:{}, raf:0, t0:0, dernier:0, actif:false };
+function initCielGL(){
+  if(CielGL.gl) return true;
+  const cv = $('ciel-gl'); let gl;
+  try{ gl = cv.getContext('webgl', { antialias:false, depth:false, powerPreference:'low-power' }); }catch(e){}
+  if(!gl) return false;
+  const sh = (type, src) => { const x = gl.createShader(type); gl.shaderSource(x, src); gl.compileShader(x); return gl.getShaderParameter(x, gl.COMPILE_STATUS) ? x : null; };
+  const vs = sh(gl.VERTEX_SHADER, CIEL_VS), fs = sh(gl.FRAGMENT_SHADER, CIEL_FS); if(!vs || !fs) return false;
+  const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr, gl.LINK_STATUS)) return false;
+  gl.useProgram(pr);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  ['R','T','top','hor','sunC','lit','shade','sunP','night','cover'].forEach(n => CielGL.u[n] = gl.getUniformLocation(pr, n));
+  CielGL.gl = gl; CielGL.prog = pr; CielGL.t0 = performance.now() - Math.random()*60000;
+  return true;
+}
+function dessinerCielGL(maintenant){
+  if(!CielGL.actif) return;
+  CielGL.raf = requestAnimationFrame(dessinerCielGL);
+  if(document.visibilityState !== 'visible' || maintenant - CielGL.dernier < 40) return;   // ~25 images/s
+  CielGL.dernier = maintenant;
+  const gl = CielGL.gl, cv = $('ciel-gl'), ech = Math.min(.6, 360 / Math.max(innerWidth, 1) + .2);
+  const w = Math.max(1, Math.round(innerWidth*ech)), h = Math.max(1, Math.round(innerHeight*ech));
+  if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); }
+  const n = new Date(), heure = window.__heureCiel ?? (n.getHours() + n.getMinutes()/60);
+  const [top, hor, sunC, lit, shade, sunP, night, cover] = paramsCiel(heure), U = CielGL.u;
+  gl.uniform2f(U.R, w, h); gl.uniform1f(U.T, (maintenant - CielGL.t0)/1000);
+  gl.uniform3fv(U.top, top); gl.uniform3fv(U.hor, hor); gl.uniform3fv(U.sunC, sunC); gl.uniform3fv(U.lit, lit); gl.uniform3fv(U.shade, shade);
+  gl.uniform2fv(U.sunP, sunP); gl.uniform1f(U.night, night); gl.uniform1f(U.cover, cover);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+function demarrerCielGL(on){
+  cancelAnimationFrame(CielGL.raf); CielGL.actif = false;
+  const calme = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!on || !initCielGL()){ $('fond-ciel').classList.remove('gl'); return; }
+  $('fond-ciel').classList.add('gl'); CielGL.actif = true; CielGL.dernier = 0;
+  if(calme){ dessinerCielGL(performance.now()); CielGL.actif = false; cancelAnimationFrame(CielGL.raf); }
+  else CielGL.raf = requestAnimationFrame(dessinerCielGL);
+}
 function majCiel(){ const m = momentCiel(); $('fond-ciel').dataset.moment = m; document.documentElement.classList.toggle('ciel-nuit', m==='nuit'); }
 function demarrerFond(){
   clearInterval(fondMinuteur); clearInterval(cielMinuteur);
@@ -2115,6 +2206,7 @@ function demarrerFond(){
   const mode = modeFond(), actif = mode !== 'aucun';
   document.documentElement.classList.toggle('anim', actif);
   document.documentElement.classList.toggle('cielmode', mode==='ciel'); if(mode!=='ciel') document.documentElement.classList.remove('ciel-nuit');
+  demarrerCielGL(mode==='ciel');
   if(mode==='ciel'){ construireCiel(); majCiel(); cielMinuteur = setInterval(majCiel, 5*60*1000); return; }
   if(!actif) return;
   const couches = document.querySelectorAll('#anim-fond .af');
