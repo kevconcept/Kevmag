@@ -452,6 +452,14 @@
   .sync-guide ol{padding-left:20px;margin:8px 0}
   #sync-mini{display:block;margin-bottom:4px}
 
+  /* Transferts */
+  .tr-sens{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+  .pill-sens{border:2px solid var(--line2);background:rgba(127,127,127,.08);color:var(--ink);border-radius:16px;padding:12px 10px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit;text-align:center;line-height:1.3}
+  .pill-sens small{display:block;font-weight:600;font-size:12px;color:var(--muted);margin-top:2px}
+  .pill-sens.on[data-sens="envoi"]{border-color:var(--orange);background:rgba(245,165,36,.16)}
+  .pill-sens.on[data-sens="reception"]{border-color:var(--green);background:rgba(46,204,113,.16)}
+  .tag.env{background:rgba(245,165,36,.18);color:var(--orange)}.tag.rec{background:rgba(46,204,113,.18);color:var(--green)}
+
   /* Reçu */
   #recu{display:none}
   .r-recu{font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:12px;line-height:1.35}
@@ -494,6 +502,7 @@
     <button class="item" data-v="stock"><i>📦</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Stock</button>
     <button class="item" data-v="acomptes"><i>⏳</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.3"/></svg>Acomptes</button>
     <button class="item" data-v="echanges"><i>🔁</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>Échanges</button>
+    <button class="item" data-v="transferts"><i>🚚</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5h13v11H1zM14 9h4l4 4v3h-8"/><circle cx="5.5" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></svg>Transferts</button>
     <button class="item" data-v="rapport"><i>📊</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Rapport</button>
     <div class="titre-sec">Magasin</div>
     <button class="item" data-v="reglages"><i>⚙️</i><svg class="sf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
@@ -549,7 +558,7 @@
 
     <div class="tuiles">
       <button class="tuile" onclick="aller('caisse')"><span class="ico o">🧾</span>Vente</button>
-      <button class="tuile" onclick="aller('stock')"><span class="ico v">📦</span>Produit</button>
+      <button class="tuile" onclick="aller('transferts')"><span class="ico v">🚚</span>Transfert</button>
       <button class="tuile" onclick="aller('echanges')"><span class="ico b">🔁</span>Échange</button>
       <button class="tuile" onclick="exporter()"><span class="ico p">💾</span>Sauvegarde</button>
     </div>
@@ -651,6 +660,33 @@
     </div>
   </section>
 
+  <!-- TRANSFERTS -->
+  <section id="v-transferts" class="hide">
+    <div class="card">
+      <h2>🚚 Nouveau transfert</h2>
+      <div class="tr-sens">
+        <button class="pill-sens on" data-sens="envoi" onclick="sensTr('envoi')">📤 Envoi vers un autre magasin<small>le stock diminue</small></button>
+        <button class="pill-sens" data-sens="reception" onclick="sensTr('reception')">📥 Réception d'un autre magasin<small>le stock augmente</small></button>
+      </div>
+      <label id="tr-lib-mag">Magasin de destination</label>
+      <input id="tr-mag" list="tr-mags" placeholder="Ex : Complast Limete, Complast Gombe…" autocomplete="off">
+      <datalist id="tr-mags"></datalist>
+      <label>Article</label>
+      <input id="tr-cherche" placeholder="Rechercher : nom, taille, D16, Bonheur…" oninput="filtrerTr()" autocomplete="off">
+      <select id="tr-prod" style="margin-top:6px"></select>
+      <div class="row"><div><label>Quantité</label><input id="tr-qte" type="number" min="1" value="1" inputmode="numeric"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn alt full" style="margin-top:0" onclick="ajouterLigneTr()">+ Ajouter</button></div></div>
+      <table style="margin-top:8px"><tbody id="tr-lignes"></tbody></table>
+      <label>Note (chauffeur, véhicule, n° de bon…)</label><input id="tr-note" placeholder="Facultatif">
+      <button class="btn full" id="tr-ok" onclick="validerTransfert()">Valider le transfert</button>
+    </div>
+    <div class="card">
+      <div class="entete"><h2>📜 Transferts</h2></div>
+      <div class="chips" id="tr-filtres"></div>
+      <div id="tr-hist"></div>
+    </div>
+  </section>
+
   <!-- STOCK -->
   <section id="v-stock" class="hide">
     <div class="card">
@@ -686,6 +722,7 @@
       <button class="btn full" onclick="enregistrerProduit()">Enregistrer</button>
       <button class="btn alt full hide" id="p-annuler" onclick="resetProduit()">Annuler</button>
     </div>
+    <button class="btn alt full" style="margin:0 0 16px" onclick="aller('transferts')">🚚 Transferts entre magasins (envoi / réception)</button>
     <div class="card" id="carte-entree">
       <h2>📦 Entrée de marchandises</h2>
       <p class="muted" style="margin:0 0 6px">Ajoutez au stock les articles reçus (livraison, retour d'usine…).</p>
@@ -744,6 +781,7 @@
       <div class="kpi"><span>💴 Encaissé en francs</span><b id="r-fc">0 FC</b></div>
       <div class="kpi"><span>⏳ Acomptes reçus</span><b id="r-acp">0</b></div>
       <div class="kpi"><span>📦 Articles reçus</span><b id="r-entrees">0</b></div>
+      <div class="kpi"><span>🚚 Transferts (envoyé / reçu)</span><b id="r-transf">0</b></div>
     </div>
     <button class="btn full wa" style="margin:0 0 16px" onclick="rapportWhatsApp()">📲 Envoyer le rapport du jour sur WhatsApp</button>
     <div class="card">
@@ -894,10 +932,10 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · ciel réaliste';
+const VERSION = '2026-11-24 · transferts';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
-let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
+let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
 let derniereVente = null, recuOuvert = null;
 
@@ -937,7 +975,7 @@ const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;'
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000); }
 
 /* Navigation */
-const TITRES = { accueil:'Accueil', caisse:'Caisse', stock:'Stock', acomptes:'Acomptes', echanges:'Échanges', rapport:'Rapport', reglages:'Réglages' };
+const TITRES = { accueil:'Accueil', caisse:'Caisse', stock:'Stock', acomptes:'Acomptes', echanges:'Échanges', transferts:'Transferts', rapport:'Rapport', reglages:'Réglages' };
 function aller(v){
   document.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x.dataset.v===v));
   document.querySelectorAll('main>section').forEach(s => s.classList.toggle('hide', s.id !== 'v-'+v));
@@ -1552,14 +1590,16 @@ function htmlRecu(v, format){
 }
 function voirRecu(vid){
   const v = db.ventes.find(x=>x.id===vid); if(!v) return toast('Vente introuvable');
-  recuOuvert = vid; acompteOuvert = null; echangeOuvert = null;
+  recuOuvert = vid; acompteOuvert = null; echangeOuvert = null; transfertOuvert = null;
   const f = db.boutique.format;
   $('apercu-feuille').classList.toggle('a4', f==='a4');
   $('apercu-contenu').innerHTML = htmlRecu(v, f);
   $('apercu').classList.remove('hide');
 }
-function fermerRecu(){ $('apercu').classList.add('hide'); recuOuvert=null; acompteOuvert=null; echangeOuvert=null; }
+function fermerRecu(){ $('apercu').classList.add('hide'); recuOuvert=null; acompteOuvert=null; echangeOuvert=null; transfertOuvert=null; }
 function imprimerRecu(){
+  if(transfertOuvert && !recuOuvert){ const t = (db.transferts||[]).find(x => x.id===transfertOuvert); if(!t) return;
+    $('recu').innerHTML = htmlTransfert(t); $('page-print').textContent = '@page{size:A4;margin:15mm}'; return window.print(); }
   if(echangeOuvert && !recuOuvert){ const e = (db.echanges||[]).find(x => x.id===echangeOuvert); if(!e) return;
     $('recu').innerHTML = htmlEchange(e); $('page-print').textContent = '@page{size:A4;margin:15mm}'; return window.print(); }
   if(acompteOuvert && !recuOuvert){ const a = (db.acomptes||[]).find(x => x.id===acompteOuvert); if(!a) return;
@@ -1593,6 +1633,7 @@ function texteRecu(v){
     + (b.adresse ? `\n\n${b.nom} – ${b.adresse}` : '') + (b.tel ? `\nTél : ${b.tel}` : '') + (b.message ? `\n${b.message}` : '');
 }
 function recuWhatsApp(){
+  if(transfertOuvert && !recuOuvert){ const t = (db.transferts||[]).find(x => x.id===transfertOuvert); if(t) ouvrirWA('', texteTransfert(t)); return; }
   if(echangeOuvert && !recuOuvert){ const e = (db.echanges||[]).find(x => x.id===echangeOuvert); if(e) ouvrirWA(numeroWA((String(e.client).match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0]), texteEchange(e)); return; }
   if(acompteOuvert && !recuOuvert) return acompteWhatsApp(acompteOuvert);
   const v = db.ventes.find(x => x.id===recuOuvert); if(!v) return;
@@ -1738,7 +1779,7 @@ function htmlAcompte(a){
 let acompteOuvert = null;
 function voirRecuAcompte(aid){
   const a = (db.acomptes||[]).find(x => x.id===aid); if(!a) return;
-  recuOuvert = null; acompteOuvert = aid; echangeOuvert = null;
+  recuOuvert = null; acompteOuvert = aid; echangeOuvert = null; transfertOuvert = null;
   $('apercu-feuille').classList.add('a4'); $('apercu-contenu').innerHTML = htmlAcompte(a); $('apercu').classList.remove('hide');
 }
 function texteAcompte(a){
@@ -1861,7 +1902,7 @@ function htmlEchange(e){
 let echangeOuvert = null;
 function voirBonEchange(eid){
   const e = (db.echanges||[]).find(x => x.id===eid); if(!e) return;
-  recuOuvert = null; acompteOuvert = null; echangeOuvert = eid;
+  recuOuvert = null; acompteOuvert = null; echangeOuvert = eid; transfertOuvert = null;
   $('apercu-feuille').classList.add('a4'); $('apercu-contenu').innerHTML = htmlEchange(e); $('apercu').classList.remove('hide');
 }
 function texteEchange(e){
@@ -1870,6 +1911,97 @@ function texteEchange(e){
     + `\n\nRemis au client :\n` + e.nouveaux.map(l => `• ${l.qte} × ${l.nom}`).join('\n')
     + (e.difference>0 && e.paye ? `\n\n*Différence payée : ${fmtDev(e.paye.montant, e.paye.dev)}*` : '\n\nÉchange à prix égal.')
     + `\n\nLe magasin ne rembourse pas ; échange contre un article de valeur égale ou supérieure.`;
+}
+
+/* Transferts entre magasins (envoi : stock diminue ; réception : stock augmente) */
+let trSens = 'envoi', trLignes = [], trFiltre = 'tous';
+const numTr = t => (t.sens==='envoi' ? 'TRS-' : 'TRR-') + new Date(t.date).getFullYear() + '-' + String(t.num).padStart(4,'0');
+function sensTr(s){
+  trSens = s; document.querySelectorAll('.pill-sens').forEach(b => b.classList.toggle('on', b.dataset.sens===s));
+  $('tr-lib-mag').textContent = s==='envoi' ? 'Magasin de destination' : 'Magasin d’origine';
+  $('tr-ok').textContent = s==='envoi' ? 'Valider l’envoi (sortie du stock)' : 'Valider la réception (entrée en stock)';
+  afficherLignesTr();
+}
+function filtrerTr(){
+  const q = sansAccent($('tr-cherche').value), sel = $('tr-prod'), avant = sel.value;
+  const l = db.produits.filter(p => !q || sansAccent(p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).includes(q)).sort((a,b) => a.nom.localeCompare(b.nom)).slice(0,300);
+  sel.innerHTML = l.length ? l.map(p => `<option value="${p.id}">${esc(p.nom)} — stock : ${p.stock}</option>`).join('') : '<option value="">Aucun article trouvé</option>';
+  if(l.some(p => p.id===avant)) sel.value = avant; else if(l.length===1) sel.value = l[0].id;
+}
+function ajouterLigneTr(){
+  const p = db.produits.find(x => x.id===$('tr-prod').value); if(!p) return toast('Choisissez l’article');
+  const q = parseInt($('tr-qte').value)||0; if(q<1) return toast('Quantité invalide');
+  const ex = trLignes.find(l => l.pid===p.id);
+  const tot = q + (ex ? ex.qte : 0);
+  if(trSens==='envoi' && tot > p.stock && !confirm(`Stock insuffisant (${p.stock}). Envoyer quand même ?`)) return;
+  if(ex) ex.qte = tot; else trLignes.push({ pid:p.id, nom:p.nom, cat:p.cat, qte:q });
+  $('tr-qte').value = 1; afficherLignesTr();
+}
+function afficherLignesTr(){
+  $('tr-lignes').innerHTML = trLignes.length ? trLignes.map((l,i) => { const p = db.produits.find(x=>x.id===l.pid), st = p ? p.stock : 0;
+    return `<tr><td>${esc(l.nom)}<br><span class="muted">stock ${st} → ${trSens==='envoi' ? st-l.qte : st+l.qte}</span></td><td class="num"><b>${trSens==='envoi'?'−':'+'}${l.qte}</b></td><td class="num"><button class="btn small alt" onclick="trLignes.splice(${i},1);afficherLignesTr()">✕</button></td></tr>`; }).join('')
+    + `<tr><td><b>Total</b></td><td class="num"><b>${trLignes.reduce((s,l)=>s+l.qte,0)} pièce(s)</b></td><td></td></tr>`
+    : '<tr><td class="muted">Aucun article ajouté.</td></tr>';
+}
+function validerTransfert(){
+  const mag = $('tr-mag').value.trim();
+  if(!mag) { $('tr-mag').focus(); return toast(trSens==='envoi' ? 'Indiquez le magasin de destination' : 'Indiquez le magasin d’origine'); }
+  if(!trLignes.length) return toast('Ajoutez au moins un article');
+  const n = trLignes.reduce((s,l)=>s+l.qte,0);
+  if(!confirm(`${trSens==='envoi' ? 'Envoyer' : 'Recevoir'} ${n} pièce(s) ${trSens==='envoi' ? 'vers' : 'de'} ${mag} ?`)) return;
+  db.transferts = db.transferts || []; db.numTransfert = (db.numTransfert||0) + 1;
+  const t = { id:id(), num:db.numTransfert, date:new Date().toISOString(), sens:trSens, magasin:mag, lignes:trLignes.map(l=>({...l})), note:$('tr-note').value.trim(), statut:'fait' };
+  t.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += (t.sens==='envoi' ? -l.qte : l.qte); });
+  db.magasins = [...new Set([mag, ...(db.magasins||[])])].slice(0,30);
+  db.transferts.push(t); trLignes = []; $('tr-note').value = ''; sauver(); rafraichir();
+  toast(numTr(t) + ' enregistré'); voirBonTransfert(t.id);
+}
+function annulerTransfert(tid){
+  const t = (db.transferts||[]).find(x => x.id===tid); if(!t || t.statut==='annulé') return;
+  if(!confirm(`Annuler le transfert ${numTr(t)} ? Le stock sera remis comme avant.`)) return;
+  t.lignes.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += (t.sens==='envoi' ? l.qte : -l.qte); });
+  t.statut = 'annulé'; t.dateAnnul = new Date().toISOString(); sauver(); rafraichir();
+}
+function afficherTransferts(){
+  if(!$('tr-prod').options.length || $('tr-cherche').value==='') filtrerTr();
+  afficherLignesTr(); if(!$('tr-ok').dataset.init){ $('tr-ok').dataset.init = 1; sensTr(trSens); }
+  $('tr-mags').innerHTML = (db.magasins||[]).map(m => `<option value="${esc(m)}">`).join('');
+  const L = db.transferts || [];
+  const F = [['tous','Tous'],['envoi','📤 Envois'],['reception','📥 Réceptions'],['annulé','Annulés']];
+  $('tr-filtres').innerHTML = F.map(([k,t]) => `<button class="chip ${trFiltre===k?'on':''}" onclick="trFiltre='${k}';afficherTransferts()">${t}<small>${k==='tous'?L.length:L.filter(x=>k==='annulé'?x.statut==='annulé':x.sens===k&&x.statut!=='annulé').length}</small></button>`).join('');
+  const liste = L.filter(t => trFiltre==='tous' || (trFiltre==='annulé' ? t.statut==='annulé' : t.sens===trFiltre && t.statut!=='annulé')).slice(-50).reverse();
+  $('tr-hist').innerHTML = liste.length ? liste.map(t => `<div class="vente"><div class="av">${t.sens==='envoi'?'📤':'📥'}</div>
+    <div class="tx"><b>${numTr(t)} · ${t.sens==='envoi'?'vers':'de'} ${esc(t.magasin)}</b><span class="muted">${new Date(t.date).toLocaleDateString('fr-FR')} · ${t.lignes.map(l=>l.qte+' × '+esc(l.nom)).join(', ')}${t.note?' · '+esc(t.note):''}</span></div>
+    <div class="mt">${t.statut==='annulé' ? '<span class="tag ann">Annulé</span>' : `<span class="tag ${t.sens==='envoi'?'env':'rec'}">${t.sens==='envoi'?'−':'+'}${t.lignes.reduce((s,l)=>s+l.qte,0)}</span>`}</div>
+    <button class="btn small alt" onclick="voirBonTransfert('${t.id}')">🖨️</button>${t.statut!=='annulé' ? `<button class="btn small alt" onclick="annulerTransfert('${t.id}')">✕</button>` : ''}</div>`).join('')
+    : '<p class="muted" style="margin:0">Aucun transfert.</p>';
+}
+function htmlTransfert(t){
+  const b = db.boutique, d = new Date(t.date), n = t.lignes.reduce((s,l)=>s+l.qte,0);
+  const de = t.sens==='envoi' ? b.nom + (b.adresse ? ' – ' + b.adresse : '') : t.magasin, vers = t.sens==='envoi' ? t.magasin : b.nom + (b.adresse ? ' – ' + b.adresse : '');
+  return `<div class="fa">${enteteFa()}
+    <div class="fa-cadres">
+      <div><h4>BON DE TRANSFERT ${t.sens==='envoi' ? '(ENVOI)' : '(RÉCEPTION)'}</h4><b>Numéro :</b> ${numTr(t)}<br><b>Date :</b> ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${t.note?`<br><b>Note :</b> ${esc(t.note)}`:''}${t.statut==='annulé'?'<br><b style="color:#c0392b">TRANSFERT ANNULÉ</b>':''}</div>
+      <div><h4>MOUVEMENT</h4><b>De :</b> ${esc(de)}<br><b>Vers :</b> ${esc(vers)}</div>
+    </div>
+    <table class="fa-table"><thead><tr><th>N°</th><th>Article</th><th>Catégorie</th><th class="n">Quantité</th><th class="n">Reçu (contrôle)</th></tr></thead><tbody>
+      ${t.lignes.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(l.nom)}</td><td>${esc(l.cat||'')}</td><td class="n">${l.qte}</td><td class="n"></td></tr>`).join('')}
+    </tbody></table>
+    <div class="fa-total"><span>TOTAL DES PIÈCES :</span><span>${n}</span></div>
+    <div class="fa-note">Les articles ci-dessus ont été ${t.sens==='envoi' ? 'remis au transporteur pour livraison au magasin destinataire' : 'reçus et contrôlés au magasin'}. Toute différence doit être signalée sur ce bon avant signature.</div>
+    <div class="fa-signes" style="flex-wrap:wrap"><div>Expéditeur<span></span></div><div>Transporteur<span></span></div><div>Réceptionnaire<span></span></div></div>
+    <div class="fa-pied">Document généré par Kevmag · ${esc(b.nom)}</div>
+  </div>`;
+}
+let transfertOuvert = null;
+function voirBonTransfert(tid){
+  const t = (db.transferts||[]).find(x => x.id===tid); if(!t) return;
+  recuOuvert = null; acompteOuvert = null; echangeOuvert = null; transfertOuvert = tid;
+  $('apercu-feuille').classList.add('a4'); $('apercu-contenu').innerHTML = htmlTransfert(t); $('apercu').classList.remove('hide');
+}
+function texteTransfert(t){
+  return `*${db.boutique.nom}* – Bon de transfert ${numTr(t)}\n${new Date(t.date).toLocaleDateString('fr-FR')}\n${t.sens==='envoi' ? 'Envoi vers' : 'Réception de'} : ${t.magasin}${t.note ? '\nNote : ' + t.note : ''}\n\n`
+    + t.lignes.map(l => `• ${l.qte} × ${l.nom}`).join('\n') + `\n\n*Total : ${t.lignes.reduce((s,l)=>s+l.qte,0)} pièce(s)*`;
 }
 
 /* Rapport */
@@ -2007,6 +2139,8 @@ function afficherRapport(){
   $('r-nb').textContent = duJour.length;
   $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
+  { const T = (db.transferts||[]).filter(t => t.statut!=='annulé' && jour(t.date)===j), q = s => T.filter(t=>t.sens===s).reduce((a,t)=>a+t.lignes.reduce((b,l)=>b+l.qte,0),0);
+    $('r-transf').textContent = '−' + q('envoi') + ' / +' + q('reception'); }
   $('r-entrees').textContent = (db.entrees||[]).filter(e => jour(e.date)===j).reduce((s,e)=>s+e.qte,0) + ' pièce(s)';
   const va = versementsDu(j); $('r-acp').textContent = fmtDev(va['$'],'$') + (va.FC ? ' + ' + fmtDev(va.FC,'FC') : '');
   const enc = encaisse(duJour); $('r-usd').textContent = fmtDev(enc['$'], '$'); $('r-fc').textContent = fmtDev(enc.FC, 'FC');
@@ -2265,17 +2399,17 @@ function importer(input){
   const r = new FileReader();
   r.onload = () => { try{ const d = JSON.parse(r.result); if(!Array.isArray(d.produits)||!Array.isArray(d.ventes)) throw 0;
     if(!confirm('Remplacer les données actuelles par cette sauvegarde ?')) return;
-    db = Object.assign({devise:'$', numRecu:0, acomptes:[], echanges:[], entrees:[]}, d); db.boutique = Object.assign({...BOUTIQUE}, d.boutique); sauver(); rafraichir(); demarrerFond();
+    db = Object.assign({devise:'$', numRecu:0, acomptes:[], echanges:[], entrees:[], transferts:[]}, d); db.boutique = Object.assign({...BOUTIQUE}, d.boutique); sauver(); rafraichir(); demarrerFond();
     toast('Sauvegarde restaurée : ' + db.produits.length + ' produits, ' + db.ventes.length + ' ventes'); }catch(e){ toast('Fichier invalide'); } };
   r.readAsText(f); input.value='';
 }
 function toutEffacer(){
   if(!confirm('Effacer TOUS les produits et ventes ? Faites une sauvegarde avant.')) return;
   if(!confirm('Êtes-vous vraiment sûr ?')) return;
-  db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
+  db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], transferts:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
@@ -2290,8 +2424,8 @@ rafraichir();
    à la dernière version synchronisée et envoyées ; le stock est envoyé en « +/- différence » pour rester juste
    quand plusieurs appareils vendent en même temps. Les autres appareils reçoivent les changements en direct. */
 const SYNC_CLE = 'kevmag-sync', SYNC_BASE = 'kevmag-sync-base';
-const SYNC_COLL = ['produits','ventes','acomptes','echanges','entrees'];
-const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange','remises'];
+const SYNC_COLL = ['produits','ventes','acomptes','echanges','entrees','transferts'];
+const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange','numTransfert','magasins','remises'];
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const Sync = { actif:false, fs:null, timer:null, ecoutes:[], base:null, envoiEnCours:false, aRefaire:false, enLigne:false, derniere:null, erreur:'' };
 function syncParams(){ try{ return JSON.parse(localStorage.getItem(SYNC_CLE)) || null; }catch(e){ return null; } }
@@ -2394,7 +2528,7 @@ function configLocale(){ const o = {}; SYNC_CONFIG_CHAMPS.forEach(k => { if(db[k
 function recevoirConfig(d){
   const avant = empreinte(configLocale()), loc = configLocale();
   if(Sync.base.conf !== null && avant !== Sync.base.conf) { // réglages modifiés ici et pas encore envoyés : on garde les compteurs au plus haut
-    ['numRecu','numAcompte','numEchange'].forEach(k => { if((d[k]||0) > (db[k]||0)) db[k] = d[k]; });
+    ['numRecu','numAcompte','numEchange','numTransfert'].forEach(k => { if((d[k]||0) > (db[k]||0)) db[k] = d[k]; });
   } else {
     SYNC_CONFIG_CHAMPS.forEach(k => { if(d[k]!==undefined) db[k] = (k.startsWith('num') ? Math.max(d[k]||0, loc[k]||0) : d[k]); });
     if(d.boutique) db.boutique = Object.assign({...BOUTIQUE}, d.boutique);
