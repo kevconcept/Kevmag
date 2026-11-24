@@ -4,6 +4,7 @@ Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinsh
 
 ## Fonctions
 - **Caisse** : panier, client, mode de paiement (espèces, mobile money, banque, crédit). Chaque vente diminue le stock et reçoit un numéro de reçu.
+- **Prix en $ et en FC** : chaque prix d’article est affiché dans les deux devises au taux du jour (stock, caisse, panier, échanges, recherche, aperçu d’import) ; dans le formulaire, le prix peut être saisi en $ ou en FC (l’autre est calculé).
 - **Vente en dollars ou en francs congolais** : à la caisse, choix de la devise de la vente et du taux du jour ; total affiché dans les deux devises ; reçu (A4, ticket, WhatsApp) dans la devise payée avec l'équivalent ; Rapport : encaissé en $ et en FC.
 - **Stock** : produits par catégorie (chambres, lits, matelas, mousses, tables, canapés, buffets…), prix, quantité, seuil d'alerte.
   Pour les mousses : densité, longueur, largeur et épaisseur (affichées dans le stock, la caisse et sur le reçu).

@@ -542,7 +542,7 @@
       <select id="c-prod"></select>
       <div class="row">
         <div><label>Quantité</label><input id="c-qte" type="number" min="1" value="1"></div>
-        <div><label>Prix unitaire</label><input id="c-prix" type="number" min="0" step="any"></div>
+        <div><label>Prix unitaire (<span class="dev-base">$</span>)</label><input id="c-prix" type="number" min="0" step="any" oninput="eqPrix('c-prix','c-prix-eq')"><div class="muted" id="c-prix-eq" style="margin-top:4px"></div></div>
       </div>
       <button class="btn alt full" onclick="ajouterLigne()">+ Ajouter au panier</button>
     </div>
@@ -626,7 +626,10 @@
       <div class="row">
         <div><label>Catégorie</label>
           <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Oreillers</option><option>Autre</option></select></div>
-        <div><label>Prix de vente</label><input id="p-prix" type="number" min="0" step="any"></div>
+        <div><label>Prix de vente (<span class="dev-base">$</span>)</label><input id="p-prix" type="number" min="0" step="any" oninput="lierPrix('base')"></div>
+      </div>
+      <div class="row" id="p-prix-autre-ligne">
+        <div><label>Prix de vente (<span class="dev-autre">FC</span>) — calculé au taux du jour</label><input id="p-prix-autre" type="number" min="0" step="any" oninput="lierPrix('autre')" placeholder="Indiquez le taux dans Réglages"></div>
       </div>
       <div class="row">
         <div><label>Stock</label><input id="p-stock" type="number" min="0" value="0"></div>
@@ -849,7 +852,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-24 · entrées de marchandises';
+const VERSION = '2026-11-24 · prix en $ et FC';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -883,6 +886,10 @@ function sauver(){ try{ localStorage.setItem(CLE, JSON.stringify(db)); }catch(e)
 const $ = id => document.getElementById(id);
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const argent = n => (Math.round((+n||0)*100)/100).toLocaleString('fr-FR') + ' ' + db.devise;
+// Prix dans les deux devises (au taux du jour) : « 36,05 $ · 100 940 FC »
+const autreMontant = n => db.taux ? (db.devise==='$' ? Math.round((+n||0)*db.taux).toLocaleString('fr-FR') + ' FC' : (Math.round((+n||0)/db.taux*100)/100).toLocaleString('fr-FR') + ' $') : '';
+const argent2 = n => db.taux ? argent(n) + ' · ' + autreMontant(n) : argent(n);
+const argent2h = n => db.taux ? `${argent(n)}<br><span class="muted" style="font-size:12px">${autreMontant(n)}</span>` : argent(n);
 const jour = d => { const x = new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); };
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000); }
@@ -910,9 +917,21 @@ function enregistrerProduit(){
   if(i >= 0) db.produits[i] = p; else db.produits.push(p);
   sauver(); resetProduit(); rafraichir(); toast('Produit enregistré');
 }
+function lierPrix(depuis){
+  const t = db.taux; if(!t) return;
+  const base = $('p-prix'), autre = $('p-prix-autre');
+  if(depuis==='base'){ const v = +base.value; autre.value = base.value==='' ? '' : (db.devise==='$' ? Math.round(v*t) : Math.round(v/t*100)/100); }
+  else { const v = +autre.value; base.value = autre.value==='' ? '' : (db.devise==='$' ? Math.round(v/t*100)/100 : Math.round(v*t)); }
+}
+function majDevisesForm(){
+  const autreDevise = db.devise==='$' ? 'FC' : '$';
+  document.querySelectorAll('.dev-base').forEach(e => e.textContent = db.devise);
+  document.querySelectorAll('.dev-autre').forEach(e => e.textContent = autreDevise);
+  $('p-prix-autre').disabled = !db.taux; lierPrix('base');
+}
 function modifierProduit(pid){
   const p = db.produits.find(x => x.id === pid); if(!p) return;
-  $('p-id').value=p.id; $('p-nom').value=p.nom; $('p-cat').value=p.cat; $('p-prix').value=p.prix; $('p-stock').value=p.stock; $('p-seuil').value=p.seuil;
+  $('p-id').value=p.id; $('p-nom').value=p.nom; $('p-cat').value=p.cat; $('p-prix').value=p.prix; lierPrix('base'); $('p-stock').value=p.stock; $('p-seuil').value=p.seuil;
   $('p-densite').value=p.densite||''; $('p-long').value=p.long||''; $('p-larg').value=p.larg||''; $('p-ep').value=p.ep||''; $('p-gamme').value=p.gamme||''; majChampsMousse();
   $('p-titre').textContent='Modifier le produit'; $('p-annuler').classList.remove('hide'); window.scrollTo(0,0);
 }
@@ -921,7 +940,7 @@ function supprimerProduit(pid){
   db.produits = db.produits.filter(x => x.id !== pid); sauver(); rafraichir();
 }
 function resetProduit(){
-  ['p-id','p-nom','p-prix','p-densite','p-long','p-larg','p-ep','p-gamme'].forEach(k => $(k).value=''); majChampsMousse(); $('p-stock').value=0; $('p-seuil').value=2;
+  ['p-id','p-nom','p-prix','p-prix-autre','p-densite','p-long','p-larg','p-ep','p-gamme'].forEach(k => $(k).value=''); majChampsMousse(); $('p-stock').value=0; $('p-seuil').value=2;
   $('p-titre').textContent='Ajouter un produit'; $('p-annuler').classList.add('hide');
 }
 function majChampsMousse(){
@@ -985,7 +1004,7 @@ function choisirCat(c){ stockCat = c; stockGamme = 'Toutes'; afficherStock(); }
 function choisirGamme(g){ stockGamme = g; afficherStock(); }
 function ligneStock(p){ return `<tr>
     <td>${esc(p.nom)}<br><span class="muted">${details(p)?esc(details(p)):esc(p.cat==='Matelas' && p.gamme ? 'Matelas · '+p.gamme : p.cat)}</span> ${etat(p)}</td>
-    <td class="num">${argent(p.prix)}</td><td class="num">${p.stock}</td>
+    <td class="num">${argent2h(p.prix)}</td><td class="num">${p.stock}</td>
     <td class="num"><button class="btn small" title="Ajouter des articles" onclick="entreeRapide('${p.id}')">＋</button> <button class="btn small alt" onclick="modifierProduit('${p.id}')">Modifier</button> <button class="btn small bad" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`; }
 /* Entrées de marchandises : ajout de quantités au stock, avec historique */
 function filtrerEntree(){
@@ -1267,7 +1286,7 @@ function afficherImport(){
   } else
   $('i-lignes').innerHTML = ordre.map(([p,i]) => `<tr><td>${esc(p.nom)} <span class="tag ${p.existe?'maj':'new'}">${p.existe?'mise à jour':'nouveau'}</span>${details(p)?'<br><span class="muted">'+esc(details(p))+'</span>':''}${p.cat==='Matelas' && (p.gamme||devinerGamme(p.nom))?'<br><span class="muted">Gamme : '+esc(p.gamme||devinerGamme(p.nom))+'</span>':''}</td>
     <td><select class="imp-cat" onchange="importEnCours[${i}].cat=this.value;importEnCours[${i}].vides=importEnCours[${i}].vides.filter(k=>k!=='cat');afficherImport()">${CATS.map(c=>`<option ${c===p.cat?'selected':''}>${c}</option>`).join('')}</select></td>
-    <td class="num">${p.existe && p.vides.includes('prix') ? '<span class="muted">inchangé</span>' : argent(p.prix)}</td><td class="num">${p.existe && p.vides.includes('stock') ? '<span class="muted">inchangé</span>' : p.stock}</td></tr>`).join('');
+    <td class="num">${p.existe && p.vides.includes('prix') ? '<span class="muted">inchangé</span>' : argent2h(p.prix)}</td><td class="num">${p.existe && p.vides.includes('stock') ? '<span class="muted">inchangé</span>' : p.stock}</td></tr>`).join('');
   const n = l.filter(p=>!p.existe).length, m = l.length-n;
   $('i-ok').textContent = 'Importer ' + l.length + ' produit' + (l.length>1?'s':'') + (m ? ` (${n} nouveaux, ${m} mis à jour)` : '');
   $('i-apercu').classList.remove('hide');
@@ -1306,11 +1325,12 @@ function telechargerModele(){
 function remplirProduits(){
   const sel = $('c-prod'), avant = sel.value;
   sel.innerHTML = db.produits.length ? db.produits.slice().sort((a,b)=>a.nom.localeCompare(b.nom))
-    .map(p => `<option value="${p.id}">${esc(p.nom)}${details(p)?' – '+esc(details(p)):''} (stock : ${p.stock})</option>`).join('') : '<option value="">Ajoutez d’abord des produits</option>';
+    .map(p => `<option value="${p.id}">${esc(p.nom)}${details(p)?' – '+esc(details(p)):''} · ${argent2(p.prix)} (stock : ${p.stock})</option>`).join('') : '<option value="">Ajoutez d’abord des produits</option>';
   if(avant && db.produits.some(p=>p.id===avant)) sel.value = avant;
   majPrix();
 }
-function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; }
+function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; eqPrix('c-prix','c-prix-eq'); }
+function eqPrix(src, cible){ const v = +$(src).value || 0; $(cible).textContent = v && db.taux ? '≈ ' + autreMontant(v) : ''; }
 $('c-prod').onchange = majPrix;
 function ajouterLigne(){
   const p = db.produits.find(x => x.id === $('c-prod').value); if(!p) return toast('Choisissez un produit');
@@ -1338,7 +1358,7 @@ function changerDeviseVente(){
   afficherPanier();
 }
 function afficherPanier(){
-  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${argent(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
+  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
   const tot = panier.reduce((s,l)=>s+l.qte*l.prix,0), dv = $('c-devise').value || db.devise;
   $('c-total').textContent = 'Total : ' + fmtDev(convertir(tot, db.devise, dv, db.taux), dv);
@@ -1684,10 +1704,10 @@ function choisirVenteEch(vid){
 function afficherEch(){
   const v = db.ventes.find(x => x.id===ech.vente); if(!v) return;
   $('e-rendus').innerHTML = v.lignes.map((l,i) => { const max = l.qte - (l.rendu||0);
-    return `<div class="e-ligne"><div class="tx"><b>${esc(l.nom)}</b><br><span class="muted">acheté ${l.qte} × ${argent(l.prix)}${l.rendu?' · déjà échangé : '+l.rendu:''}</span></div>
+    return `<div class="e-ligne"><div class="tx"><b>${esc(l.nom)}</b><br><span class="muted">acheté ${l.qte} × ${argent2(l.prix)}${l.rendu?' · déjà échangé : '+l.rendu:''}</span></div>
       ${max>0 ? `<input type="number" min="0" max="${max}" value="${ech.rendus[i]||0}" onchange="ech.rendus[${i}]=Math.max(0,Math.min(${max},parseInt(this.value)||0));this.value=ech.rendus[${i}];bilanEch()">` : '<span class="muted">—</span>'}</div>`; }).join('');
-  $('e-prod').innerHTML = db.produits.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).map(p => `<option value="${p.id}">${esc(p.nom)} · ${argent(p.prix)} (stock : ${p.stock})</option>`).join('');
-  $('e-nouveaux').innerHTML = ech.nouveaux.map((l,i) => `<tr><td>${esc(l.nom)}<br><span class="muted">${l.qte} × ${argent(l.prix)}</span></td><td class="num">${argent(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="ech.nouveaux.splice(${i},1);afficherEch()">✕</button></td></tr>`).join('');
+  $('e-prod').innerHTML = db.produits.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).map(p => `<option value="${p.id}">${esc(p.nom)} · ${argent2(p.prix)} (stock : ${p.stock})</option>`).join('');
+  $('e-nouveaux').innerHTML = ech.nouveaux.map((l,i) => `<tr><td>${esc(l.nom)}<br><span class="muted">${l.qte} × ${argent2(l.prix)}</span></td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="ech.nouveaux.splice(${i},1);afficherEch()">✕</button></td></tr>`).join('');
   bilanEch();
 }
 function ajouterNouveauEch(){
@@ -2000,7 +2020,7 @@ function rechercher(){
   if(!q){ box.classList.add('hide'); return; }
   const prods = db.produits.filter(p => (p.nom+' '+p.cat+' '+details(p)).toLowerCase().includes(q)).slice(0,6);
   const ventes = db.ventes.filter(v => ((v.client||'')+' '+numero(v)+' '+v.lignes.map(l=>l.nom).join(' ')).toLowerCase().includes(q)).slice(-6).reverse();
-  box.innerHTML = (prods.map(p => `<button class="res" onclick="aller('stock');modifierProduit('${p.id}')"><i>📦</i><span><b>${esc(p.nom)}</b><br><span class="muted">${esc(p.cat)}${details(p)?' · '+esc(details(p)):''} · stock ${p.stock} · ${argent(p.prix)}</span></span></button>`).join('')
+  box.innerHTML = (prods.map(p => `<button class="res" onclick="aller('stock');modifierProduit('${p.id}')"><i>📦</i><span><b>${esc(p.nom)}</b><br><span class="muted">${esc(p.cat)}${details(p)?' · '+esc(details(p)):''} · stock ${p.stock} · ${argent2(p.prix)}</span></span></button>`).join('')
     + ventes.map(v => `<button class="res" onclick="voirRecu('${v.id}')"><i>🧾</i><span><b>Reçu n° ${numero(v)}${v.client?' · '+esc(v.client):''}</b><br><span class="muted">${new Date(v.date).toLocaleDateString('fr-FR')} · ${argent(v.total)}</span></span></button>`).join(''))
     || '<div class="res muted">Aucun résultat</div>';
   box.classList.remove('hide');
@@ -2049,7 +2069,7 @@ function dessinerCiel(){
 }
 
 /* Réglages */
-function majTaux(){ db.taux = +$('g-taux').value || 0; sauver(); afficherAccueil(); afficherPanier(); toast('Taux enregistré'); }
+function majTaux(){ db.taux = +$('g-taux').value || 0; sauver(); rafraichir(); toast('Taux enregistré'); }
 function changerTheme(t){ db.theme = t; sauver(); document.documentElement.classList.toggle('ios', t==='ios'); toast('Apparence modifiée'); }
 function changerDevise(){ db.devise = $('g-devise').value; sauver(); rafraichir(); }
 function exporter(){
@@ -2082,7 +2102,7 @@ function toutEffacer(){
   db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; $('g-anim').value = db.fondAnim===false ? 'non' : 'oui'; $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
