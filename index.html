@@ -855,6 +855,7 @@
       <div class="kpi"><span>📅 Chiffre du mois</span><b id="r-mois">0</b></div>
       <div class="kpi"><span>💵 Encaissé en dollars</span><b id="r-usd">0 $</b></div>
       <div class="kpi"><span>💴 Encaissé en francs</span><b id="r-fc">0 FC</b></div>
+      <div class="kpi"><span>🏷️ Remises accordées</span><b id="r-rem">0</b></div>
       <div class="kpi"><span>⏳ Acomptes reçus</span><b id="r-acp">0</b></div>
       <div class="kpi"><span>🏭 Reçu de l'usine</span><b id="r-entrees">0</b></div>
       <div class="kpi"><span>🚚 Transferts (envoyé / reçu)</span><b id="r-transf">0</b></div>
@@ -1017,7 +1018,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · rapport pdf-excel';
+const VERSION = '2026-11-25 · rapport remises';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -2013,7 +2014,7 @@ function rapportWhatsApp(){
   const parPaie = {}; duJour.forEach(v => parPaie[v.paiement] = (parPaie[v.paiement]||0) + v.total);
   const bas = db.produits.filter(p => p.stock<=p.seuil);
   const t = `*${db.boutique.nom} – Rapport du ${dj.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}*\n\n`
-    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsDu(j)['$'],'$')}${versementsDu(j).FC ? ' + ' + fmtDev(versementsDu(j).FC,'FC') : ''}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
+    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🏷️ Remises accordées : ${argent(duJour.reduce((s,v)=>s+remiseVente(v),0))}\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsDu(j)['$'],'$')}${versementsDu(j).FC ? ' + ' + fmtDev(versementsDu(j).FC,'FC') : ''}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
     + (Object.keys(parPaie).length ? '\n\n*Par paiement*\n' + Object.entries(parPaie).map(([k,x]) => `• ${k} : ${argent(x)}`).join('\n') : '')
     + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
     + (bas.length ? `\n\n⚠️ *À réapprovisionner (${bas.length})*\n` + bas.slice(0,15).map(p => `• ${p.nom} : ${p.stock}`).join('\n') + (bas.length>15 ? `\n… et ${bas.length-15} autres` : '') : '');
@@ -2480,7 +2481,9 @@ function donneesRapport(j){
   const ventes = db.ventes.filter(v => jour(v.date)===j).sort((a,b) => a.date < b.date ? -1 : 1);
   const recus = ventes.map(v => { const P = payeDe(v);
     return { num:numero(v), heure:heure(v.date), client:v.client||'', articles:v.lignes.map(l => l.qte + ' x ' + l.nom + (l.desc ? ' (' + l.desc + ')' : '')).join(', '),
-      paiement: v.acompte ? 'Acompte livré (déjà payé)' : (v.paiement||''), total:v.total, dev:P.dev, montant: v.acompte ? 0 : P.montant }; });
+      paiement: v.acompte ? 'Acompte livré (déjà payé)' : (v.paiement||''), total:v.total, dev:P.dev, montant: v.acompte ? 0 : P.montant, remise: remiseVente(v) }; });
+  const remises = []; ventes.forEach(v => v.lignes.forEach(l => { if(l.remise && l.prixBase > l.prix) remises.push({ num:numero(v), nom:l.nom + (l.desc ? ' (' + l.desc + ')' : ''), qte:l.qte, taux:l.remise, base:l.prixBase, prix:l.prix, montant:Math.round((l.prixBase - l.prix) * l.qte * 100) / 100 }); }));
+  const totRemise = Math.round(remises.reduce((s,r) => s + r.montant, 0) * 100) / 100;
   const art = {}; ventes.forEach(v => v.lignes.forEach(l => { const k = l.nom + (l.desc ? ' (' + l.desc + ')' : '');
     const a = art[k] = art[k] || { nom:k, qte:0, montant:0 }; a.qte += l.qte; a.montant += l.qte * l.prix; }));
   const articles = Object.values(art).sort((a,b) => b.qte - a.qte || a.nom.localeCompare(b.nom));
@@ -2499,8 +2502,10 @@ function donneesRapport(j){
   const bons = {}; (db.entrees||[]).filter(e => jour(e.date)===j && (e.source||'usine')==='usine').forEach(e => { const b = bons[e.bon||e.id] = bons[e.bon||e.id] || { num: e.num ? numBR(e.num, e.date) : 'Entrée', heure:heure(e.date), lignes:[], pieces:0, note:e.note||'' }; b.lignes.push(e.qte + ' x ' + e.nom); b.pieces += e.qte; });
   const usine = Object.values(bons).map(b => ({ ...b, articles:b.lignes.join(', ') }));
   return { j, date:new Date(j+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}), recus, articles, argentV, argentA, tot, modes, versements, devises, transferts, usine,
-    ca: ventes.reduce((s,v)=>s+v.total,0), nbArt: articles.reduce((s,a)=>s+a.qte,0) };
+    ca: ventes.reduce((s,v)=>s+v.total,0), nbArt: articles.reduce((s,a)=>s+a.qte,0), remises, totRemise, avantRemise: ventes.reduce((s,v)=>s+v.total,0) + totRemise };
 }
+// Montant des remises d'une vente (prix normal − prix remisé)
+const remiseVente = v => Math.round(v.lignes.reduce((s,l) => s + (l.remise && l.prixBase > l.prix ? (l.prixBase - l.prix) * l.qte : 0), 0) * 100) / 100;
 const txtPdf = t => String(t ?? '').replace(/[\u202f\u00a0]/g,' ').replace(/[\u2212\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[^\x00-\xff€]/g,'');
 const nbDev = (x, dev) => txtPdf(fmtDev(x, dev));
 function blobRapportPDF(R){
@@ -2515,18 +2520,24 @@ function blobRapportPDF(R){
   const table = (head, body, opts={}) => { doc.autoTable({ ...base, startY:y, head:[head.map(txtPdf)], body: body.map(r => r.map(txtPdf)), ...opts }); y = doc.lastAutoTable.finalY; };
   const R2 = { halign:'right' };
   // Résumé
-  table(['Résumé', ''], [['Chiffre du jour', argent(R.ca)], ['Nombre de ventes', String(R.recus.length)], ['Articles vendus', String(R.nbArt)],
+  table(['Résumé', ''], [['Ventes au prix normal (avant remises)', argent(R.avantRemise)], ['Remises accordées', R.totRemise ? '- ' + argent(R.totRemise) + ' (' + R.remises.length + ' article' + (R.remises.length>1?'s':'') + ')' : 'Aucune remise'], ['Chiffre du jour (après remises)', argent(R.ca)], ['Nombre de ventes', String(R.recus.length)], ['Articles vendus', String(R.nbArt)],
     ['Argent reçu en dollars', nbDev(R.tot['$'],'$')], ['Argent reçu en francs congolais', nbDev(R.tot.FC,'FC')], ['Devises reçues', R.devises],
     ['Transferts envoyés / reçus', R.transferts.filter(t=>t.sens==='Envoyé à').length + ' / ' + R.transferts.filter(t=>t.sens==='Reçu de').length], ['Réceptions de l\'usine', String(R.usine.length)]],
     { columnStyles:{ 0:{ fontStyle:'bold', cellWidth:70 } } });
   // 1. Ventes
   titre('1. Ventes des articles');
   if(R.recus.length){
-    table(['Reçu','Heure','Articles','Client','Paiement','Total','Payé'], R.recus.map(r => [r.num, r.heure, r.articles, r.client, r.paiement, argent(r.total), r.montant ? nbDev(r.montant, r.dev) : '-']),
-      { columnStyles:{ 0:{cellWidth:14}, 1:{cellWidth:12}, 5:R2, 6:R2 } });
+    table(['Reçu','Heure','Articles','Client','Paiement','Remise','Total','Payé'], R.recus.map(r => [r.num, r.heure, r.articles, r.client, r.paiement, r.remise ? '- ' + argent(r.remise) : '-', argent(r.total), r.montant ? nbDev(r.montant, r.dev) : '-']),
+      { columnStyles:{ 0:{cellWidth:14}, 1:{cellWidth:12}, 3:{cellWidth:24}, 5:{ ...R2, cellWidth:16 }, 6:{ ...R2, cellWidth:20 }, 7:{ ...R2, cellWidth:24 } } });
     y += 4; table(['Article vendu','Quantité','Montant'], R.articles.map(a => [a.nom, String(a.qte), argent(a.montant)]).concat([['Total', String(R.nbArt), argent(R.ca)]]),
       { columnStyles:{ 1:{ ...R2, cellWidth:22 }, 2:{ ...R2, cellWidth:34 } }, didParseCell: d => { if(d.section==='body' && d.row.index===R.articles.length) d.cell.styles.fontStyle = 'bold'; } });
   } else table(['Ventes'], [['Aucune vente ce jour.']]);
+  // Remises
+  titre('Remises accordées');
+  if(R.remises.length) table(['Reçu','Article','Qté','Taux','Prix normal','Prix remisé','Remise'], R.remises.map(r => [r.num, r.nom, String(r.qte), r.taux + ' %', argent(r.base), argent(r.prix), '- ' + argent(r.montant)])
+      .concat([['', 'Total des remises', '', '', '', '', '- ' + argent(R.totRemise)]]),
+    { columnStyles:{ 0:{cellWidth:14}, 2:{ ...R2, cellWidth:10 }, 3:{ ...R2, cellWidth:13 }, 4:R2, 5:R2, 6:R2 }, didParseCell: d => { if(d.section==='body' && d.row.index===R.remises.length){ d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = [223,230,243]; } } });
+  else table(['Remises'], [['Aucune remise accordée ce jour.']]);
   // 2. Argent reçu
   titre('2. Argent reçu');
   table(['Provenance','Dollars ($)','Francs congolais (FC)'], [['Ventes', nbDev(R.argentV['$'],'$'), nbDev(R.argentV.FC,'FC')], ['Acomptes versés', nbDev(R.argentA['$'],'$'), nbDev(R.argentA.FC,'FC')], ['TOTAL REÇU', nbDev(R.tot['$'],'$'), nbDev(R.tot.FC,'FC')]],
@@ -2551,11 +2562,13 @@ function blobRapportPDF(R){
 function blobRapportXLSX(R){
   const wb = XLSX.utils.book_new(), feuille = (nom, lignes, cols) => { const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = cols.map(w => ({ wch:w })); XLSX.utils.book_append_sheet(wb, ws, nom); };
   const en = [db.boutique.nom + ' – Rapport du ' + R.date];
-  feuille('Résumé', [en, [], ['Chiffre du jour (' + db.devise + ')', Math.round(R.ca*100)/100], ['Nombre de ventes', R.recus.length], ['Articles vendus', R.nbArt],
+  feuille('Résumé', [en, [], ['Ventes au prix normal (' + db.devise + ')', Math.round(R.avantRemise*100)/100], ['Remises accordées (' + db.devise + ')', R.totRemise], ['Chiffre du jour après remises (' + db.devise + ')', Math.round(R.ca*100)/100], ['Nombre de ventes', R.recus.length], ['Articles vendus', R.nbArt],
     ['Argent reçu en dollars ($)', R.tot['$']], ['Argent reçu en francs (FC)', R.tot.FC], ['Devises reçues', R.devises], ['Taux (FC pour 1 $)', db.taux||''],
     ['Transferts envoyés', R.transferts.filter(t=>t.sens==='Envoyé à').length], ['Transferts reçus', R.transferts.filter(t=>t.sens==='Reçu de').length], ['Réceptions de l\'usine', R.usine.length]], [34,40]);
-  feuille('1. Ventes', [en, [], ['Reçu','Heure','Articles','Client','Paiement','Total (' + db.devise + ')','Payé','Devise payée']].concat(R.recus.length ? R.recus.map(r => [r.num, r.heure, r.articles, r.client, r.paiement, Math.round(r.total*100)/100, r.montant, r.montant ? r.dev : '']) : [['Aucune vente ce jour']]),
-    [8,7,60,22,22,14,12,10]);
+  feuille('1. Ventes', [en, [], ['Reçu','Heure','Articles','Client','Paiement','Remise (' + db.devise + ')','Total (' + db.devise + ')','Payé','Devise payée']].concat(R.recus.length ? R.recus.map(r => [r.num, r.heure, r.articles, r.client, r.paiement, r.remise, Math.round(r.total*100)/100, r.montant, r.montant ? r.dev : '']) : [['Aucune vente ce jour']]),
+    [8,7,60,22,22,12,14,12,10]);
+  feuille('Remises', [en, [], ['Reçu','Article','Quantité','Taux (%)','Prix normal (' + db.devise + ')','Prix remisé (' + db.devise + ')','Remise (' + db.devise + ')']]
+    .concat(R.remises.length ? R.remises.map(r => [r.num, r.nom, r.qte, r.taux, r.base, r.prix, r.montant]).concat([[], ['', 'Total des remises', '', '', '', '', R.totRemise]]) : [['Aucune remise ce jour']]), [8,50,10,9,16,16,14]);
   feuille('Articles vendus', [en, [], ['Article','Quantité','Montant (' + db.devise + ')']].concat(R.articles.map(a => [a.nom, a.qte, Math.round(a.montant*100)/100]), [[], ['Total', R.nbArt, Math.round(R.ca*100)/100]]), [50,10,16]);
   feuille('2. Argent reçu', [en, [], ['Provenance','Dollars ($)','Francs (FC)'], ['Ventes', R.argentV['$'], R.argentV.FC], ['Acomptes versés', R.argentA['$'], R.argentA.FC], ['TOTAL REÇU', R.tot['$'], R.tot.FC], [], ['Devises reçues', R.devises], [],
     ['Mode de paiement','Dollars ($)','Francs (FC)']].concat(Object.entries(R.modes).map(([m,x]) => [m, x['$'], x.FC]),
@@ -2611,6 +2624,7 @@ function afficherRapport(){
   $('r-nb').textContent = duJour.length;
   $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
+  $('r-rem').textContent = argent(duJour.reduce((s,v)=>s+remiseVente(v),0));
   { const T = (db.transferts||[]).filter(t => t.statut!=='annulé' && jour(t.date)===j), q = s => T.filter(t=>t.sens===s).reduce((a,t)=>a+t.lignes.reduce((b,l)=>b+l.qte,0),0);
     $('r-transf').textContent = '−' + q('envoi') + ' / +' + q('reception'); }
   $('r-entrees').textContent = (db.entrees||[]).filter(e => jour(e.date)===j).reduce((s,e)=>s+e.qte,0) + ' pièce(s)';
