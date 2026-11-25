@@ -3,6 +3,7 @@
 Application de gestion pour le magasin de meubles Complast (Bibwa, N'sele, Kinshasa).
 
 ## Fonctions
+- **Recherche instantanée à la caisse** : dès les premières lettres tapées (ex. « bonh », « metal », « d20 190x90 »), tous les articles correspondants s’affichent (nom, mesures en cm ou mm, catégorie, gamme), avec prix en $ et FC et stock ; toucher un article (ou Entrée) le choisit.
 - **Caisse** : panier, client, mode de paiement (espèces, mobile money, banque, crédit). Chaque vente diminue le stock et reçoit un numéro de reçu.
 - **Remises à la caisse** : 3 % sur tous les articles, 0 % sur les mousses et les matelas Elengi, 10 % sur les matelas Orthopédique (modifiable dans Réglages) ; appliquées au panier, aux acomptes et aux échanges, détaillées sur les reçus.
 - **Prix en $ et en FC** : chaque prix d’article est affiché dans les deux devises au taux du jour (stock, caisse, panier, échanges, recherche, aperçu d’import) ; dans le formulaire, le prix peut être saisi en $ ou en FC (l’autre est calculé).

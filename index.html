@@ -458,6 +458,14 @@
   @media (max-width:420px){ td.acts .btn{padding:6px 7px;margin-left:2px} #s-liste td{padding-left:3px;padding-right:3px} }
   @media (max-width:380px){ td.acts{white-space:normal;width:38px} td.acts .btn{display:block;width:34px;margin:2px 0 2px auto;padding:5px 0} }
   #tf-liste input{width:110px;padding:8px;text-align:right}
+  #c-sugg{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:46vh;overflow-y:auto}
+  #c-sugg:empty{display:none}
+  #c-sugg button{display:block;text-align:left;width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--border,rgba(127,127,127,.25));background:rgba(127,127,127,.10);color:inherit;font:inherit;cursor:pointer}
+  #c-sugg button:hover,#c-sugg button:focus{background:rgba(10,132,255,.18)}
+  #c-sugg b.surl{background:rgba(255,214,10,.45);border-radius:4px;color:inherit}
+  #c-sugg .px{display:block;margin-top:2px;font-weight:700;color:var(--accent,#0a84ff)}
+  #c-sugg .px small{display:block;font-weight:400;opacity:.7}
+  #c-sugg .info{font-size:13px;opacity:.75;padding:2px 4px}
   #tf-liste tr.vide-prix input{border-color:var(--orange);background:rgba(245,165,36,.12)}
   #tf-mat{table-layout:auto}
   #tf-mat input{width:86px;min-width:70px}
@@ -600,7 +608,10 @@
   <section id="v-caisse" class="hide">
     <div class="card">
       <h2>🛒 Nouvelle vente</h2>
-      <label>Produit</label>
+      <label>Rechercher l’article</label>
+      <input id="c-cherche" type="search" autocomplete="off" placeholder="Tapez les premières lettres… (ex. bonh, d20 190, metal)" oninput="chercherCaisse()" onkeydown="if(event.key==='Enter'){event.preventDefault();const b=document.querySelector('#c-sugg button');if(b)b.click();}">
+      <div id="c-sugg"></div>
+      <label>Produit choisi</label>
       <select id="c-prod"></select>
       <div class="row">
         <div><label>Quantité</label><input id="c-qte" type="number" min="1" value="1"></div>
@@ -1002,7 +1013,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · tv-stand';
+const VERSION = '2026-11-25 · recherche caisse';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1744,6 +1755,41 @@ function majRemises(){
 const txtRemise = l => l.remise ? `remise ${l.remise} % (${argent(l.prixBase)} → ${argent(l.prix)})` : '';
 function eqPrix(src, cible){ const v = +$(src).value || 0; $(cible).textContent = v && db.taux ? '≈ ' + autreMontant(v) : ''; }
 $('c-prod').onchange = majPrix;
+/* Recherche instantanée de la caisse : dès les premières lettres, tous les articles correspondants (nom, mesures, catégorie, gamme) */
+const CAISSE_MIN = 2;
+function surligner(txt, mots){
+  let h = esc(txt); const t = sansAccent(txt), plages = [];
+  mots.forEach(m => { let i = t.indexOf(m); while(i >= 0){ plages.push([i, i + m.length]); i = t.indexOf(m, i + m.length); } });
+  if(!plages.length) return h;
+  plages.sort((a,b) => a[0]-b[0]); const fus = [];
+  plages.forEach(p => { const d = fus[fus.length-1]; if(d && p[0] <= d[1]) d[1] = Math.max(d[1], p[1]); else fus.push(p.slice()); });
+  let out = '', pos = 0; fus.forEach(([a,b]) => { out += esc(txt.slice(pos,a)) + '<b class="surl">' + esc(txt.slice(a,b)) + '</b>'; pos = b; });
+  return out + esc(txt.slice(pos));
+}
+// Mesures en cm écrites « 190x90x7 » pour retrouver un article tapé en cm (mousses et matelas notés en mm)
+function motsMesures(p){
+  try{
+    if(p.cat==='Mousse'){ const m = mesuresMousse(p); if(m.long && m.larg) return m.long + 'x' + m.larg + (m.ep ? ' ' + m.long + 'x' + m.larg + 'x' + m.ep : ''); }
+    const t = taille(p.nom); if(t && t.length >= 2 && t[0]){ const c = t.map(n => +n/10); return c.slice(0,2).join('x') + ' ' + c.join('x'); }
+  }catch(e){}
+  return '';
+}
+function chercherCaisse(){
+  const q = sansAccent($('c-cherche').value), box = $('c-sugg');
+  if(q.replace(/\s/g,'').length < CAISSE_MIN){ box.innerHTML = ''; return; }
+  const mots = q.split(/\s+/).filter(Boolean);
+  const res = db.produits.filter(p => { const t = sansAccent([p.nom, details(p), p.cat, p.gamme||'', motsMesures(p)].join(' ')); return mots.every(m => t.includes(m)); })
+    .sort((a,b) => { const da = sansAccent(a.nom).startsWith(mots[0]) ? 0 : 1, dbb = sansAccent(b.nom).startsWith(mots[0]) ? 0 : 1; return da - dbb || ordreProduit(a,b); });
+  if(!res.length){ box.innerHTML = '<div class="info">Aucun article ne correspond à « ' + esc($('c-cherche').value) + ' ».</div>'; return; }
+  const MAX = 60;
+  box.innerHTML = '<div class="info">' + res.length + ' article' + (res.length>1?'s':'') + ' trouvé' + (res.length>1?'s':'') + (res.length>MAX ? ' (60 premiers affichés, précisez)' : '') + '</div>'
+    + res.slice(0, MAX).map(p => `<button type="button" onclick="choisirCaisse('${p.id}')"><span>${surligner(p.nom, mots)}<br><span class="muted" style="font-size:13px">${details(p) ? esc(details(p)) + ' · ' : ''}${esc(p.cat)}${p.gamme ? ' · ' + esc(p.gamme) : ''} · stock ${p.stock}${p.stock<=0 ? ' ⚠️' : ''}</span></span><span class="px">${p.prix ? argent2(p.prix) : '—'}</span></button>`).join('');
+}
+function choisirCaisse(id){
+  $('c-prod').value = id; majPrix(); $('c-cherche').value = ''; $('c-sugg').innerHTML = '';
+  const p = db.produits.find(x => x.id === id); if(p) toast('✔ ' + p.nom);
+  $('c-qte').select ? ($('c-qte').focus(), $('c-qte').select()) : 0;
+}
 function ajouterLigne(){
   const p = db.produits.find(x => x.id === $('c-prod').value); if(!p) return toast('Choisissez un produit');
   const qte = parseInt($('c-qte').value)||0; if(qte<1) return toast('Quantité invalide');
