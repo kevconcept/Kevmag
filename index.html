@@ -457,6 +457,10 @@
   td.acts .btn{padding:6px 9px;margin-left:4px}
   @media (max-width:420px){ td.acts .btn{padding:6px 7px;margin-left:2px} #s-liste td{padding-left:3px;padding-right:3px} }
   @media (max-width:380px){ td.acts{white-space:normal;width:38px} td.acts .btn{display:block;width:34px;margin:2px 0 2px auto;padding:5px 0} }
+  table.grille{table-layout:fixed}
+  table.grille th:first-child,table.grille td:first-child{width:48px}
+  table.grille input{width:100%;padding:8px 5px;text-align:right;font-size:14px;border-radius:10px}
+  table.grille td,table.grille th{padding:5px 2px}
   /* Transferts */
   .tr-sens{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
   .pill-sens{border:2px solid var(--line2);background:rgba(127,127,127,.08);color:var(--ink);border-radius:16px;padding:12px 10px;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit;text-align:center;line-height:1.3}
@@ -841,6 +845,15 @@
       <label>Arrière-plan</label>
       <select id="g-anim" onchange="db.fond = this.value; db.fondAnim = this.value!=='aucun'; sauver(); demarrerFond()"><option value="produits">Produits Complast animés</option><option value="ciel">Ciel (selon l'heure : matin, jour, soir, nuit)</option><option value="aucun">Aucun</option></select>
     </div>
+    <div class="card" id="carte-grille">
+      <h2>🧽 Grille de prix des mousses</h2>
+      <p class="muted" style="margin:0 0 8px">Prix en FC pour <b>1 cm d'épaisseur</b>, par densité et largeur (feuilles « Retail »). Prix d'une mousse = prix au cm × épaisseur.</p>
+      <div style="overflow-x:auto"><table class="grille"><thead><tr><th>Densité</th><th class="num">90</th><th class="num">120</th><th class="num">140</th><th class="num">180</th></tr></thead><tbody id="gm-lignes"></tbody></table></div>
+      <div class="row"><div><label>Taux de la grille (FC pour 1 $)</label><input id="gm-taux" type="number" min="1" step="any" onchange="majGrille()"></div>
+        <div><label>Mousses à mettre à jour</label><select id="gm-dens"><option value="tous">Toutes les densités</option><option value="12">D12</option><option value="16">D16</option><option value="20">D20</option></select></div></div>
+      <button class="btn full" onclick="appliquerGrille()">🧽 Appliquer les prix aux mousses du stock</button>
+      <p class="muted" style="margin:8px 0 0">Les nouvelles mousses reçoivent automatiquement leur prix d'après cette grille.</p>
+    </div>
     <div class="card">
       <h2>🏷️ Remises à la caisse</h2>
       <p class="muted" style="margin:0 0 4px">Appliquées automatiquement quand un article est ajouté au panier.</p>
@@ -957,7 +970,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · mousses reclassées';
+const VERSION = '2026-11-25 · grille prix mousses';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1036,6 +1049,37 @@ function montrerProduit(pid){
   const tr = document.querySelector(`#s-liste tr[data-id="${pid}"]`);
   if(tr){ tr.classList.add('nouveau'); tr.scrollIntoView({ block:'center', behavior:'smooth' }); setTimeout(() => tr.classList.remove('nouveau'), 4000); }
 }
+/* Grille de prix des mousses (FC par cm d'épaisseur, par densité et largeur), feuilles « Retail » du 31-10-26 */
+const GRILLE_MOUSSE = { taux:2350, D12:{90:4610,120:6130,140:7140,180:9190}, D16:{90:5595,120:7450,140:8695,180:11190}, D20:{90:6980,120:9325,140:10880,180:13950} };
+const LARGEURS = [90,120,140,180];
+function grille(){ const g = JSON.parse(JSON.stringify(GRILLE_MOUSSE)), u = db.grilleMousse || {}; if(u.taux) g.taux = u.taux; ['D12','D16','D20'].forEach(d => Object.assign(g[d], u[d]||{})); return g; }
+// Prix d'une mousse en devise de base d'après la grille (0 si densité / largeur absentes de la grille)
+function prixGrille(p){
+  const g = grille(), m = mesuresMousse(p), u = (g['D'+m.densite]||{})[m.larg];
+  if(!u || !m.ep) return 0;
+  const fc = u * m.ep;
+  return db.devise==='FC' ? fc : Math.round(fc / g.taux * 1e6) / 1e6;
+}
+function afficherGrille(){
+  const g = grille();
+  $('gm-lignes').innerHTML = ['D12','D16','D20'].map(d => `<tr><td><b>${d}</b></td>${LARGEURS.map(l => `<td class="num"><input type="number" min="0" step="any" value="${g[d][l]}" data-d="${d}" data-l="${l}" onchange="majGrille()"></td>`).join('')}</tr>`).join('');
+  $('gm-taux').value = g.taux;
+}
+function majGrille(){
+  const u = { taux: +$('gm-taux').value || GRILLE_MOUSSE.taux };
+  document.querySelectorAll('#gm-lignes input').forEach(i => { (u[i.dataset.d] = u[i.dataset.d] || {})[i.dataset.l] = +i.value || 0; });
+  db.grilleMousse = u; sauver(); toast('Grille enregistrée');
+}
+function appliquerGrille(){
+  const dens = $('gm-dens').value, cibles = db.produits.filter(p => p.cat==='Mousse' && (dens==='tous' || mesuresMousse(p).densite===+dens));
+  const ok = [], sans = [];
+  cibles.forEach(p => { const px = prixGrille(p); if(px) ok.push([p, px]); else if(mesuresMousse(p).densite) sans.push(p.nom); });
+  if(!ok.length) return toast('Aucune mousse à mettre à jour');
+  if(!confirm(`Mettre à jour le prix de ${ok.length} mousse(s)${dens==='tous' ? '' : ' D'+dens} d'après la grille ?` + (sans.length ? `\n\n${sans.length} mousse(s) sans largeur dans la grille ne changeront pas :\n` + sans.slice(0,8).join('\n') + (sans.length>8 ? '\n…' : '') : ''))) return;
+  ok.forEach(([p, px]) => { p.prix = px; });
+  sauver(); rafraichir();
+  toast(`${ok.length} prix mis à jour` + (sans.length ? ` · ${sans.length} sans largeur dans la grille` : ''));
+}
 function enregistrerProduit(){
   const nom = $('p-nom').value.trim();
   if(!nom) return toast('Indiquez le nom du produit');
@@ -1052,6 +1096,7 @@ function enregistrerProduit(){
   if(p.cat==='Mousse'){ const m = mesuresDuNom(nom);   // champs vides : mesures lues dans le nom
     p.densite=+$('p-densite').value||m.densite||0; p.long=+$('p-long').value||m.long||0; p.larg=+$('p-larg').value||m.larg||0; p.ep=epMousse(+$('p-ep').value||m.ep||0); }
   if(p.cat==='Matelas' && !p.gamme) p.gamme = devinerGamme(nom);
+  if(p.cat==='Mousse' && !p.prix){ const px = prixGrille(p); if(px) p.prix = px; }   // nouvelle mousse sans prix : prix de la grille
   const i = db.produits.findIndex(x => x.id === p.id), nouveau = i < 0;
   if(i >= 0) db.produits[i] = { ...db.produits[i], ...p }; else db.produits.push(p);
   sauver(); resetProduit(); rafraichir(); montrerProduit(p.id);
@@ -2587,7 +2632,7 @@ function toutEffacer(){
   db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], transferts:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); afficherEntrees(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); afficherEntrees(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; if(!document.activeElement || !document.activeElement.closest('#carte-grille')) afficherGrille(); { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
@@ -2603,7 +2648,7 @@ rafraichir();
    quand plusieurs appareils vendent en même temps. Les autres appareils reçoivent les changements en direct. */
 const SYNC_CLE = 'kevmag-sync', SYNC_BASE = 'kevmag-sync-base';
 const SYNC_COLL = ['produits','ventes','acomptes','echanges','entrees','transferts'];
-const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange','numTransfert','numReception','magasins','remises'];
+const SYNC_CONFIG_CHAMPS = ['boutique','devise','taux','numRecu','numAcompte','numEchange','numTransfert','numReception','magasins','remises','grilleMousse'];
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const Sync = { actif:false, fs:null, timer:null, ecoutes:[], base:null, envoiEnCours:false, aRefaire:false, enLigne:false, derniere:null, erreur:'' };
 function syncParams(){ try{ return JSON.parse(localStorage.getItem(SYNC_CLE)) || null; }catch(e){ return null; } }
