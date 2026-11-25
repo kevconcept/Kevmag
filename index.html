@@ -770,7 +770,7 @@
       <label>Nom</label><input id="p-nom" placeholder="Ex : Mousse D16 1900x1400x12, Matelas Bonheur 1900x900x100…" oninput="devinerFormulaire()" onchange="majChampsMousse()">
       <div class="row">
         <div><label>Catégorie</label>
-          <select id="p-cat" onchange="this.dataset.manuel=1;majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Oreillers</option><option>Autre</option></select></div>
+          <select id="p-cat" onchange="this.dataset.manuel=1;majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>TV stand</option><option>Oreillers</option><option>Autre</option></select></div>
         <div><label>Prix de vente (<span class="dev-base">$</span>)</label><input id="p-prix" type="number" min="0" step="any" oninput="lierPrix('base')"></div>
       </div>
       <div class="row" id="p-prix-autre-ligne">
@@ -1002,7 +1002,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · tarifs';
+const VERSION = '2026-11-25 · tv-stand';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1032,7 +1032,10 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
   if((db.catsV||0) < 6){ setTimeout(() => { let n = 0; db.produits.forEach(p => {
       if(p.cat==='Autre' && devinerCat(p.nom)==='Oreillers'){ p.cat = 'Oreillers'; n++; }
       if(p.cat==='Matelas' && !p.gamme && devinerGamme(p.nom)==='Hospital SHP'){ p.gamme = 'Hospital SHP'; n++; } });
-    db.catsV = 6; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' (Oreillers / Hospital SHP)'); } }, 0); } db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0;
+    db.catsV = 6; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' (Oreillers / Hospital SHP)'); } }, 0); } 
+  if((db.catsV||0) < 8){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat!=='TV stand' && ['Buffet','Autre','Table'].includes(p.cat) && devinerCat(p.nom)==='TV stand'){ p.cat = 'TV stand'; n++; } });
+    db.catsV = Math.max(db.catsV||0, 8); sauver(); if(n){ rafraichir(); toast(n + ' TV stand rangé' + (n>1?'s':'') + ' dans leur rubrique'); } }, 100); }
+  db.boutique = Object.assign({...BOUTIQUE}, db.boutique); db.numRecu = db.numRecu || 0;
   if(!db.gerantV){ if(!db.boutique.whatsapp) db.boutique.whatsapp = NUM_GERANT; db.gerantV = 1; setTimeout(sauver, 0); }
   // Mentions légales de Complast (remplies une fois si vides)
   if(!db.legalV){ ['rccm','idnat','impot'].forEach(k => { if(!db.boutique[k]) db.boutique[k] = BOUTIQUE[k]; }); db.legalV = 1; setTimeout(sauver, 0); } }
@@ -1291,8 +1294,8 @@ function etat(p){
 // Pièces déjà vendues sans stock qu'un arrivage va servir : « stock −3 → 7 · 3 servies aux ventes en attente »
 function txtArrivage(st, q){ const servi = st < 0 ? Math.min(-st, q) : 0; return `stock ${st} → ${st+q}` + (servi ? ` · <b style="color:var(--orange)">${servi} servie${servi>1?'s':''} aux ventes en attente</b>` : ''); }
 const servis = l => l.reduce((s,x) => { const p = db.produits.find(y=>y.id===x.pid); return s + (p && p.stock < 0 ? Math.min(-p.stock, x.qte) : 0); }, 0);
-const CATS = ['Chambre','Garde-robe','Dresser table','Nightstand','Lit','Matelas','Mousse','Oreillers','Table','Canapé','Buffet','Autre'];
-const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Nightstand:'🕯️', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', Oreillers:'☁️', Autre:'📦' };
+const CATS = ['Chambre','Garde-robe','Dresser table','Nightstand','Lit','Matelas','Mousse','Oreillers','Table','Canapé','Buffet','TV stand','Autre'];
+const ICONES = { Chambre:'🏠', 'Garde-robe':'🚪', 'Dresser table':'🪞', Nightstand:'🕯️', Lit:'🛏️', Matelas:'🛌', Mousse:'🧽', Table:'🪑', 'Canapé':'🛋️', Buffet:'🗄️', 'TV stand':'📺', Oreillers:'☁️', Autre:'📦' };
 let stockCat = 'Tous', stockGamme = 'Toutes';
 function choisirCat(c){ stockCat = c; stockGamme = 'Toutes'; afficherStock(); }
 function choisirGamme(g){ stockGamme = g; afficherStock(); }
@@ -1466,13 +1469,14 @@ const REGLES = [
   ['Chambre', /\bchambre|\bcommode|\bbedroom/],
   ['Lit',     /\blits?\b|\bsommier|\bcouchette|\bberceau|\btete de lit/],
   ['Canapé',  /\bcanape|\bsalon|\bfauteuil|\bsofa|\bdivan|\bpouf|\bbanquette/],
-  ['Buffet',  /\bbuffet|\bvaisselier|\bbahut|meuble (tv|tele)|\betagere|\bbibliotheque|\bvitrine/],
+  ['TV stand', /\btv\b|\btele\b|\btelevision|\bbancada/],
+  ['Buffet',  /\bbuffet|\bvaisselier|\bbahut|\betagere|\bbibliotheque|\bvitrine/],
   ['Table',   /\btables?\b|\bbureau|\bchaises?\b|\btabouret|\bconsole|salle a manger/],
 ];
 function devinerCat(nom, catFichier){
   const c = sansAccent(catFichier);
   if(c){
-    const exact = CATS.find(x => sansAccent(x)===c); if(exact) return exact;
+    const exact = CATS.find(x => sansAccent(x)===c); if(exact) return exact==='Buffet' && /\btv\b|\btele\b|\btelevision|\bbancada/.test(sansAccent(nom)) ? 'TV stand' : exact;
     for(const [cat, re] of REGLES) if(re.test(c)) return cat;
     const proche = CATS.find(x => c.startsWith(sansAccent(x)) || sansAccent(x).startsWith(c)); if(proche) return proche;
   }
@@ -2320,7 +2324,7 @@ function texteTransfert(t){
 
 /* Rapport */
 /* État du stock classé : catégorie → sous-groupe (densité / gamme) → articles */
-const ORDRE_ETAT = ['Mousse','Matelas','Oreillers','Lit','Garde-robe','Dresser table','Nightstand','Chambre','Canapé','Table','Buffet','Autre'];
+const ORDRE_ETAT = ['Mousse','Matelas','Oreillers','Lit','Garde-robe','Dresser table','Nightstand','Chambre','Canapé','Table','Buffet','TV stand','Autre'];
 function etatStock(){
   return ORDRE_ETAT.map(cat => {
     const l = db.produits.filter(p => p.cat===cat); if(!l.length) return null;
