@@ -957,7 +957,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · classement automatique';
+const VERSION = '2026-11-25 · mousses reclassées';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -976,6 +976,10 @@ function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) 
     db.catsV = 4; sauver(); if(n){ rafraichir(); toast(n + ' matelas rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); }
   // Nouveau modèle de reçu : la facture A4 devient le format par défaut (une seule fois)
   if(!db.recuV){ db.boutique = db.boutique || {}; db.boutique.format = 'a4'; db.recuV = 1; setTimeout(sauver, 0); }
+  // Mousses sans densité ou sans mesures : on les lit dans le nom (une seule fois)
+  if((db.catsV||0) < 7){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat!=='Mousse') return;
+      const mm = mesuresMousse(p); if(mm.densite!==(p.densite||0) || mm.long!==(p.long||0) || mm.larg!==(p.larg||0) || mm.ep!==(p.ep||0)){ Object.assign(p, mm); n++; } });
+    db.catsV = Math.max(db.catsV||0, 7); sauver(); if(n){ rafraichir(); toast(n + ' mousse' + (n>1?'s':'') + ' reclassée' + (n>1?'s':'') + ' (densité / taille / épaisseur)'); } }, 50); }
   // Gammes Bébé D14 / Bébé D16 (une seule fois)
   if((db.catsV||0) < 5){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Matelas' && !p.gamme){ const g = devinerGamme(p.nom); if(g){ p.gamme = g; n++; } } });
     db.catsV = 5; sauver(); if(n){ rafraichir(); toast(n + ' matelas bébé rangé' + (n>1?'s':'') + ' par gamme'); } }, 0); }
@@ -1017,6 +1021,7 @@ function devinerFormulaire(){
   const nom = $('p-nom').value, sel = $('p-cat');
   if(!sel.dataset.manuel && nom.trim().length >= 3){ const c = devinerCat(nom); if(c!=='Autre' || !$('p-id').value) sel.value = c; }
   if(sel.value==='Mousse'){ const m = mesuresDuNom(nom);
+    if(m.ep) m.ep = epMousse(m.ep);
     [['p-densite','densite'],['p-long','long'],['p-larg','larg'],['p-ep','ep']].forEach(([i,k]) => { if(m[k] && !$(i).dataset.manuel) $(i).value = m[k]; }); }
   if(sel.value==='Matelas' && !$('p-gamme').dataset.manuel){ const g = devinerGamme(nom); if(g) $('p-gamme').value = g; }
   majChampsMousse();
@@ -1045,7 +1050,7 @@ function enregistrerProduit(){
   }
   if(p.cat==='Matelas') p.gamme = $('p-gamme').value;
   if(p.cat==='Mousse'){ const m = mesuresDuNom(nom);   // champs vides : mesures lues dans le nom
-    p.densite=+$('p-densite').value||m.densite||0; p.long=+$('p-long').value||m.long||0; p.larg=+$('p-larg').value||m.larg||0; p.ep=+$('p-ep').value||m.ep||0; }
+    p.densite=+$('p-densite').value||m.densite||0; p.long=+$('p-long').value||m.long||0; p.larg=+$('p-larg').value||m.larg||0; p.ep=epMousse(+$('p-ep').value||m.ep||0); }
   if(p.cat==='Matelas' && !p.gamme) p.gamme = devinerGamme(nom);
   const i = db.produits.findIndex(x => x.id === p.id), nouveau = i < 0;
   if(i >= 0) db.produits[i] = { ...db.produits[i], ...p }; else db.produits.push(p);
@@ -1112,8 +1117,8 @@ function parTaille(a, b){
 // Mousses : groupées par densité, puis triées par longueur, largeur, épaisseur
 function tailleMousse(p){
   const d = p.densite || mesuresDuNom(p.nom).densite || Infinity, t = taille(p.nom);
-  if(t[0]!==Infinity) return [d, t[0] >= 1000 ? t[0] : t[0]*10, t[1] >= 300 ? t[1] : t[1]*10, t[2]];
-  return [d, (p.long||0)*10, (p.larg||0)*10, p.ep||0];
+  if(t[0]!==Infinity) return [d, t[0] >= 1000 ? t[0] : t[0]*10, t[1] >= 300 ? t[1] : t[1]*10, epMousse(p.ep || t[2])];
+  return [d, (p.long||0)*10, (p.larg||0)*10, epMousse(p.ep)];
 }
 const cmpMousse = (a,b) => { const x = tailleMousse(a), y = tailleMousse(b); return (x[0]-y[0]) || (x[1]-y[1]) || (x[2]-y[2]) || (x[3]-y[3]) || a.nom.localeCompare(b.nom); };
 // Ordre des produits dans les listes : mousses par densité puis taille et épaisseur ; matelas par gamme puis taille ; sinon par nom
@@ -1124,18 +1129,23 @@ function ordreProduit(a,b){
 }
 function lignesMousse(l){
   const tri = l.slice().sort(cmpMousse);
-  const dens = [...new Set(tri.map(p => p.densite || 0))];
+  const dens = [...new Set(tri.map(densiteDe))];
   if(dens.length < 2 && !dens[0]) return tri.map(ligneStock).join('');
-  return dens.map(d => { const ll = tri.filter(p => (p.densite||0)===d);
+  return dens.map(d => { const ll = tri.filter(p => densiteDe(p)===d);
     return `<tr class="sous"><td colspan="4">${d ? 'Densité D'+d : 'Autres mousses'}<span>${ll.length}</span></td></tr>` + ll.map(ligneStock).join(''); }).join('');
 }
 function gammeDe(g){ const x = sansAccent(g); return GAMMES.find(G => sansAccent(G)===x) || devinerGamme(g); }
 /* Description d'une mousse : « D25 · 190 × 140 × 20 cm » */
+const epMousse = v => (+v > 30 ? +v/10 : +v) || 0;   // mousse : épaisseur en cm (160 → 16 cm)
+function mesuresMousse(p){
+  const m = mesuresDuNom(p.nom);
+  return { densite: p.densite || m.densite || 0, long: p.long || m.long || 0, larg: p.larg || m.larg || 0, ep: epMousse(p.ep || m.ep) };
+}
 function details(p){
   if(!p || p.cat!=='Mousse') return '';
-  const t = [];
-  if(p.densite) t.push('D'+p.densite);
-  const d = [p.long,p.larg,p.ep].filter(Boolean);
+  const t = [], mm = mesuresMousse(p);
+  if(mm.densite) t.push('D'+mm.densite);
+  const d = [mm.long,mm.larg,mm.ep].filter(Boolean);
   if(d.length) t.push(d.join(' × ')+' cm');
   return t.join(' · ');
 }
@@ -2181,8 +2191,8 @@ function etatStock(){
     let groupes;
     if(cat==='Mousse'){
       const tri = l.slice().sort(cmpMousse);
-      const dens = [...new Set(tri.map(p => p.densite || 0))].sort((a,b) => a-b);   // sans densité (déchet, flocon) en premier
-      groupes = dens.map(d => ({ titre: d ? 'D'+d : 'Déchet / divers', produits: tri.filter(p => (p.densite||0)===d) }));
+      const dens = [...new Set(tri.map(densiteDe))].sort((a,b) => a-b);   // sans densité (déchet, flocon) en premier
+      groupes = dens.map(d => ({ titre: d ? 'D'+d : 'Déchet / divers', produits: tri.filter(p => densiteDe(p)===d) }));
     } else if(cat==='Matelas'){
       groupes = [...GAMMES, ''].map(g => ({ titre: g || 'Autres matelas', produits: l.filter(p => (p.gamme||'')===g).sort(parTaille) })).filter(g => g.produits.length);
     } else groupes = [{ titre:'', produits: l.slice().sort(parTaille) }];
