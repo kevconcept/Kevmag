@@ -452,6 +452,7 @@
   .sync-guide ol{padding-left:20px;margin:8px 0}
   #sync-mini{display:block;margin-bottom:4px}
 
+  #s-liste tr.nouveau td{background:rgba(46,204,113,.22);transition:background .6s}
   td.acts{white-space:nowrap}
   td.acts .btn{padding:6px 9px;margin-left:4px}
   @media (max-width:420px){ td.acts .btn{padding:6px 7px;margin-left:2px} #s-liste td{padding-left:3px;padding-right:3px} }
@@ -727,10 +728,10 @@
     <div class="card">
       <h2 id="p-titre">Ajouter un produit</h2>
       <input type="hidden" id="p-id">
-      <label>Nom</label><input id="p-nom" placeholder="Ex : Matelas 2 places" onchange="majChampsMousse()">
+      <label>Nom</label><input id="p-nom" placeholder="Ex : Mousse D16 1900x1400x12, Matelas Bonheur 1900x900x100…" oninput="devinerFormulaire()" onchange="majChampsMousse()">
       <div class="row">
         <div><label>Catégorie</label>
-          <select id="p-cat" onchange="majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Oreillers</option><option>Autre</option></select></div>
+          <select id="p-cat" onchange="this.dataset.manuel=1;majChampsMousse()"><option>Chambre</option><option>Garde-robe</option><option>Dresser table</option><option>Nightstand</option><option>Lit</option><option>Matelas</option><option>Mousse</option><option>Table</option><option>Canapé</option><option>Buffet</option><option>Oreillers</option><option>Autre</option></select></div>
         <div><label>Prix de vente (<span class="dev-base">$</span>)</label><input id="p-prix" type="number" min="0" step="any" oninput="lierPrix('base')"></div>
       </div>
       <div class="row" id="p-prix-autre-ligne">
@@ -742,16 +743,16 @@
       </div>
       <div id="p-matelas" class="hide">
         <label>Gamme de matelas</label>
-        <select id="p-gamme"><option value="">— Aucune —</option></select>
+        <select id="p-gamme" onchange="this.dataset.manuel=1"><option value="">— Aucune —</option></select>
       </div>
       <div id="p-mousse" class="hide">
         <div class="row">
-          <div><label>Densité (kg/m³)</label><input id="p-densite" type="number" min="0" step="any" placeholder="Ex : 25"></div>
-          <div><label>Épaisseur (cm)</label><input id="p-ep" type="number" min="0" step="any" placeholder="Ex : 20"></div>
+          <div><label>Densité (kg/m³)</label><input id="p-densite" oninput="this.dataset.manuel=1" type="number" min="0" step="any" placeholder="Ex : 25"></div>
+          <div><label>Épaisseur (cm)</label><input id="p-ep" oninput="this.dataset.manuel=1" type="number" min="0" step="any" placeholder="Ex : 20"></div>
         </div>
         <div class="row">
-          <div><label>Longueur (cm)</label><input id="p-long" type="number" min="0" step="any" placeholder="Ex : 190"></div>
-          <div><label>Largeur (cm)</label><input id="p-larg" type="number" min="0" step="any" placeholder="Ex : 140"></div>
+          <div><label>Longueur (cm)</label><input id="p-long" oninput="this.dataset.manuel=1" type="number" min="0" step="any" placeholder="Ex : 190"></div>
+          <div><label>Largeur (cm)</label><input id="p-larg" oninput="this.dataset.manuel=1" type="number" min="0" step="any" placeholder="Ex : 140"></div>
         </div>
       </div>
       <button class="btn full" onclick="enregistrerProduit()">Enregistrer</button>
@@ -956,7 +957,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · mousses D12 D16 D20';
+const VERSION = '2026-11-25 · classement automatique';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1011,15 +1012,45 @@ function aller(v){
 document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => aller(b.dataset.v));
 
 /* Produits */
+/* Classement automatique d'un nouvel article d'après son nom (catégorie, densité / mesures, gamme) */
+function devinerFormulaire(){
+  const nom = $('p-nom').value, sel = $('p-cat');
+  if(!sel.dataset.manuel && nom.trim().length >= 3){ const c = devinerCat(nom); if(c!=='Autre' || !$('p-id').value) sel.value = c; }
+  if(sel.value==='Mousse'){ const m = mesuresDuNom(nom);
+    [['p-densite','densite'],['p-long','long'],['p-larg','larg'],['p-ep','ep']].forEach(([i,k]) => { if(m[k] && !$(i).dataset.manuel) $(i).value = m[k]; }); }
+  if(sel.value==='Matelas' && !$('p-gamme').dataset.manuel){ const g = devinerGamme(nom); if(g) $('p-gamme').value = g; }
+  majChampsMousse();
+}
+let produitAMontrer = null;
+// Ouvre la liste sur la catégorie (et la densité / gamme) du produit et le met en évidence à sa place
+function montrerProduit(pid){
+  const p = db.produits.find(x => x.id===pid); if(!p) return;
+  stockCat = p.cat; $('s-cherche').value = '';
+  stockGamme = p.cat==='Mousse' ? (densiteDe(p) ? 'D'+densiteDe(p) : 'divers') : p.cat==='Matelas' ? (p.gamme||'') : 'Toutes';
+  afficherStock();
+  const tr = document.querySelector(`#s-liste tr[data-id="${pid}"]`);
+  if(tr){ tr.classList.add('nouveau'); tr.scrollIntoView({ block:'center', behavior:'smooth' }); setTimeout(() => tr.classList.remove('nouveau'), 4000); }
+}
 function enregistrerProduit(){
   const nom = $('p-nom').value.trim();
   if(!nom) return toast('Indiquez le nom du produit');
   const p = { id: $('p-id').value || id(), nom, cat: $('p-cat').value, prix: +$('p-prix').value||0, stock: parseInt($('p-stock').value)||0, seuil: parseInt($('p-seuil').value)||0 };
+  // Article déjà dans le stock (même nom) : on ajoute les pièces à celui-ci au lieu de créer un doublon
+  const deja = !$('p-id').value && db.produits.find(x => sansAccent(x.nom)===sansAccent(nom));
+  if(deja){
+    if(!confirm(`« ${deja.nom} » existe déjà dans le stock (${deja.stock} pièce(s)).\n\n` + (p.stock>0 ? `Ajouter les ${p.stock} pièce(s) à son stock au lieu de créer un doublon ?` : `Ouvrir cet article au lieu de créer un doublon ?`))) return;
+    if(p.stock>0) entreeUsine([{ pid:deja.id, nom:deja.nom, cat:deja.cat, qte:p.stock }], 'ajout via la fiche produit');
+    if(p.prix && !deja.prix){ deja.prix = p.prix; sauver(); }
+    resetProduit(); rafraichir(); montrerProduit(deja.id); return toast(p.stock>0 ? `+${p.stock} ajoutées à « ${deja.nom} » → stock ${deja.stock}` : 'Article existant affiché');
+  }
   if(p.cat==='Matelas') p.gamme = $('p-gamme').value;
-  if(p.cat==='Mousse'){ p.densite=+$('p-densite').value||0; p.long=+$('p-long').value||0; p.larg=+$('p-larg').value||0; p.ep=+$('p-ep').value||0; }
-  const i = db.produits.findIndex(x => x.id === p.id);
-  if(i >= 0) db.produits[i] = p; else db.produits.push(p);
-  sauver(); resetProduit(); rafraichir(); toast('Produit enregistré');
+  if(p.cat==='Mousse'){ const m = mesuresDuNom(nom);   // champs vides : mesures lues dans le nom
+    p.densite=+$('p-densite').value||m.densite||0; p.long=+$('p-long').value||m.long||0; p.larg=+$('p-larg').value||m.larg||0; p.ep=+$('p-ep').value||m.ep||0; }
+  if(p.cat==='Matelas' && !p.gamme) p.gamme = devinerGamme(nom);
+  const i = db.produits.findIndex(x => x.id === p.id), nouveau = i < 0;
+  if(i >= 0) db.produits[i] = { ...db.produits[i], ...p }; else db.produits.push(p);
+  sauver(); resetProduit(); rafraichir(); montrerProduit(p.id);
+  toast(nouveau ? `Ajouté et classé : ${p.cat}${p.cat==='Mousse' && p.densite ? ' · D'+p.densite : ''}${p.gamme ? ' · '+p.gamme : ''}` : 'Produit enregistré');
 }
 function lierPrix(depuis){
   const t = db.taux; if(!t) return;
@@ -1035,7 +1066,7 @@ function majDevisesForm(){
 }
 function modifierProduit(pid){
   const p = db.produits.find(x => x.id === pid); if(!p) return;
-  $('p-id').value=p.id; $('p-nom').value=p.nom; $('p-cat').value=p.cat; $('p-prix').value=p.prix; lierPrix('base'); $('p-stock').value=p.stock; $('p-seuil').value=p.seuil;
+  $('p-id').value=p.id; $('p-nom').value=p.nom; $('p-cat').value=p.cat; $('p-cat').dataset.manuel=1; $('p-prix').value=p.prix; lierPrix('base'); $('p-stock').value=p.stock; $('p-seuil').value=p.seuil;
   $('p-densite').value=p.densite||''; $('p-long').value=p.long||''; $('p-larg').value=p.larg||''; $('p-ep').value=p.ep||''; $('p-gamme').value=p.gamme||''; majChampsMousse();
   $('p-titre').textContent='Modifier le produit'; $('p-annuler').classList.remove('hide'); window.scrollTo(0,0);
 }
@@ -1044,7 +1075,7 @@ function supprimerProduit(pid){
   db.produits = db.produits.filter(x => x.id !== pid); sauver(); rafraichir();
 }
 function resetProduit(){
-  ['p-id','p-nom','p-prix','p-prix-autre','p-densite','p-long','p-larg','p-ep','p-gamme'].forEach(k => $(k).value=''); majChampsMousse(); $('p-stock').value=0; $('p-seuil').value=2;
+  ['p-id','p-nom','p-prix','p-prix-autre','p-densite','p-long','p-larg','p-ep','p-gamme'].forEach(k => { $(k).value=''; delete $(k).dataset.manuel; }); delete $('p-cat').dataset.manuel; majChampsMousse(); $('p-stock').value=0; $('p-seuil').value=2;
   $('p-titre').textContent='Ajouter un produit'; $('p-annuler').classList.add('hide');
 }
 function majChampsMousse(){
@@ -1120,7 +1151,7 @@ let stockCat = 'Tous', stockGamme = 'Toutes';
 function choisirCat(c){ stockCat = c; stockGamme = 'Toutes'; afficherStock(); }
 function choisirGamme(g){ stockGamme = g; afficherStock(); }
 const densiteDe = p => p.densite || mesuresDuNom(p.nom).densite || 0;
-function ligneStock(p){ return `<tr>
+function ligneStock(p){ return `<tr data-id="${p.id}">
     <td>${esc(p.nom)}<br><span class="muted">${details(p)?esc(details(p)):esc(p.cat==='Matelas' && p.gamme ? 'Matelas · '+p.gamme : p.cat)}</span> ${etat(p)}</td>
     <td class="num">${argent2h(p.prix)}</td><td class="num">${p.stock<0 ? `<b style="color:var(--red)">${p.stock}</b>` : p.stock}</td>
     <td class="num acts"><button class="btn small" title="Ajouter des articles (entrée usine)" onclick="entreeRapide('${p.id}')">＋</button><button class="btn small alt" title="Modifier" onclick="modifierProduit('${p.id}')">✏️</button><button class="btn small bad" title="Supprimer" onclick="supprimerProduit('${p.id}')">✕</button></td></tr>`; }
@@ -1267,7 +1298,7 @@ function afficherStock(){
   const liste = db.produits.filter(p => (stockCat==='Tous' || p.cat===stockCat || (stockCat==='ALIVRER' && p.stock < 0)) && (stockCat!=='Matelas' || stockGamme==='Toutes' || (p.gamme||'')===stockGamme)
     && (stockCat!=='Mousse' || stockGamme==='Toutes' || (densiteDe(p) ? 'D'+densiteDe(p) : 'divers')===stockGamme)
     && (p.nom+' '+p.cat+' '+(p.gamme||'')+' '+details(p)).toLowerCase().includes(q));
-  const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort((a,b)=>a.nom.localeCompare(b.nom))]).filter(g => g[1].length);
+  const groupes = CATS.map(c => [c, liste.filter(p => p.cat===c).sort(ordreProduit)]).filter(g => g[1].length);
   const lignesCat = (c,l) => c==='Mousse' ? lignesMousse(l) : c!=='Matelas' ? l.map(ligneStock).join('')
     : [...GAMMES, ''].map(g => [g, l.filter(p => (p.gamme||'')===g).sort(parTaille)]).filter(x => x[1].length)
         .map(([g,ll]) => `<tr class="sous"><td colspan="4">${g || 'Autres matelas'}<span>${ll.length}</span></td></tr>` + ll.map(ligneStock).join('')).join('');
