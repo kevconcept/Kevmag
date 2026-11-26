@@ -491,6 +491,12 @@
   #tf-liste input{width:110px;padding:8px;text-align:right}
   #r-jours button{display:flex;justify-content:space-between;width:100%;gap:10px;padding:9px 12px;margin-bottom:6px;border-radius:12px;border:1px solid var(--line2,rgba(127,127,127,.25));background:rgba(127,127,127,.08);color:inherit;font:inherit;cursor:pointer;text-align:left}
   #r-jours button.on{border-color:var(--blue,#0a84ff);background:rgba(10,132,255,.16)}
+  .sugg-art{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:46vh;overflow-y:auto}
+  .sugg-art:empty{display:none}
+  .sugg-art button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid var(--line2,rgba(127,127,127,.25));background:rgba(127,127,127,.10);color:inherit;font:inherit;cursor:pointer}
+  .sugg-art button:hover{background:rgba(10,132,255,.18)}
+  .sugg-art b.surl{background:rgba(255,214,10,.45);border-radius:4px;color:inherit}
+  .sugg-art .info{font-size:13px;opacity:.75;padding:2px 4px;font-weight:700}
   #c-sugg{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:46vh;overflow-y:auto}
   #c-sugg:empty{display:none}
   #c-sugg button{display:block;text-align:left;width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--border,rgba(127,127,127,.25));background:rgba(127,127,127,.10);color:inherit;font:inherit;cursor:pointer}
@@ -745,14 +751,17 @@
       <h2>🔁 Nouvel échange</h2>
       <div class="regle-ech">🚫 <b>Le magasin ne rembourse pas.</b> Un article peut être échangé contre un article de <b>même prix</b> ou de <b>prix supérieur</b> (le client paie la différence). Pas d'échange contre un article moins cher.</div>
       <label>1. Retrouver l'achat du client</label>
-      <input id="e-cherche" placeholder="N° de reçu, nom ou téléphone du client" oninput="chercherVenteEch()" autocomplete="off">
+      <input id="e-cherche" type="search" placeholder="Article (2-3 lettres), n° de reçu, nom ou téléphone du client" oninput="chercherVenteEch()" autocomplete="off">
       <div id="e-ventes"></div>
+      <div id="e-stock-sugg" class="sugg-art"></div>
       <div id="e-etape2" class="hide">
         <div id="e-achat" class="muted" style="margin:12px 0 4px"></div>
         <h3 class="e-h">2. Articles rapportés par le client</h3>
         <div id="e-rendus"></div>
         <h3 class="e-h">3. Nouveaux articles choisis</h3>
-        <select id="e-prod"></select>
+        <input id="e-cherche-art" type="search" placeholder="Rechercher l’article en stock (2-3 lettres)…" oninput="chercherArtEch()" autocomplete="off">
+        <div id="e-art-sugg" class="sugg-art"></div>
+        <select id="e-prod" style="margin-top:6px"></select>
         <div class="row"><div><label>Quantité</label><input id="e-qte" type="number" min="1" value="1"></div>
           <div style="display:flex;align-items:flex-end"><button class="btn alt full" style="margin-top:0" onclick="ajouterNouveauEch()">+ Ajouter</button></div></div>
         <table style="margin-top:8px"><tbody id="e-nouveaux"></tbody></table>
@@ -1211,7 +1220,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · import bon de livraison';
+const VERSION = '2026-11-26 · recherche échange';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2890,17 +2899,39 @@ function acompteWhatsApp(aid){
 /* Échanges de produits (sans remboursement) */
 let ech = { vente:null, rendus:{}, nouveaux:[] };
 const numEch = e => 'ECH-' + new Date(e.date).getFullYear() + '-' + String(e.num).padStart(4,'0');
+// Articles du stock qui correspondent aux lettres tapées (nom, mesures, catégorie, gamme), comme à la caisse
+function articlesCorrespondants(q){
+  const mots = sansAccent(q).split(/\s+/).filter(Boolean);
+  if(mots.join('').length < 2) return { mots, res:[] };
+  const res = db.produits.filter(p => { const t = sansAccent([p.nom, details(p), p.cat, p.gamme||'', motsMesures(p)].join(' ')); return mots.every(m => t.includes(m)); })
+    .sort((a,b) => (sansAccent(a.nom).startsWith(mots[0]) ? 0 : 1) - (sansAccent(b.nom).startsWith(mots[0]) ? 0 : 1) || ordreProduit(a,b));
+  return { mots, res };
+}
+const boutonArticle = (p, mots, action) => `<button type="button" onclick="${action}"><span>${surligner(p.nom, mots)}</span><br><span class="muted" style="font-size:13px">${details(p) ? esc(details(p)) + ' · ' : ''}${esc(p.cat)}${p.gamme ? ' · ' + esc(p.gamme) : ''} · <b>stock ${p.stock}</b>${p.stock<=0 ? ' ⚠️' : ''} · ${p.prix ? argent2(p.prix) : 'sans prix'}</span></button>`;
 function chercherVenteEch(){
-  const q = $('e-cherche').value.trim().toLowerCase(), box = $('e-ventes');
-  if(q.length < 2){ box.innerHTML = ''; return; }
-  const l = db.ventes.filter(v => !v.echange && ((v.client||'')+' '+numero(v)+' '+v.lignes.map(x=>x.nom).join(' ')).toLowerCase().includes(q)).slice(-8).reverse();
+  const brut = $('e-cherche').value.trim(), q = brut.toLowerCase(), box = $('e-ventes'), sb = $('e-stock-sugg');
+  if(q.replace(/\s/g,'').length < 2){ box.innerHTML = ''; sb.innerHTML = ''; return; }
+  // Articles du stock correspondants (tout de suite, dès 2 lettres)
+  const { mots, res } = articlesCorrespondants(brut);
+  sb.innerHTML = res.length ? '<div class="info">📦 Articles en stock correspondants (' + res.length + ') — touchez pour voir les achats de cet article</div>'
+    + res.slice(0, 30).map(p => boutonArticle(p, mots, `$('e-cherche').value=${esc(JSON.stringify(p.nom)).replace(/"/g,'&quot;')};chercherVenteEch()`)).join('') : '';
+  const motsV = sansAccent(brut).split(/\s+/).filter(Boolean);
+  const l = db.ventes.filter(v => { if(v.echange) return false; const t = sansAccent((v.client||'')+' '+numero(v)+' '+v.lignes.map(x=>x.nom + ' ' + (x.desc||'')).join(' ')); return motsV.every(m => t.includes(m)); }).slice(-8).reverse();
   box.innerHTML = l.length ? l.map(v => `<button class="res" onclick="choisirVenteEch('${v.id}')"><i>🧾</i><span><b>Reçu n° ${numero(v)}${v.client?' · '+esc(v.client):''}</b><br><span class="muted">${new Date(v.date).toLocaleDateString('fr-FR')} · ${v.lignes.map(x=>esc(x.qte+' × '+x.nom)).join(', ')} · ${argent(v.total)}</span></span></button>`).join('')
     : '<p class="muted">Aucun achat trouvé.</p>';
+  if(l.length) box.insertAdjacentHTML('afterbegin', '<div class="info muted" style="font-weight:700;font-size:13px;margin-top:8px">🧾 Achats correspondants (' + l.length + ')</div>');
 }
+function chercherArtEch(){
+  const { mots, res } = articlesCorrespondants($('e-cherche-art').value), box = $('e-art-sugg');
+  if(mots.join('').length < 2){ box.innerHTML = ''; return; }
+  box.innerHTML = res.length ? '<div class="info">' + res.length + ' article(s) trouvé(s)</div>' + res.slice(0, 40).map(p => boutonArticle(p, mots, `choisirArtEch('${p.id}')`)).join('')
+    : '<div class="info">Aucun article ne correspond.</div>';
+}
+function choisirArtEch(id){ $('e-prod').value = id; $('e-cherche-art').value = ''; $('e-art-sugg').innerHTML = ''; const p = db.produits.find(x => x.id===id); if(p) toast('✔ ' + p.nom); $('e-qte').focus(); }
 function choisirVenteEch(vid){
   const v = db.ventes.find(x => x.id===vid); if(!v) return;
   ech = { vente:vid, rendus:{}, nouveaux:[] };
-  $('e-ventes').innerHTML = ''; $('e-cherche').value = '';
+  $('e-ventes').innerHTML = ''; $('e-cherche').value = ''; $('e-stock-sugg').innerHTML = '';
   $('e-achat').innerHTML = `Achat : <b>Reçu n° ${numero(v)}</b> du ${new Date(v.date).toLocaleDateString('fr-FR')}${v.client?' · '+esc(v.client):''}`;
   $('e-etape2').classList.remove('hide'); $('e-dev').value = db.devise; afficherEch();
 }
