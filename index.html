@@ -515,6 +515,7 @@
   #modif{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:21;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
   #r-recherche input[type=date]{width:100%;min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none}
   #r-bloc-per .row>div{min-width:0;flex:1 1 0}
+  .btn-ok{flex:0 0 auto;min-width:64px;font-weight:800}
   .r-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   #modif-carte{width:100%;max-width:560px;margin:0;background:var(--card)}
   html.ios #modif #modif-carte{background:var(--barre);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
@@ -873,16 +874,18 @@
       <h2>🔎 Rechercher un rapport</h2>
       <div class="chips" style="margin-top:4px;padding-bottom:6px"><button class="chip on" id="r-mode-jour" onclick="modeRapport('jour')">📅 Un jour</button><button class="chip" id="r-mode-per" onclick="modeRapport('periode')">🗓️ Une période (du… au…)</button></div>
       <div id="r-bloc-jour"><label style="margin-top:4px">Jour</label>
-        <div style="display:flex;gap:8px;align-items:center"><button class="btn alt small" onclick="decalerRapport(-1)" aria-label="Jour précédent">◀</button><input id="r-date" type="date" oninput="afficherRapport()" onchange="afficherRapport()" style="flex:1"><button class="btn alt small" onclick="decalerRapport(1)" aria-label="Jour suivant">▶</button></div></div>
-      <div id="r-bloc-per" class="hide"><div class="row"><div><label style="margin-top:4px">Du</label><input id="r-du" type="date" oninput="afficherRapport()" onchange="afficherRapport()"></div><div><label style="margin-top:4px">Au</label><input id="r-au" type="date" oninput="afficherRapport()" onchange="afficherRapport()"></div></div></div>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn alt small" onclick="decalerRapport(-1)" aria-label="Jour précédent">◀</button><input id="r-date" type="date" oninput="afficherRapport()" onchange="afficherRapport()" style="flex:1"><button class="btn alt small" onclick="decalerRapport(1)" aria-label="Jour suivant">▶</button><button class="btn small btn-ok" onclick="okDateRapport()">OK</button></div></div>
+      <div id="r-bloc-per" class="hide"><div class="row"><div><label style="margin-top:4px">Du</label><input id="r-du" type="date" oninput="afficherRapport()" onchange="afficherRapport()"></div><div><label style="margin-top:4px">Au</label><input id="r-au" type="date" oninput="afficherRapport()" onchange="afficherRapport()"></div></div>
+        <button class="btn full btn-ok" style="margin-top:8px" onclick="okDateRapport()">OK – afficher cette période</button></div>
       <div class="chips" style="padding-bottom:4px"><button class="chip" onclick="raccourciRapport('auj')">Aujourd’hui</button><button class="chip" onclick="raccourciRapport('hier')">Hier</button><button class="chip" onclick="raccourciRapport('semaine')">Cette semaine</button><button class="chip" onclick="raccourciRapport('mois')">Ce mois</button><button class="chip" onclick="raccourciRapport('moisPrec')">Mois dernier</button></div>
       <div id="r-lib" style="font-weight:700;margin-top:4px"></div>
       <button class="btn full" style="margin-top:10px" onclick="voirDetailRapport()">📋 Voir et modifier ce rapport ⬇️</button>
       <div id="r-bloc-deplacer" style="margin-top:10px">
         <details><summary style="cursor:pointer;font-weight:700">📅 Changer la date de tout ce rapport</summary>
           <div class="muted" style="margin:8px 0 4px">Toutes les opérations de ce jour (ventes, acomptes, échanges, transferts, entrées) passent à la nouvelle date, à la même heure. Le stock ne change pas.</div>
-          <label style="margin-top:4px">Nouvelle date</label><input id="r-nouv-date" type="date">
-          <button class="btn alt full" style="margin-top:8px" onclick="deplacerRapport()">📅 Déplacer le rapport à cette date</button>
+          <label style="margin-top:4px">Nouvelle date</label>
+          <div style="display:flex;gap:8px;align-items:center"><input id="r-nouv-date" type="date" style="flex:1;min-width:0"><button class="btn btn-ok" onclick="deplacerRapport()">OK</button></div>
+          <div class="muted" style="font-size:13px;margin-top:4px">Choisissez la date, puis appuyez sur OK.</div>
         </details>
       </div>
       <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">📆 Jours avec activité</summary><input id="r-jours-cherche" type="month" style="margin-top:8px" onchange="afficherJoursActivite()"><div id="r-jours" style="margin-top:8px"></div></details>
@@ -1100,7 +1103,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · rapport : voir et déplacer';
+const VERSION = '2026-11-26 · bouton OK date';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -3006,6 +3009,8 @@ function modeRapport(m){
   if(m==='periode' && !$('r-du').value){ const j = $('r-date').value || jour(new Date()); $('r-du').value = j.slice(0,8) + '01'; $('r-au').value = j; }
   afficherRapport();
 }
+// Bouton OK après le choix de la date : affiche le rapport et descend jusqu'au détail
+function okDateRapport(){ document.activeElement && document.activeElement.blur && document.activeElement.blur(); afficherRapport(); voirDetailRapport(); }
 function voirDetailRapport(){ const c = $('r-detail'); if(c) c.scrollIntoView({ behavior:'smooth', block:'start' }); }
 // Déplacer toutes les opérations d'un jour vers une autre date (même heure) : utile si la date du téléphone était fausse ou si un jour a été saisi le lendemain
 function deplacerRapport(){
