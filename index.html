@@ -1154,7 +1154,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · dépenses';
+const VERSION = '2026-11-26 · dépenses du jour';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2484,6 +2484,8 @@ function rapportWhatsApp(){
     + `💰 Chiffre ${P.unJour ? 'du jour' : 'de la période'} : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🏷️ Remises accordées : ${argent(duJour.reduce((s,v)=>s+remiseVente(v),0))}\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsP(P)['$'],'$')}${versementsP(P).FC ? ' + ' + fmtDev(versementsP(P).FC,'FC') : ''}\n💸 Dépenses : ${fmtDev(totDep(depensesP(P))['$'],'$')} + ${fmtDev(totDep(depensesP(P)).FC,'FC')}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
     + (Object.keys(parPaie).length ? '\n\n*Par paiement*\n' + Object.entries(parPaie).map(([k,x]) => `• ${k} : ${argent(x)}`).join('\n') : '')
     + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${P.unJour ? '' : new Date(v.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' '}${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
+    + (depensesP(P).length ? '\n\n💸 *Dépenses ' + (P.unJour ? 'du jour' : 'de la période') + '*\n' + depensesP(P).map(d => `• ${P.unJour ? '' : new Date(d.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' '}${new Date(d.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${d.motif} : ${fmtDev(d.montant, d.dev)}`).join('\n')
+        + `\n*Total des dépenses : ${fmtDev(totDep(depensesP(P))['$'],'$')} + ${fmtDev(totDep(depensesP(P)).FC,'FC')}*\n💰 Reste en caisse : ${fmtDev(encaisse(duJour)['$'] + versementsP(P)['$'] - totDep(depensesP(P))['$'],'$')} · ${fmtDev(encaisse(duJour).FC + versementsP(P).FC - totDep(depensesP(P)).FC,'FC')}` : '\n\n💸 Aucune dépense ' + (P.unJour ? 'ce jour' : 'sur cette période'))
     + (bas.length ? `\n\n⚠️ *À réapprovisionner (${bas.length})*\n` + bas.slice(0,15).map(p => `• ${p.nom} : ${p.stock}`).join('\n') + (bas.length>15 ? `\n… et ${bas.length-15} autres` : '') : '');
   const n = numeroWA(db.boutique.whatsapp);
   if(!n) toast('Astuce : ajoutez votre numéro WhatsApp dans Réglages → Reçus');
@@ -3021,7 +3023,10 @@ function blobRapportPDF(R){
       ['Dépenses en dollars ($)', R.dep['$'] ? '- ' + nbDev(R.dep['$'],'$') : '0 $'], ['Dépenses en francs congolais (FC)', R.dep.FC ? '- ' + nbDev(R.dep.FC,'FC') : '0 FC'],
       ['RESTE EN CAISSE ($)', nbDev(R.reste['$'],'$')], ['RESTE EN CAISSE (FC)', nbDev(R.reste.FC,'FC')]],
     { columnStyles:{ 0:{ fontStyle:'bold', cellWidth:110 }, 1:R2 }, didParseCell: d => { if(d.section==='body' && [3,4,8,9].includes(d.row.index)){ d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = [223,230,243]; } } });
-  if(R.depenses.length){ y += 4; table(['Dépense (heure)','Motif','Montant'], R.depenses.map(d => [d.heure, d.motif, nbDev(d.montant, d.dev)]), { columnStyles:{ 0:{cellWidth:30}, 2:{ ...R2, cellWidth:32 } } }); }
+  titre(R.unJour ? 'Dépenses du jour' : 'Dépenses de la période');
+  if(R.depenses.length) table(['Heure','Motif','Montant'], R.depenses.map(d => [d.heure, d.motif, nbDev(d.montant, d.dev)]).concat([['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? nbDev(R.dep['$'],'$') : '', R.dep.FC ? nbDev(R.dep.FC,'FC') : ''].filter(Boolean).join(' + ')]]),
+    { columnStyles:{ 0:{cellWidth:30}, 2:{ ...R2, cellWidth:40 } }, didParseCell: d => tot(d, R.depenses.length) });
+  else table(['Dépenses'], [['Aucune dépense ' + CJ + '.']]);
   titre('Transferts');
   if(R.transferts.length) table(['N°','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.sens, t.magasin, t.articles + (t.note ? ' – ' + t.note : ''), String(t.pieces)]), { columnStyles:{ 0:{cellWidth:26}, 1:{cellWidth:18}, 4:{ ...R2, cellWidth:14 } } });
   else table(['Transferts'], [['Aucun transfert envoyé ou reçu ' + CJ + '.']]);
@@ -3161,7 +3166,9 @@ function htmlRapport(R){
       ['Dont acomptes', [R.argentA['$'] ? D(R.argentA['$'],'$') : '', R.argentA.FC ? D(R.argentA.FC,'FC') : ''].filter(Boolean).join(' + ') || '0'],
       ['Dépenses en dollars ($)', R.dep['$'] ? '− ' + D(R.dep['$'],'$') : '0 $'], ['Dépenses en francs congolais (FC)', R.dep.FC ? '− ' + D(R.dep.FC,'FC') : '0 FC'],
       { cls:'rp-tot', c:['RESTE EN CAISSE ($)', D(R.reste['$'],'$')] }, { cls:'rp-tot', c:['RESTE EN CAISSE (FC)', D(R.reste.FC,'FC')] }], [])}
-    ${R.depenses.length ? T('Dépenses', ['Heure','Motif','Montant'], R.depenses.map(d => [d.heure, esc(d.motif), D(d.montant, d.dev)]), [2]) : ''}
+    ${R.depenses.length ? T(R.unJour ? 'Dépenses du jour' : 'Dépenses de la période', ['Heure','Motif','Montant'], R.depenses.map(d => [d.heure, esc(d.motif), D(d.montant, d.dev)])
+        .concat([{ cls:'rp-tot', c:['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? D(R.dep['$'],'$') : '', R.dep.FC ? D(R.dep.FC,'FC') : ''].filter(Boolean).join(' + ')] }]), [2])
+      : '<h3 class="rp-h">' + (R.unJour ? 'Dépenses du jour' : 'Dépenses de la période') + '</h3>' + vide('Aucune dépense ' + CJ + '.')}
     ${R.transferts.length ? T('Transferts', ['N°','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.sens, esc(t.magasin), esc(t.articles) + (t.note ? ' – ' + esc(t.note) : ''), t.pieces]), [4])
       : '<h3 class="rp-h">Transferts</h3>' + vide('Aucun transfert envoyé ou reçu ' + CJ + '.')}
     ${R.usine.length ? T('Réceptions de l’usine', ['N°','Articles','Pièces'], R.usine.map(u => [u.num, esc(u.articles) + (u.note ? ' – ' + esc(u.note) : ''), u.pieces]), [2]) : ''}
