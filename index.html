@@ -458,6 +458,8 @@
   @media (max-width:420px){ td.acts .btn{padding:6px 7px;margin-left:2px} #s-liste td{padding-left:3px;padding-right:3px} }
   @media (max-width:380px){ td.acts{white-space:normal;width:38px} td.acts .btn{display:block;width:34px;margin:2px 0 2px auto;padding:5px 0} }
   #tf-liste input{width:110px;padding:8px;text-align:right}
+  #r-jours button{display:flex;justify-content:space-between;width:100%;gap:10px;padding:9px 12px;margin-bottom:6px;border-radius:12px;border:1px solid var(--line2,rgba(127,127,127,.25));background:rgba(127,127,127,.08);color:inherit;font:inherit;cursor:pointer;text-align:left}
+  #r-jours button.on{border-color:var(--blue,#0a84ff);background:rgba(10,132,255,.16)}
   #c-sugg{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:46vh;overflow-y:auto}
   #c-sugg:empty{display:none}
   #c-sugg button{display:block;text-align:left;width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--border,rgba(127,127,127,.25));background:rgba(127,127,127,.10);color:inherit;font:inherit;cursor:pointer}
@@ -845,11 +847,18 @@
 
   <!-- RAPPORT -->
   <section id="v-rapport" class="hide">
-    <div class="card">
-      <label style="margin-top:0">Jour</label><input id="r-date" type="date" onchange="afficherRapport()">
+    <div class="card" id="r-recherche">
+      <h2>🔎 Rechercher un rapport</h2>
+      <div class="chips" style="margin-top:4px;padding-bottom:6px"><button class="chip on" id="r-mode-jour" onclick="modeRapport('jour')">📅 Un jour</button><button class="chip" id="r-mode-per" onclick="modeRapport('periode')">🗓️ Une période (du… au…)</button></div>
+      <div id="r-bloc-jour"><label style="margin-top:4px">Jour</label>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn alt small" onclick="decalerRapport(-1)" aria-label="Jour précédent">◀</button><input id="r-date" type="date" onchange="afficherRapport()" style="flex:1"><button class="btn alt small" onclick="decalerRapport(1)" aria-label="Jour suivant">▶</button></div></div>
+      <div id="r-bloc-per" class="hide"><div class="row"><div><label style="margin-top:4px">Du</label><input id="r-du" type="date" onchange="afficherRapport()"></div><div><label style="margin-top:4px">Au</label><input id="r-au" type="date" onchange="afficherRapport()"></div></div></div>
+      <div class="chips" style="padding-bottom:4px"><button class="chip" onclick="raccourciRapport('auj')">Aujourd’hui</button><button class="chip" onclick="raccourciRapport('hier')">Hier</button><button class="chip" onclick="raccourciRapport('semaine')">Cette semaine</button><button class="chip" onclick="raccourciRapport('mois')">Ce mois</button><button class="chip" onclick="raccourciRapport('moisPrec')">Mois dernier</button></div>
+      <div id="r-lib" style="font-weight:700;margin-top:4px"></div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">📆 Jours avec activité</summary><input id="r-jours-cherche" type="month" style="margin-top:8px" onchange="afficherJoursActivite()"><div id="r-jours" style="margin-top:8px"></div></details>
     </div>
     <div class="kpis">
-      <div class="kpi"><span>💰 Chiffre du jour</span><b id="r-ca">0</b></div>
+      <div class="kpi"><span id="r-ca-lib">💰 Chiffre du jour</span><b id="r-ca">0</b></div>
       <div class="kpi"><span>🧾 Ventes</span><b id="r-nb">0</b></div>
       <div class="kpi"><span>📦 Articles vendus</span><b id="r-art">0</b></div>
       <div class="kpi"><span>📅 Chiffre du mois</span><b id="r-mois">0</b></div>
@@ -860,13 +869,13 @@
       <div class="kpi"><span>🏭 Reçu de l'usine</span><b id="r-entrees">0</b></div>
       <div class="kpi"><span>🚚 Transferts (envoyé / reçu)</span><b id="r-transf">0</b></div>
     </div>
-    <button class="btn full wa" style="margin:0 0 10px" onclick="rapportWhatsApp()">📲 Envoyer le rapport du jour sur WhatsApp</button>
+    <button class="btn full wa" style="margin:0 0 10px" onclick="rapportWhatsApp()">📲 Envoyer ce rapport sur WhatsApp (texte)</button>
     <div class="row" style="margin-bottom:16px">
       <button class="btn wa" onclick="partagerRapport('pdf')">📲 Rapport détaillé (PDF)</button>
       <button class="btn wa" onclick="partagerRapport('xlsx')">📲 Rapport détaillé (Excel)</button>
     </div>
     <div class="card">
-      <h2>Ventes du jour</h2>
+      <h2 id="r-ventes-titre">Ventes du jour</h2>
       <table><thead><tr><th>Heure</th><th>Détail</th><th class="num">Total</th><th></th></tr></thead>
       <tbody id="r-ventes"></tbody></table>
     </div>
@@ -1018,7 +1027,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-25 · rapport remises';
+const VERSION = '2026-11-26 · recherche rapport';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -2009,14 +2018,14 @@ function recuWhatsApp(){
 }
 function encaisse(l){ const e = { '$':0, FC:0 }; l.filter(v => !v.acompte).forEach(v => { const P = payeDe(v); e[P.dev] = (e[P.dev]||0) + P.montant; }); return e; }
 function rapportWhatsApp(){
-  const j = $('r-date').value || jour(new Date()), dj = new Date(j+'T12:00');
-  const duJour = db.ventes.filter(v => jour(v.date)===j), duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
+  const P = periodeRapport(), j = P.d2;
+  const duJour = db.ventes.filter(v => dansP(v.date, P)), duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
   const parPaie = {}; duJour.forEach(v => parPaie[v.paiement] = (parPaie[v.paiement]||0) + v.total);
   const bas = db.produits.filter(p => p.stock<=p.seuil);
-  const t = `*${db.boutique.nom} – Rapport du ${dj.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}*\n\n`
-    + `💰 Chiffre du jour : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🏷️ Remises accordées : ${argent(duJour.reduce((s,v)=>s+remiseVente(v),0))}\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsDu(j)['$'],'$')}${versementsDu(j).FC ? ' + ' + fmtDev(versementsDu(j).FC,'FC') : ''}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
+  const t = `*${db.boutique.nom} – Rapport ${P.unJour ? 'du ' : ''}${P.lib}*\n\n`
+    + `💰 Chiffre ${P.unJour ? 'du jour' : 'de la période'} : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🏷️ Remises accordées : ${argent(duJour.reduce((s,v)=>s+remiseVente(v),0))}\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsP(P)['$'],'$')}${versementsP(P).FC ? ' + ' + fmtDev(versementsP(P).FC,'FC') : ''}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
     + (Object.keys(parPaie).length ? '\n\n*Par paiement*\n' + Object.entries(parPaie).map(([k,x]) => `• ${k} : ${argent(x)}`).join('\n') : '')
-    + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
+    + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${P.unJour ? '' : new Date(v.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' '}${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
     + (bas.length ? `\n\n⚠️ *À réapprovisionner (${bas.length})*\n` + bas.slice(0,15).map(p => `• ${p.nom} : ${p.stock}`).join('\n') + (bas.length>15 ? `\n… et ${bas.length-15} autres` : '') : '');
   const n = numeroWA(db.boutique.whatsapp);
   if(!n) toast('Astuce : ajoutez votre numéro WhatsApp dans Réglages → Reçus');
@@ -2034,6 +2043,7 @@ let filtreAcp = 'en cours';
 const numAcp = a => 'ACP-' + new Date(a.date).getFullYear() + '-' + String(a.num).padStart(4,'0');
 const verseAcompte = a => a.versements.reduce((s,x) => s + x.base, 0);
 const resteAcompte = a => Math.max(0, Math.round((a.total - verseAcompte(a))*100)/100);
+function versementsP(P){ const e = { '$':0, FC:0 }; (db.acomptes||[]).forEach(a => a.versements.forEach(x => { if(dansP(x.date, P)) e[x.dev] += x.montant; })); return e; }
 function versementsDu(j){ const e = { '$':0, FC:0 }; (db.acomptes||[]).forEach(a => a.versements.forEach(x => { if(jour(x.date)===j) e[x.dev] += x.montant; })); return e; }
 function nouveauVersement(montant, dev, mode){
   const base = convertir(montant, dev, db.devise, db.taux);
@@ -2476,9 +2486,9 @@ async function partagerEtat(format){
   return partagerFichier(blob, nom, `${db.boutique.nom} – État du stock du ${dateEtat()}`);
 }
 /* Rapport détaillé du jour (PDF / Excel) : ventes et articles vendus, argent reçu par devise, transferts et réceptions */
-function donneesRapport(j){
-  const heure = d => new Date(d).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-  const ventes = db.ventes.filter(v => jour(v.date)===j).sort((a,b) => a.date < b.date ? -1 : 1);
+function donneesRapport(P){
+  const heure = d => (P.unJour ? '' : new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' ') + new Date(d).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  const ventes = db.ventes.filter(v => dansP(v.date, P)).sort((a,b) => a.date < b.date ? -1 : 1);
   const recus = ventes.map(v => { const P = payeDe(v);
     return { num:numero(v), heure:heure(v.date), client:v.client||'', articles:v.lignes.map(l => l.qte + ' x ' + l.nom + (l.desc ? ' (' + l.desc + ')' : '')).join(', '),
       paiement: v.acompte ? 'Acompte livré (déjà payé)' : (v.paiement||''), total:v.total, dev:P.dev, montant: v.acompte ? 0 : P.montant, remise: remiseVente(v) }; });
@@ -2492,16 +2502,16 @@ function donneesRapport(j){
   ventes.filter(v => !v.acompte).forEach(v => { const P = payeDe(v), m = v.paiement || 'Espèces'; argentV[P.dev] = (argentV[P.dev]||0) + P.montant;
     modes[m] = modes[m] || { '$':0, FC:0 }; modes[m][P.dev] += P.montant; });
   const versements = [];
-  (db.acomptes||[]).forEach(a => a.versements.forEach(x => { if(jour(x.date)!==j) return; argentA[x.dev] = (argentA[x.dev]||0) + x.montant;
+  (db.acomptes||[]).forEach(a => a.versements.forEach(x => { if(!dansP(x.date, P)) return; argentA[x.dev] = (argentA[x.dev]||0) + x.montant;
     const m = (x.mode || 'Espèces') + ' (acompte)'; modes[m] = modes[m] || { '$':0, FC:0 }; modes[m][x.dev] += x.montant;
     versements.push({ num:numAcp(a), heure:heure(x.date), client:a.client, dev:x.dev, montant:x.montant, mode:x.mode||'' }); }));
   const tot = { '$': argentV['$'] + argentA['$'], FC: argentV.FC + argentA.FC };
-  const devises = tot['$'] && tot.FC ? 'Dollars ($) et francs congolais (FC)' : tot['$'] ? 'Uniquement des dollars ($) – aucun franc congolais' : tot.FC ? 'Uniquement des francs congolais (FC) – aucun dollar' : 'Aucun argent reçu ce jour';
-  const transferts = (db.transferts||[]).filter(t => t.statut!=='annulé' && jour(t.date)===j).map(t => ({ num:numTr(t), heure:heure(t.date),
+  const devises = tot['$'] && tot.FC ? 'Dollars ($) et francs congolais (FC)' : tot['$'] ? 'Uniquement des dollars ($) – aucun franc congolais' : tot.FC ? 'Uniquement des francs congolais (FC) – aucun dollar' : 'Aucun argent reçu ' + (P.unJour ? 'ce jour' : 'sur cette période');
+  const transferts = (db.transferts||[]).filter(t => t.statut!=='annulé' && dansP(t.date, P)).map(t => ({ num:numTr(t), heure:heure(t.date),
     sens: t.sens==='envoi' ? 'Envoyé à' : 'Reçu de', magasin:t.magasin||'', articles:t.lignes.map(l => l.qte + ' x ' + l.nom).join(', '), pieces:t.lignes.reduce((s,l)=>s+l.qte,0), note:t.note||'' }));
-  const bons = {}; (db.entrees||[]).filter(e => jour(e.date)===j && (e.source||'usine')==='usine').forEach(e => { const b = bons[e.bon||e.id] = bons[e.bon||e.id] || { num: e.num ? numBR(e.num, e.date) : 'Entrée', heure:heure(e.date), lignes:[], pieces:0, note:e.note||'' }; b.lignes.push(e.qte + ' x ' + e.nom); b.pieces += e.qte; });
+  const bons = {}; (db.entrees||[]).filter(e => dansP(e.date, P) && (e.source||'usine')==='usine').forEach(e => { const b = bons[e.bon||e.id] = bons[e.bon||e.id] || { num: e.num ? numBR(e.num, e.date) : 'Entrée', heure:heure(e.date), lignes:[], pieces:0, note:e.note||'' }; b.lignes.push(e.qte + ' x ' + e.nom); b.pieces += e.qte; });
   const usine = Object.values(bons).map(b => ({ ...b, articles:b.lignes.join(', ') }));
-  return { j, date:new Date(j+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}), recus, articles, argentV, argentA, tot, modes, versements, devises, transferts, usine,
+  return { j:P.cle, unJour:P.unJour, date:(P.unJour ? 'du ' : '') + P.lib, recus, articles, argentV, argentA, tot, modes, versements, devises, transferts, usine,
     ca: ventes.reduce((s,v)=>s+v.total,0), nbArt: articles.reduce((s,a)=>s+a.qte,0), remises, totRemise, avantRemise: ventes.reduce((s,v)=>s+v.total,0) + totRemise };
 }
 // Montant des remises d'une vente (prix normal − prix remisé)
@@ -2509,10 +2519,11 @@ const remiseVente = v => Math.round(v.lignes.reduce((s,l) => s + (l.remise && l.
 const txtPdf = t => String(t ?? '').replace(/[\u202f\u00a0]/g,' ').replace(/[\u2212\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[^\x00-\xff€]/g,'');
 const nbDev = (x, dev) => txtPdf(fmtDev(x, dev));
 function blobRapportPDF(R){
+  const CJ = R.unJour ? 'ce jour' : 'sur cette période';
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:'mm', format:'a4' }), b = db.boutique, BLEU = [34,48,122];
   if(logoDataURL) try{ doc.addImage(logoDataURL, 'PNG', 14, 10, 42, 16); }catch(_){}
-  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...BLEU); doc.text(txtPdf((b.nom||'').toUpperCase() + ' – RAPPORT DU JOUR'), 196, 16, { align:'right' });
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90); doc.text([R.date.charAt(0).toUpperCase() + R.date.slice(1), b.adresse||''].map(txtPdf), 196, 22, { align:'right' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...BLEU); doc.text(txtPdf((b.nom||'').toUpperCase() + (R.unJour ? ' – RAPPORT DU JOUR' : ' – RAPPORT DE LA PÉRIODE')), 196, 16, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90); const sous = R.date.replace(/^du /, ''); doc.text([sous.charAt(0).toUpperCase() + sous.slice(1), b.adresse||''].map(txtPdf), 196, 22, { align:'right' });
   const base = { theme:'grid', styles:{ font:'helvetica', fontSize:8.5, cellPadding:1.5, textColor:20, lineColor:[170,170,170], lineWidth:.15 }, headStyles:{ fillColor:BLEU, textColor:255, fontStyle:'bold' }, margin:{ left:14, right:14, bottom:16 } };
   let y = 32;
   const titre = t => { y = (doc.lastAutoTable && doc.lastAutoTable.finalY > y ? doc.lastAutoTable.finalY : y) + 8; if(y > 265){ doc.addPage(); y = 18; }
@@ -2520,7 +2531,7 @@ function blobRapportPDF(R){
   const table = (head, body, opts={}) => { doc.autoTable({ ...base, startY:y, head:[head.map(txtPdf)], body: body.map(r => r.map(txtPdf)), ...opts }); y = doc.lastAutoTable.finalY; };
   const R2 = { halign:'right' };
   // Résumé
-  table(['Résumé', ''], [['Ventes au prix normal (avant remises)', argent(R.avantRemise)], ['Remises accordées', R.totRemise ? '- ' + argent(R.totRemise) + ' (' + R.remises.length + ' article' + (R.remises.length>1?'s':'') + ')' : 'Aucune remise'], ['Chiffre du jour (après remises)', argent(R.ca)], ['Nombre de ventes', String(R.recus.length)], ['Articles vendus', String(R.nbArt)],
+  table(['Résumé', ''], [['Ventes au prix normal (avant remises)', argent(R.avantRemise)], ['Remises accordées', R.totRemise ? '- ' + argent(R.totRemise) + ' (' + R.remises.length + ' article' + (R.remises.length>1?'s':'') + ')' : 'Aucune remise'], [(R.unJour ? 'Chiffre du jour' : 'Chiffre de la période') + ' (après remises)', argent(R.ca)], ['Nombre de ventes', String(R.recus.length)], ['Articles vendus', String(R.nbArt)],
     ['Argent reçu en dollars', nbDev(R.tot['$'],'$')], ['Argent reçu en francs congolais', nbDev(R.tot.FC,'FC')], ['Devises reçues', R.devises],
     ['Transferts envoyés / reçus', R.transferts.filter(t=>t.sens==='Envoyé à').length + ' / ' + R.transferts.filter(t=>t.sens==='Reçu de').length], ['Réceptions de l\'usine', String(R.usine.length)]],
     { columnStyles:{ 0:{ fontStyle:'bold', cellWidth:70 } } });
@@ -2531,13 +2542,13 @@ function blobRapportPDF(R){
       { columnStyles:{ 0:{cellWidth:14}, 1:{cellWidth:12}, 3:{cellWidth:24}, 5:{ ...R2, cellWidth:16 }, 6:{ ...R2, cellWidth:20 }, 7:{ ...R2, cellWidth:24 } } });
     y += 4; table(['Article vendu','Quantité','Montant'], R.articles.map(a => [a.nom, String(a.qte), argent(a.montant)]).concat([['Total', String(R.nbArt), argent(R.ca)]]),
       { columnStyles:{ 1:{ ...R2, cellWidth:22 }, 2:{ ...R2, cellWidth:34 } }, didParseCell: d => { if(d.section==='body' && d.row.index===R.articles.length) d.cell.styles.fontStyle = 'bold'; } });
-  } else table(['Ventes'], [['Aucune vente ce jour.']]);
+  } else table(['Ventes'], [['Aucune vente ' + CJ + '.']]);
   // Remises
   titre('Remises accordées');
   if(R.remises.length) table(['Reçu','Article','Qté','Taux','Prix normal','Prix remisé','Remise'], R.remises.map(r => [r.num, r.nom, String(r.qte), r.taux + ' %', argent(r.base), argent(r.prix), '- ' + argent(r.montant)])
       .concat([['', 'Total des remises', '', '', '', '', '- ' + argent(R.totRemise)]]),
     { columnStyles:{ 0:{cellWidth:14}, 2:{ ...R2, cellWidth:10 }, 3:{ ...R2, cellWidth:13 }, 4:R2, 5:R2, 6:R2 }, didParseCell: d => { if(d.section==='body' && d.row.index===R.remises.length){ d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = [223,230,243]; } } });
-  else table(['Remises'], [['Aucune remise accordée ce jour.']]);
+  else table(['Remises'], [['Aucune remise accordée ' + CJ + '.']]);
   // 2. Argent reçu
   titre('2. Argent reçu');
   table(['Provenance','Dollars ($)','Francs congolais (FC)'], [['Ventes', nbDev(R.argentV['$'],'$'), nbDev(R.argentV.FC,'FC')], ['Acomptes versés', nbDev(R.argentA['$'],'$'), nbDev(R.argentA.FC,'FC')], ['TOTAL REÇU', nbDev(R.tot['$'],'$'), nbDev(R.tot.FC,'FC')]],
@@ -2549,45 +2560,46 @@ function blobRapportPDF(R){
   // 3. Transferts et réceptions
   titre('3. Transferts et réceptions');
   if(R.transferts.length) table(['N°','Heure','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.heure, t.sens, t.magasin, t.articles + (t.note ? ' – ' + t.note : ''), String(t.pieces)]), { columnStyles:{ 0:{cellWidth:24}, 5:R2 } });
-  else table(['Transferts'], [['Aucun transfert envoyé ou reçu ce jour.']]);
+  else table(['Transferts'], [['Aucun transfert envoyé ou reçu ' + CJ + '.']]);
   y += 4;
   if(R.usine.length) table(['Réception usine','Heure','Articles','Pièces'], R.usine.map(u => [u.num, u.heure, u.articles + (u.note ? ' – ' + u.note : ''), String(u.pieces)]), { columnStyles:{ 0:{cellWidth:28}, 3:R2 } });
-  else table(['Réceptions de l\'usine'], [['Aucune réception de l\'usine ce jour.']]);
+  else table(['Réceptions de l\'usine'], [['Aucune réception de l\'usine ' + CJ + '.']]);
   y += 10; if(y > 282){ doc.addPage(); y = 24; }
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(40); doc.text(txtPdf('Établi par : ____________________     Signature : ______________'), 14, y);
   const n = doc.internal.getNumberOfPages();
-  for(let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(txtPdf('Kevmag · ' + (b.nom||'') + ' · rapport du ' + R.j + ' · page ' + i + '/' + n), 196, 290, { align:'right' }); }
+  for(let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(txtPdf('Kevmag · ' + (b.nom||'') + ' · rapport ' + R.j.replace('_au_', ' au ') + ' · page ' + i + '/' + n), 196, 290, { align:'right' }); }
   return doc.output('blob');
 }
 function blobRapportXLSX(R){
+  const CJ = R.unJour ? 'ce jour' : 'sur cette période';
   const wb = XLSX.utils.book_new(), feuille = (nom, lignes, cols) => { const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = cols.map(w => ({ wch:w })); XLSX.utils.book_append_sheet(wb, ws, nom); };
-  const en = [db.boutique.nom + ' – Rapport du ' + R.date];
-  feuille('Résumé', [en, [], ['Ventes au prix normal (' + db.devise + ')', Math.round(R.avantRemise*100)/100], ['Remises accordées (' + db.devise + ')', R.totRemise], ['Chiffre du jour après remises (' + db.devise + ')', Math.round(R.ca*100)/100], ['Nombre de ventes', R.recus.length], ['Articles vendus', R.nbArt],
+  const en = [db.boutique.nom + ' – Rapport ' + R.date];
+  feuille('Résumé', [en, [], ['Ventes au prix normal (' + db.devise + ')', Math.round(R.avantRemise*100)/100], ['Remises accordées (' + db.devise + ')', R.totRemise], [(R.unJour ? 'Chiffre du jour' : 'Chiffre de la période') + ' après remises (' + db.devise + ')', Math.round(R.ca*100)/100], ['Nombre de ventes', R.recus.length], ['Articles vendus', R.nbArt],
     ['Argent reçu en dollars ($)', R.tot['$']], ['Argent reçu en francs (FC)', R.tot.FC], ['Devises reçues', R.devises], ['Taux (FC pour 1 $)', db.taux||''],
     ['Transferts envoyés', R.transferts.filter(t=>t.sens==='Envoyé à').length], ['Transferts reçus', R.transferts.filter(t=>t.sens==='Reçu de').length], ['Réceptions de l\'usine', R.usine.length]], [34,40]);
-  feuille('1. Ventes', [en, [], ['Reçu','Heure','Articles','Client','Paiement','Remise (' + db.devise + ')','Total (' + db.devise + ')','Payé','Devise payée']].concat(R.recus.length ? R.recus.map(r => [r.num, r.heure, r.articles, r.client, r.paiement, r.remise, Math.round(r.total*100)/100, r.montant, r.montant ? r.dev : '']) : [['Aucune vente ce jour']]),
+  feuille('1. Ventes', [en, [], ['Reçu','Heure','Articles','Client','Paiement','Remise (' + db.devise + ')','Total (' + db.devise + ')','Payé','Devise payée']].concat(R.recus.length ? R.recus.map(r => [r.num, r.heure, r.articles, r.client, r.paiement, r.remise, Math.round(r.total*100)/100, r.montant, r.montant ? r.dev : '']) : [['Aucune vente ' + CJ]]),
     [8,7,60,22,22,12,14,12,10]);
   feuille('Remises', [en, [], ['Reçu','Article','Quantité','Taux (%)','Prix normal (' + db.devise + ')','Prix remisé (' + db.devise + ')','Remise (' + db.devise + ')']]
-    .concat(R.remises.length ? R.remises.map(r => [r.num, r.nom, r.qte, r.taux, r.base, r.prix, r.montant]).concat([[], ['', 'Total des remises', '', '', '', '', R.totRemise]]) : [['Aucune remise ce jour']]), [8,50,10,9,16,16,14]);
+    .concat(R.remises.length ? R.remises.map(r => [r.num, r.nom, r.qte, r.taux, r.base, r.prix, r.montant]).concat([[], ['', 'Total des remises', '', '', '', '', R.totRemise]]) : [['Aucune remise ' + CJ]]), [8,50,10,9,16,16,14]);
   feuille('Articles vendus', [en, [], ['Article','Quantité','Montant (' + db.devise + ')']].concat(R.articles.map(a => [a.nom, a.qte, Math.round(a.montant*100)/100]), [[], ['Total', R.nbArt, Math.round(R.ca*100)/100]]), [50,10,16]);
   feuille('2. Argent reçu', [en, [], ['Provenance','Dollars ($)','Francs (FC)'], ['Ventes', R.argentV['$'], R.argentV.FC], ['Acomptes versés', R.argentA['$'], R.argentA.FC], ['TOTAL REÇU', R.tot['$'], R.tot.FC], [], ['Devises reçues', R.devises], [],
     ['Mode de paiement','Dollars ($)','Francs (FC)']].concat(Object.entries(R.modes).map(([m,x]) => [m, x['$'], x.FC]),
     R.versements.length ? [[], ['Acompte','Heure','Client','Mode','Montant','Devise']].concat(R.versements.map(x => [x.num, x.heure, x.client, x.mode, x.montant, x.dev])) : []), [26,14,14,16,12,8]);
   feuille('3. Transferts', [en, [], ['N°','Heure','Sens','Magasin','Articles','Pièces','Note']]
-    .concat(R.transferts.length ? R.transferts.map(t => [t.num, t.heure, t.sens, t.magasin, t.articles, t.pieces, t.note]) : [['Aucun transfert ce jour']])
+    .concat(R.transferts.length ? R.transferts.map(t => [t.num, t.heure, t.sens, t.magasin, t.articles, t.pieces, t.note]) : [['Aucun transfert ' + CJ]])
     .concat([[], ['Réception usine','Heure','Articles','Pièces','Note']])
-    .concat(R.usine.length ? R.usine.map(u => [u.num, u.heure, u.articles, u.pieces, u.note]) : [['Aucune réception de l\'usine ce jour']]), [16,7,12,18,60,8,20]);
+    .concat(R.usine.length ? R.usine.map(u => [u.num, u.heure, u.articles, u.pieces, u.note]) : [['Aucune réception de l\'usine ' + CJ]]), [16,7,12,18,60,8,20]);
   return new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 async function partagerRapport(format){
-  const R = donneesRapport($('r-date').value || jour(new Date()));
+  const R = donneesRapport(periodeRapport());
   const nom = 'Kevmag-rapport-' + R.j + (format==='pdf' ? '.pdf' : '.xlsx');
   let blob;
   try{
     if(format==='pdf'){ await Promise.all([chargerPDF(), chargerLogo()]); blob = blobRapportPDF(R); }
     else { await chargerXLSX(); blob = blobRapportXLSX(R); }
   }catch(err){ console.error(err); return toast('Il faut internet pour préparer le fichier'); }
-  return partagerFichier(blob, nom, `${db.boutique.nom} – Rapport du ${R.date}`);
+  return partagerFichier(blob, nom, `${db.boutique.nom} – Rapport ${R.date}`);
 }
 async function partagerFichier(blob, nom, texte){
   const fichier = new File([blob], nom, { type: blob.type });
@@ -2615,27 +2627,76 @@ async function exporterEtat(){
     toast('Sans internet : état enregistré en CSV');
   }
 }
+/* Recherche de rapport : un jour ou une période (du … au …) */
+let modeRap = 'jour';
+const dateLongue = j => new Date(j+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const dateCourte = j => new Date(j+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+function periodeRapport(){
+  const auj = jour(new Date());
+  if(modeRap==='periode'){
+    let d1 = $('r-du').value || auj, d2 = $('r-au').value || d1; if(d2 < d1) [d1, d2] = [d2, d1];
+    if(d1 !== d2) return { d1, d2, unJour:false, lib:'du ' + dateCourte(d1) + ' au ' + dateCourte(d2), cle:d1 + '_au_' + d2 };
+    return { d1, d2, unJour:true, lib:dateLongue(d1), cle:d1 };
+  }
+  const j = $('r-date').value || auj; return { d1:j, d2:j, unJour:true, lib:dateLongue(j), cle:j };
+}
+const dansP = (d, P) => { const j = jour(d); return j >= P.d1 && j <= P.d2; };
+function modeRapport(m){
+  modeRap = m; $('r-mode-jour').classList.toggle('on', m==='jour'); $('r-mode-per').classList.toggle('on', m==='periode');
+  $('r-bloc-jour').classList.toggle('hide', m!=='jour'); $('r-bloc-per').classList.toggle('hide', m!=='periode');
+  if(m==='periode' && !$('r-du').value){ const j = $('r-date').value || jour(new Date()); $('r-du').value = j.slice(0,8) + '01'; $('r-au').value = j; }
+  afficherRapport();
+}
+function decalerRapport(n){ const d = new Date(($('r-date').value || jour(new Date())) + 'T12:00'); d.setDate(d.getDate() + n); $('r-date').value = jour(d); afficherRapport(); }
+function raccourciRapport(k){
+  const n = new Date(), j = x => jour(x);
+  if(k==='auj' || k==='hier'){ const d = new Date(); if(k==='hier') d.setDate(d.getDate()-1); $('r-date').value = j(d); return modeRapport('jour'); }
+  let a, b;
+  if(k==='semaine'){ a = new Date(n); a.setDate(n.getDate() - (n.getDay()+6)%7); b = n; }
+  else if(k==='mois'){ a = new Date(n.getFullYear(), n.getMonth(), 1); b = n; }
+  else { a = new Date(n.getFullYear(), n.getMonth()-1, 1); b = new Date(n.getFullYear(), n.getMonth(), 0); }
+  $('r-du').value = j(a); $('r-au').value = j(b); modeRapport('periode');
+}
+// Liste des jours où il y a eu des ventes, acomptes, transferts ou entrées (mois choisi)
+function afficherJoursActivite(){
+  const box = $('r-jours'); if(!box) return;
+  const mois = $('r-jours-cherche').value || jour(new Date()).slice(0,7), J = {};
+  const add = (d, k, x=1) => { const j = jour(d); if(j.slice(0,7)!==mois) return; const o = J[j] = J[j] || { v:0, ca:0, tr:0, en:0, ac:0 }; o[k] += x; };
+  db.ventes.forEach(v => { add(v.date, 'v'); add(v.date, 'ca', v.total); });
+  (db.transferts||[]).filter(t => t.statut!=='annulé').forEach(t => add(t.date, 'tr'));
+  (db.entrees||[]).forEach(e => add(e.date, 'en'));
+  (db.acomptes||[]).forEach(a => a.versements.forEach(x => add(x.date, 'ac')));
+  const jours = Object.keys(J).sort().reverse(), P = periodeRapport();
+  box.innerHTML = jours.length ? jours.map(j => { const o = J[j];
+    return `<button class="${P.unJour && P.d1===j ? 'on' : ''}" onclick="$('r-date').value='${j}';modeRapport('jour');$('r-recherche').scrollIntoView({behavior:'smooth'})"><span><b>${esc(dateLongue(j))}</b><br><span class="muted" style="font-size:13px">${o.v} vente${o.v>1?'s':''}${o.ac ? ' · ' + o.ac + ' acompte' + (o.ac>1?'s':'') : ''}${o.tr ? ' · ' + o.tr + ' transfert' + (o.tr>1?'s':'') : ''}${o.en ? ' · entrée usine' : ''}</span></span><b style="white-space:nowrap">${argent(o.ca)}</b></button>`; }).join('')
+    : '<div class="muted">Aucune activité ce mois-ci.</div>';
+}
 function afficherRapport(){
   afficherEtat();
-  const j = $('r-date').value || jour(new Date());
-  const duJour = db.ventes.filter(v => jour(v.date)===j);
+  const P = periodeRapport(), j = P.d2;
+  $('r-lib').textContent = '📋 Rapport ' + (P.unJour ? 'du ' : '') + P.lib;
+  $('r-ca-lib').textContent = P.unJour ? '💰 Chiffre du jour' : '💰 Chiffre de la période';
+  $('r-ventes-titre').textContent = P.unJour ? 'Ventes du jour' : 'Ventes de la période';
+  if(!$('r-jours-cherche').value) $('r-jours-cherche').value = j.slice(0,7);
+  afficherJoursActivite();
+  const duJour = db.ventes.filter(v => dansP(v.date, P));
   const duMois = db.ventes.filter(v => jour(v.date).slice(0,7)===j.slice(0,7));
   $('r-ca').textContent = argent(duJour.reduce((s,v)=>s+v.total,0));
   $('r-nb').textContent = duJour.length;
   $('r-art').textContent = duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0);
   $('r-mois').textContent = argent(duMois.reduce((s,v)=>s+v.total,0));
   $('r-rem').textContent = argent(duJour.reduce((s,v)=>s+remiseVente(v),0));
-  { const T = (db.transferts||[]).filter(t => t.statut!=='annulé' && jour(t.date)===j), q = s => T.filter(t=>t.sens===s).reduce((a,t)=>a+t.lignes.reduce((b,l)=>b+l.qte,0),0);
+  { const T = (db.transferts||[]).filter(t => t.statut!=='annulé' && dansP(t.date, P)), q = s => T.filter(t=>t.sens===s).reduce((a,t)=>a+t.lignes.reduce((b,l)=>b+l.qte,0),0);
     $('r-transf').textContent = '−' + q('envoi') + ' / +' + q('reception'); }
-  $('r-entrees').textContent = (db.entrees||[]).filter(e => jour(e.date)===j).reduce((s,e)=>s+e.qte,0) + ' pièce(s)';
-  const va = versementsDu(j); $('r-acp').textContent = fmtDev(va['$'],'$') + (va.FC ? ' + ' + fmtDev(va.FC,'FC') : '');
+  $('r-entrees').textContent = (db.entrees||[]).filter(e => dansP(e.date, P)).reduce((s,e)=>s+e.qte,0) + ' pièce(s)';
+  const va = versementsP(P); $('r-acp').textContent = fmtDev(va['$'],'$') + (va.FC ? ' + ' + fmtDev(va.FC,'FC') : '');
   const enc = encaisse(duJour); $('r-usd').textContent = fmtDev(enc['$'], '$'); $('r-fc').textContent = fmtDev(enc.FC, 'FC');
   $('r-ventes').innerHTML = duJour.length ? duJour.slice().reverse().map(v=>`<tr>
-    <td>${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td>
+    <td>${P.unJour ? '' : new Date(v.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + '<br>'}${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>${v.lignes.map(l=>esc(l.qte+' × '+l.nom+(l.desc?' ('+l.desc+')':''))).join('<br>')}<br><span class="muted">${esc(v.paiement)}${v.client?' · '+esc(v.client):''}</span></td>
     <td class="num">${argent(v.total)}</td>
     <td class="num"><button class="btn small" onclick="voirRecu('${v.id}')">🖨️ Reçu</button><br><button class="btn small alt" style="margin-top:4px" onclick="annulerVente('${v.id}')">Annuler</button></td></tr>`).join('')
-    : '<tr><td colspan="4" class="muted">Aucune vente ce jour.</td></tr>';
+    : '<tr><td colspan="4" class="muted">Aucune vente ' + (P.unJour ? 'ce jour' : 'sur cette période') + '.</td></tr>';
   const bas = db.produits.filter(p=>p.stock<=p.seuil);
   $('r-alertes').innerHTML = bas.length ? bas.map(p=>`${esc(p.nom)} : <b>${p.stock}</b> en stock ${etat(p)}`).join('<br>') : 'Tout va bien, aucun produit en alerte.';
 }
