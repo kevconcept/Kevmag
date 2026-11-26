@@ -894,12 +894,13 @@
       <button class="btn wa" onclick="partagerRapport('xlsx')">📲 Rapport détaillé (Excel)</button>
     </div>
     <div class="card">
-      <h2 id="r-ventes-titre">Ventes du jour</h2>
+      <div class="entete"><h2 id="r-ventes-titre">Ventes du jour</h2><button class="btn small alt" onclick="nouvelleVentePassee()">➕ Vente oubliée</button></div>
       <table><thead><tr><th>Heure</th><th>Détail</th><th class="num">Total</th></tr></thead>
       <tbody id="r-ventes"></tbody></table>
     </div>
     <div class="card">
       <h2 id="r-mvt-titre">🚚 Transferts et réceptions du jour</h2>
+      <div class="r-actions" style="margin:0 0 8px"><button class="btn small alt" onclick="nouveauMvtPasse('envoi')">➕ Envoi oublié</button><button class="btn small alt" onclick="nouveauMvtPasse('reception')">➕ Réception oubliée</button><button class="btn small alt" onclick="nouveauMvtPasse('usine')">➕ Entrée usine oubliée</button></div>
       <div id="r-mvt"></div>
     </div>
     <div class="card">
@@ -1054,7 +1055,7 @@
     <label>Montant payé</label><input id="m-paye" type="number" min="0" step="any" oninput="this.dataset.manuel=1">
     <div class="muted" id="m-stock" style="margin-top:8px"></div>
     <button class="btn full" style="margin-top:12px" onclick="enregistrerModif()">💾 Enregistrer les modifications</button>
-    <button class="btn full alt" style="margin-top:8px" onclick="const id=mv.id;fermerModif();annulerVente(id)">🗑️ Annuler toute la vente</button>
+    <button class="btn full alt" id="m-annuler" style="margin-top:8px" onclick="const id=mv.id;fermerModif();annulerVente(id)">🗑️ Annuler toute la vente</button>
   </div>
 </div>
 <div id="modif2" class="hide" onclick="if(event.target===this)fermerMvt()">
@@ -1071,7 +1072,7 @@
     <div id="mm-total" style="margin-top:12px;font-weight:800"></div>
     <div class="muted" id="mm-stock" style="margin-top:6px"></div>
     <button class="btn full" style="margin-top:12px" onclick="enregistrerMvt()">💾 Enregistrer les modifications</button>
-    <button class="btn full alt" style="margin-top:8px" onclick="annulerMvt()">🗑️ Annuler tout le mouvement</button>
+    <button class="btn full alt" id="mm-annuler" style="margin-top:8px" onclick="annulerMvt()">🗑️ Annuler tout le mouvement</button>
   </div>
 </div>
 <div id="apercu" class="hide" onclick="if(event.target===this)fermerRecu()">
@@ -1088,7 +1089,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · modifier transferts';
+const VERSION = '2026-11-26 · ajouts oubliés';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1938,9 +1939,25 @@ function ouvrirModif(vid){
   $('m-date').value = versLocal(v.date); $('m-client').value = v.client || ''; $('m-paie').value = v.paiement || 'Espèces';
   $('m-dev').value = P.dev; $('m-taux').value = P.taux || db.taux || ''; $('m-paye').value = P.montant; delete $('m-paye').dataset.manuel;
   $('m-bloc-lignes').classList.toggle('hide', mv.verrou); $('m-cherche').value = ''; $('m-sugg').innerHTML = '';
+  $('m-annuler').classList.remove('hide');
   afficherModif(false); $('modif').classList.remove('hide'); $('modif').scrollTop = 0;
 }
 function fermerModif(){ $('modif').classList.add('hide'); mv = null; }
+// Date proposée pour un ajout oublié : le jour affiché dans le Rapport (heure actuelle si c'est aujourd'hui, sinon 12:00)
+function dateAjoutRapport(){
+  const P = periodeRapport(), j = P.unJour ? P.d1 : P.d2, auj = jour(new Date());
+  return j >= auj ? versLocal(new Date()) : j + 'T12:00';
+}
+function nouvelleVentePassee(){
+  mv = { id:null, nouveau:true, lignes:[], devise:db.devise, verrou:false };
+  $('modif-titre').textContent = '➕ Ajouter une vente oubliée';
+  $('modif-note').innerHTML = 'La vente est enregistrée à la date choisie ci-dessous ; le stock est diminué.';
+  $('m-date').value = dateAjoutRapport(); $('m-client').value = ''; $('m-paie').value = 'Espèces';
+  $('m-dev').value = db.devise; $('m-taux').value = db.taux || ''; $('m-paye').value = ''; delete $('m-paye').dataset.manuel;
+  $('m-bloc-lignes').classList.remove('hide'); $('m-cherche').value = ''; $('m-sugg').innerHTML = '';
+  $('m-annuler').classList.add('hide');
+  afficherModif(true); $('modif').classList.remove('hide'); $('modif').scrollTop = 0; setTimeout(() => $('m-cherche').focus(), 50);
+}
 const totalModif = () => Math.round(mv.lignes.reduce((s,l) => s + l.qte * l.prix, 0) * 1e6) / 1e6;
 let modifRendu = false;
 function afficherModif(recalc = true){
@@ -1971,6 +1988,7 @@ function majPayeModif(recalc){
 // Différence de stock (pièces remises (+) ou retirées (−)) entre la vente enregistrée et la version modifiée
 function deltaStockModif(v){
   const d = {};
+  if(mv.nouveau){ mv.lignes.forEach(l => { if(l.pid) d[l.pid] = (d[l.pid]||0) - l.qte; }); Object.keys(d).forEach(k => { if(!d[k]) delete d[k]; }); return d; }
   if(!v || mv.verrou) return d;
   v.lignes.forEach(l => { if(l.pid) d[l.pid] = (d[l.pid]||0) + (l.qte - (l.rendu||0)); });
   mv.lignes.forEach(l => { if(l.pid) d[l.pid] = (d[l.pid]||0) - (l.qte - (l.rendu||0)); });
@@ -1990,6 +2008,7 @@ function ajouterModif(pid){
   $('m-cherche').value = ''; $('m-sugg').innerHTML = ''; afficherModif();
 }
 function enregistrerModif(){
+  if(mv.nouveau) return enregistrerVentePassee();
   const v = db.ventes.find(x => x.id===mv.id); if(!v) return fermerModif();
   if(!mv.verrou && !mv.lignes.length) return toast('Ajoutez au moins un article, ou annulez la vente');
   const d = $('m-date').value ? new Date($('m-date').value) : new Date(v.date);
@@ -2018,6 +2037,23 @@ function enregistrerModif(){
   rafraichir(); toast('Vente N° ' + numero(v) + ' modifiée (' + ch.join(', ') + ')' + (Object.keys(delta).length ? ' · stock corrigé' : ''));
 }
 
+function enregistrerVentePassee(){
+  if(!mv.lignes.length) return toast('Ajoutez au moins un article');
+  const d = $('m-date').value ? new Date($('m-date').value) : null;
+  if(!d || isNaN(d)) return toast('Indiquez la date de la vente');
+  if(d > new Date(Date.now() + 6e4)) return toast('La date ne peut pas être dans le futur');
+  const dv = $('m-dev').value, t = +$('m-taux').value || 0, paye = nombre($('m-paye').value);
+  if(dv !== db.devise && !t) return toast('Indiquez le taux');
+  const delta = deltaStockModif(null);
+  if(!confirm(`Ajouter cette vente du ${d.toLocaleString('fr-FR',{dateStyle:'full',timeStyle:'short'})} ?\nTotal : ${argent(totalModif())}`)) return;
+  Object.entries(delta).forEach(([pid,x]) => { const p = db.produits.find(q => q.id===pid); if(p) p.stock += x; });
+  const v = { id:id(), date:d.toISOString(), lignes:mv.lignes, total:Math.round(totalModif()*100)/100, client:$('m-client').value.trim(), paiement:$('m-paie').value, num: ++db.numRecu, devise:db.devise,
+    paye:{ dev:dv, taux:t, montant: dv==='FC' ? Math.round(paye) : Math.round(paye*100)/100 }, ajoutee:new Date().toISOString() };
+  db.ventes.push(v); sauver(); fermerModif();
+  if(modeRap==='jour') $('r-date').value = jour(v.date);
+  rafraichir(); toast('Vente N° ' + numero(v) + ' ajoutée au ' + d.toLocaleDateString('fr-FR') + ' · stock mis à jour');
+}
+
 /* Modifier un transfert (envoi / réception) ou une entrée de l'usine : date, magasin, note, articles, quantités ; le stock est corrigé */
 let mm = null;
 function afficherMvtRapport(P){
@@ -2043,10 +2079,21 @@ function ouvrirMvt(type, cle){
   $('mm-date').value = versLocal(o.date); $('mm-note').value = o.note;
   $('mm-bloc-mag').classList.toggle('hide', type!=='transfert');
   if(type==='transfert'){ $('mm-mag').value = o.magasin; $('mm-mag-lib').textContent = o.sens==='envoi' ? 'Envoyé au magasin' : 'Reçu du magasin'; $('tr-mags').innerHTML = (db.magasins||[]).map(m => `<option value="${esc(m)}">`).join(''); }
-  $('mm-cherche').value = ''; $('mm-sugg').innerHTML = '';
+  $('mm-cherche').value = ''; $('mm-sugg').innerHTML = ''; $('mm-annuler').classList.remove('hide');
   afficherMvt(); $('modif2').classList.remove('hide'); $('modif2').scrollTop = 0;
 }
 function fermerMvt(){ $('modif2').classList.add('hide'); mm = null; }
+function nouveauMvtPasse(kind){
+  const usine = kind==='usine';
+  mm = { type: usine ? 'usine' : 'transfert', cle:null, nouveau:true, sens: usine ? null : kind, signe: kind==='envoi' ? -1 : 1, date:null, magasin:'', note:'', lignes:[], avant:[] };
+  $('mm-titre').textContent = usine ? '➕ Ajouter une entrée de l’usine oubliée' : kind==='envoi' ? '➕ Ajouter un envoi oublié (vers un autre magasin)' : '➕ Ajouter une réception oubliée (d’un autre magasin)';
+  $('mm-note-info').textContent = 'Enregistré à la date choisie ci-dessous ; le stock est ' + (kind==='envoi' ? 'diminué.' : 'augmenté.');
+  $('mm-date').value = dateAjoutRapport(); $('mm-note').value = '';
+  $('mm-bloc-mag').classList.toggle('hide', usine);
+  if(!usine){ $('mm-mag').value = ''; $('mm-mag-lib').textContent = kind==='envoi' ? 'Envoyé au magasin' : 'Reçu du magasin'; $('tr-mags').innerHTML = (db.magasins||[]).map(m => `<option value="${esc(m)}">`).join(''); }
+  $('mm-cherche').value = ''; $('mm-sugg').innerHTML = ''; $('mm-annuler').classList.add('hide');
+  afficherMvt(); $('modif2').classList.remove('hide'); $('modif2').scrollTop = 0;
+}
 function deltaMvt(){
   const d = {};
   mm.avant.forEach(l => { if(l.pid) d[l.pid] = (d[l.pid]||0) - mm.signe * l.qte; });
@@ -2086,6 +2133,7 @@ function enregistrerMvt(){
   if(d > new Date(Date.now() + 6e4)) return toast('La date ne peut pas être dans le futur');
   const note = $('mm-note').value.trim(), mag = mm.type==='transfert' ? $('mm-mag').value.trim() : '';
   if(mm.type==='transfert' && !mag){ $('mm-mag').focus(); return toast('Indiquez le magasin'); }
+  if(mm.nouveau) return enregistrerMvtPasse(d, note, mag);
   const sig = L => L.map(l => l.pid + ':' + l.qte).sort().join(',');
   const ch = [];
   if(new Date(mm.date).toISOString().slice(0,16) !== d.toISOString().slice(0,16)) ch.push('date');
@@ -2113,6 +2161,27 @@ function enregistrerMvt(){
   sauver(); fermerMvt();
   if(typeof modeRap!=='undefined' && modeRap==='jour' && !$('v-rapport').classList.contains('hide')) $('r-date').value = jour(d);
   rafraichir(); toast(libelle + ' modifié (' + ch.join(', ') + ')' + (Object.keys(delta).length ? ' · stock corrigé' : ''));
+}
+function enregistrerMvtPasse(d, note, mag){
+  const n = mm.lignes.reduce((s,l)=>s+l.qte,0), quand = d.toLocaleString('fr-FR',{dateStyle:'full',timeStyle:'short'});
+  const quoi = mm.type==='usine' ? `l’entrée de l’usine (${n} pièce(s))` : mm.sens==='envoi' ? `l’envoi de ${n} pièce(s) vers ${mag}` : `la réception de ${n} pièce(s) de ${mag}`;
+  if(!confirm(`Ajouter ${quoi} au ${quand} ?`)) return;
+  const delta = deltaMvt();
+  Object.entries(delta).forEach(([pid,x]) => { const p = db.produits.find(q => q.id===pid); if(p) p.stock += x; });
+  let libelle;
+  if(mm.type==='transfert'){
+    db.transferts = db.transferts || []; db.numTransfert = (db.numTransfert||0) + 1;
+    const t = { id:id(), num:db.numTransfert, date:d.toISOString(), sens:mm.sens, magasin:mag, lignes:mm.lignes.map(l => ({...l})), note, statut:'fait', ajoute:new Date().toISOString() };
+    db.transferts.push(t); db.magasins = [...new Set([mag, ...(db.magasins||[])])].slice(0,30); libelle = numTr(t);
+  } else {
+    db.entrees = db.entrees || []; db.numReception = (db.numReception||0) + 1;
+    const bon = id(), num = db.numReception;
+    mm.lignes.forEach(l => db.entrees.push({ id:id(), date:d.toISOString(), pid:l.pid, nom:l.nom, cat:l.cat, qte:l.qte, note, source:'usine', bon, num, ajoute:new Date().toISOString() }));
+    libelle = numBR(num, d);
+  }
+  sauver(); fermerMvt();
+  if(typeof modeRap!=='undefined' && modeRap==='jour' && !$('v-rapport').classList.contains('hide')) $('r-date').value = jour(d);
+  rafraichir(); toast(libelle + ' ajouté au ' + d.toLocaleDateString('fr-FR') + ' · stock mis à jour');
 }
 function annulerMvt(){
   const o = mm; fermerMvt();
