@@ -502,6 +502,15 @@
   .r-recu.a4 table{font-size:14px}
   .r-recu.a4 td,.r-recu.a4 th{padding:6px 4px}
   .r-recu.a4 .tot td{font-size:18px}
+  #modif2{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:21;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+  #modif2.hide{display:none}
+  #modif2-carte{width:100%;max-width:560px;margin:0;background:var(--card)}
+  html.ios #modif2 #modif2-carte{background:var(--barre);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+  #mm-sugg button{display:block;width:100%;text-align:left;padding:9px 12px;margin-top:6px;border-radius:12px;border:1px solid var(--line2,rgba(127,127,127,.25));background:rgba(127,127,127,.08);color:inherit;font:inherit;cursor:pointer}
+  .mm-l{display:flex;align-items:center;gap:8px;border:1px solid var(--line2,rgba(127,127,127,.25));border-radius:14px;padding:8px 10px;margin-top:8px}
+  .mm-l span{flex:1;min-width:0;overflow-wrap:anywhere}
+  .mm-l input,.mm-l button{flex:0 0 auto}
+  .mm-l input{width:78px;padding:8px;text-align:right}
   #modif{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:21;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
   .r-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   #modif-carte{width:100%;max-width:560px;margin:0;background:var(--card)}
@@ -890,6 +899,10 @@
       <tbody id="r-ventes"></tbody></table>
     </div>
     <div class="card">
+      <h2 id="r-mvt-titre">🚚 Transferts et réceptions du jour</h2>
+      <div id="r-mvt"></div>
+    </div>
+    <div class="card">
       <h2>⚠️ À réapprovisionner</h2>
       <div id="r-alertes" class="muted"></div>
     </div>
@@ -1044,6 +1057,23 @@
     <button class="btn full alt" style="margin-top:8px" onclick="const id=mv.id;fermerModif();annulerVente(id)">🗑️ Annuler toute la vente</button>
   </div>
 </div>
+<div id="modif2" class="hide" onclick="if(event.target===this)fermerMvt()">
+  <div class="card" id="modif2-carte">
+    <div class="entete"><h2 id="mm-titre">✏️ Modifier</h2><button class="btn small alt" onclick="fermerMvt()">✕</button></div>
+    <div id="mm-note-info" class="muted" style="margin-bottom:6px"></div>
+    <label>Date et heure</label><input id="mm-date" type="datetime-local" step="60">
+    <div id="mm-bloc-mag"><label id="mm-mag-lib">Magasin</label><input id="mm-mag" list="tr-mags" placeholder="Nom du magasin"></div>
+    <label>Note</label><input id="mm-note" placeholder="Bon de livraison, transporteur…">
+    <label>Articles</label>
+    <div id="mm-lignes"></div>
+    <input id="mm-cherche" type="search" autocomplete="off" placeholder="➕ Ajouter un article (tapez quelques lettres)…" oninput="chercherMvt()" style="margin-top:8px">
+    <div id="mm-sugg"></div>
+    <div id="mm-total" style="margin-top:12px;font-weight:800"></div>
+    <div class="muted" id="mm-stock" style="margin-top:6px"></div>
+    <button class="btn full" style="margin-top:12px" onclick="enregistrerMvt()">💾 Enregistrer les modifications</button>
+    <button class="btn full alt" style="margin-top:8px" onclick="annulerMvt()">🗑️ Annuler tout le mouvement</button>
+  </div>
+</div>
 <div id="apercu" class="hide" onclick="if(event.target===this)fermerRecu()">
   <div class="feuille" id="apercu-feuille">
     <div id="apercu-contenu"></div>
@@ -1058,7 +1088,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · modifier ventes';
+const VERSION = '2026-11-26 · modifier transferts';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -1445,6 +1475,7 @@ function afficherEntrees(){
       <div class="tx"><b>${x.type==='usine' ? (x.b.num ? numBR(x.b.num, x.date) : 'Entrée') + ' · Usine' : numTr(x.t) + ' · de ' + esc(x.t.magasin)}</b><span class="muted">${new Date(x.date).toLocaleDateString('fr-FR')} · ${lignes.map(l=>l.qte+' × '+esc(l.nom)).join(', ')}${(x.type==='usine'?x.b.note:x.t.note)?' · '+esc(x.type==='usine'?x.b.note:x.t.note):''}</span></div>
       <div class="mt"><span class="tag rec">+${n}</span></div>
       <button class="btn small alt" onclick="${x.type==='usine' ? `voirBonReception('${x.b.bon}')` : `voirBonTransfert('${x.t.id}')`}">🖨️</button>
+      <button class="btn small alt" onclick="${x.type==='usine' ? `ouvrirMvt('usine','${x.b.bon}')` : `ouvrirMvt('transfert','${x.t.id}')`}" aria-label="Modifier">✏️</button>
       <button class="btn small alt" onclick="${x.type==='usine' ? `annulerBonUsine('${x.b.bon}')` : `annulerTransfert('${x.t.id}')`}">✕</button></div>`; }).join('')
     : '<p class="muted" style="margin:0">Aucune entrée.</p>';
 }
@@ -1987,6 +2018,107 @@ function enregistrerModif(){
   rafraichir(); toast('Vente N° ' + numero(v) + ' modifiée (' + ch.join(', ') + ')' + (Object.keys(delta).length ? ' · stock corrigé' : ''));
 }
 
+/* Modifier un transfert (envoi / réception) ou une entrée de l'usine : date, magasin, note, articles, quantités ; le stock est corrigé */
+let mm = null;
+function afficherMvtRapport(P){
+  const box = $('r-mvt'); if(!box) return;
+  $('r-mvt-titre').textContent = '🚚 Transferts et réceptions ' + (P.unJour ? 'du jour' : 'de la période');
+  const T = (db.transferts||[]).filter(t => t.statut!=='annulé' && dansP(t.date, P)).map(t => ({ date:t.date, ic:t.sens==='envoi'?'📤':'📥', titre:numTr(t) + ' · ' + (t.sens==='envoi' ? 'envoyé à ' : 'reçu de ') + t.magasin, lignes:t.lignes, note:t.note, signe:t.sens==='envoi'?'−':'+', modifs:t.modifs, ouvrir:`ouvrirMvt('transfert','${t.id}')`, bon:`voirBonTransfert('${t.id}')` }));
+  const U = bonsUsine().filter(b => dansP(b.date, P)).map(b => ({ date:b.date, ic:'🏭', titre:(b.num ? numBR(b.num, b.date) : 'Entrée') + ' · reçu de l’usine', lignes:b.lignes, note:b.note, signe:'+', modifs:b.lignes.some(l => l.modifie), ouvrir:`ouvrirMvt('usine','${b.bon}')`, bon:`voirBonReception('${b.bon}')` }));
+  const L = [...T, ...U].sort((a,b) => b.date.localeCompare(a.date));
+  box.innerHTML = L.length ? L.map(x => `<div class="m-ligne"><div style="display:flex;justify-content:space-between;gap:8px"><b>${x.ic} ${esc(x.titre)}</b><b style="white-space:nowrap">${x.signe}${x.lignes.reduce((s,l)=>s+l.qte,0)}</b></div>
+      <div class="muted" style="font-size:13px">${new Date(x.date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})} · ${x.lignes.map(l => l.qte + ' × ' + esc(l.nom)).join(', ')}${x.note ? ' · ' + esc(x.note) : ''}${x.modifs && (x.modifs===true || x.modifs.length) ? ' · ✏️ modifié' : ''}</div>
+      <div class="r-actions"><button class="btn small alt" onclick="${x.bon}">🖨️ Bon</button><button class="btn small alt" onclick="${x.ouvrir}">✏️ Modifier</button></div></div>`).join('')
+    : '<div class="muted">Aucun transfert ni réception ' + (P.unJour ? 'ce jour' : 'sur cette période') + '.</div>';
+}
+function ouvrirMvt(type, cle){
+  let o;
+  if(type==='transfert'){ const t = (db.transferts||[]).find(x => x.id===cle); if(!t || t.statut==='annulé') return toast('Transfert introuvable ou annulé');
+    o = { type, cle, signe: t.sens==='envoi' ? -1 : 1, date:t.date, magasin:t.magasin, note:t.note||'', lignes:t.lignes.map(l => ({ pid:l.pid, nom:l.nom, cat:l.cat, qte:l.qte })), titre:'✏️ Modifier ' + numTr(t) + (t.sens==='envoi' ? ' (envoi)' : ' (réception)'), sens:t.sens, modifs:t.modifs }; }
+  else { const b = bonsUsine().find(x => x.bon===cle); if(!b) return toast('Entrée introuvable');
+    o = { type, cle, signe:1, date:b.date, note:b.note||'', lignes:b.lignes.map(l => ({ pid:l.pid, nom:l.nom, cat:l.cat, qte:l.qte })), titre:'✏️ Modifier ' + (b.num ? numBR(b.num, b.date) : 'l’entrée') + ' (usine)', num:b.num }; }
+  o.avant = o.lignes.map(l => ({...l})); mm = o;
+  $('mm-titre').textContent = o.titre;
+  $('mm-note-info').textContent = o.modifs && o.modifs.length ? 'Déjà modifié ' + o.modifs.length + ' fois.' : '';
+  $('mm-date').value = versLocal(o.date); $('mm-note').value = o.note;
+  $('mm-bloc-mag').classList.toggle('hide', type!=='transfert');
+  if(type==='transfert'){ $('mm-mag').value = o.magasin; $('mm-mag-lib').textContent = o.sens==='envoi' ? 'Envoyé au magasin' : 'Reçu du magasin'; $('tr-mags').innerHTML = (db.magasins||[]).map(m => `<option value="${esc(m)}">`).join(''); }
+  $('mm-cherche').value = ''; $('mm-sugg').innerHTML = '';
+  afficherMvt(); $('modif2').classList.remove('hide'); $('modif2').scrollTop = 0;
+}
+function fermerMvt(){ $('modif2').classList.add('hide'); mm = null; }
+function deltaMvt(){
+  const d = {};
+  mm.avant.forEach(l => { if(l.pid) d[l.pid] = (d[l.pid]||0) - mm.signe * l.qte; });
+  mm.lignes.forEach(l => { if(l.pid) d[l.pid] = (d[l.pid]||0) + mm.signe * l.qte; });
+  Object.keys(d).forEach(k => { if(!d[k]) delete d[k]; });
+  return d;
+}
+let mvtRendu = false;
+function afficherMvt(){
+  if(!mm || mvtRendu) return; mvtRendu = true;
+  try{
+    const act = document.activeElement; if(act && $('mm-lignes').contains(act)) act.blur();
+    $('mm-lignes').innerHTML = mm.lignes.length ? mm.lignes.map((l,i) => `<div class="mm-l"><span><b>${esc(l.nom)}</b><br><span class="muted" style="font-size:12px">stock actuel ${((db.produits.find(p => p.id===l.pid)||{}).stock ?? '?')}</span></span>
+      <input type="number" min="1" step="1" value="${l.qte}" aria-label="Quantité" onchange="mm.lignes[${i}].qte=Math.max(1,parseInt(this.value)||1);afficherMvt()"><button class="btn small alt" onclick="mm.lignes.splice(${i},1);afficherMvt()">✕</button></div>`).join('')
+      : '<div class="muted">Aucun article : ajoutez-en un, ou annulez le mouvement.</div>';
+    $('mm-total').textContent = 'Total : ' + mm.lignes.reduce((s,l)=>s+l.qte,0) + ' pièce(s)';
+    const d = deltaMvt();
+    $('mm-stock').innerHTML = Object.keys(d).length ? '📦 Correction du stock : ' + Object.entries(d).map(([pid,x]) => { const p = db.produits.find(q => q.id===pid); return esc(p ? p.nom : '?') + ' ' + (x>0 ? '+' + x : x); }).join(' · ') : '';
+  } finally { mvtRendu = false; }
+}
+function chercherMvt(){
+  const q = sansAccent($('mm-cherche').value), box = $('mm-sugg');
+  if(q.replace(/\s/g,'').length < 2){ box.innerHTML = ''; return; }
+  const mots = q.split(/\s+/).filter(Boolean);
+  const res = db.produits.filter(p => { const t = sansAccent([p.nom, details(p), p.cat, p.gamme||'', motsMesures(p)].join(' ')); return mots.every(m => t.includes(m)); }).sort(ordreProduit).slice(0, 30);
+  box.innerHTML = res.length ? res.map(p => `<button type="button" onclick="ajouterMvt('${p.id}')">${esc(p.nom)}${details(p) ? ' <span class="muted">(' + esc(details(p)) + ')</span>' : ''}<br><span class="muted" style="font-size:13px">stock ${p.stock}</span></button>`).join('') : '<div class="muted" style="margin-top:6px">Aucun article.</div>';
+}
+function ajouterMvt(pid){
+  const p = db.produits.find(x => x.id===pid); if(!p) return;
+  const ex = mm.lignes.find(l => l.pid===pid); if(ex) ex.qte += 1; else mm.lignes.push({ pid:p.id, nom:p.nom, cat:p.cat, qte:1 });
+  $('mm-cherche').value = ''; $('mm-sugg').innerHTML = ''; afficherMvt();
+}
+function enregistrerMvt(){
+  if(!mm.lignes.length) return toast('Ajoutez au moins un article, ou annulez le mouvement');
+  const d = $('mm-date').value ? new Date($('mm-date').value) : new Date(mm.date);
+  if(isNaN(d)) return toast('Date invalide');
+  if(d > new Date(Date.now() + 6e4)) return toast('La date ne peut pas être dans le futur');
+  const note = $('mm-note').value.trim(), mag = mm.type==='transfert' ? $('mm-mag').value.trim() : '';
+  if(mm.type==='transfert' && !mag){ $('mm-mag').focus(); return toast('Indiquez le magasin'); }
+  const sig = L => L.map(l => l.pid + ':' + l.qte).sort().join(',');
+  const ch = [];
+  if(new Date(mm.date).toISOString().slice(0,16) !== d.toISOString().slice(0,16)) ch.push('date');
+  if(mm.type==='transfert' && mag !== mm.magasin) ch.push('magasin');
+  if(note !== mm.note) ch.push('note');
+  if(sig(mm.lignes) !== sig(mm.avant)) ch.push('articles');
+  if(!ch.length){ fermerMvt(); return toast('Aucune modification'); }
+  const delta = deltaMvt();
+  Object.entries(delta).forEach(([pid,x]) => { const p = db.produits.find(q => q.id===pid); if(p) p.stock += x; });
+  const trace = { le:new Date().toISOString(), champs:ch, avant:{ date:mm.date, magasin:mm.magasin, note:mm.note, lignes:mm.avant.map(l => l.qte + ' × ' + l.nom).join(', ') } };
+  let libelle;
+  if(mm.type==='transfert'){
+    const t = db.transferts.find(x => x.id===mm.cle);
+    t.date = d.toISOString(); t.magasin = mag; t.note = note; t.lignes = mm.lignes.map(l => ({...l})); t.modifs = (t.modifs||[]).concat([trace]);
+    db.magasins = [...new Set([mag, ...(db.magasins||[])])].slice(0,30); libelle = numTr(t);
+  } else {
+    // Les lignes du bon sont remplacées (on garde l'identifiant des lignes d'un même article)
+    const anciennes = db.entrees.filter(e => (e.bon || e.id) === mm.cle), restants = [...anciennes];
+    const garde = new Set(anciennes.map(e => e.id));
+    db.entrees = db.entrees.filter(e => !garde.has(e.id));
+    mm.lignes.forEach(l => { const i = restants.findIndex(e => e.pid===l.pid), e0 = i>=0 ? restants.splice(i,1)[0] : null;
+      db.entrees.push({ id: e0 ? e0.id : id(), date:d.toISOString(), pid:l.pid, nom:l.nom, cat:l.cat, qte:l.qte, note, source:'usine', bon:mm.cle, num:mm.num, modifie:true, modifs:((e0 && e0.modifs)||[]).concat([trace]) }); });
+    libelle = mm.num ? numBR(mm.num, d) : 'Entrée usine';
+  }
+  sauver(); fermerMvt();
+  if(typeof modeRap!=='undefined' && modeRap==='jour' && !$('v-rapport').classList.contains('hide')) $('r-date').value = jour(d);
+  rafraichir(); toast(libelle + ' modifié (' + ch.join(', ') + ')' + (Object.keys(delta).length ? ' · stock corrigé' : ''));
+}
+function annulerMvt(){
+  const o = mm; fermerMvt();
+  if(o.type==='transfert') annulerTransfert(o.cle); else annulerBonUsine(o.cle);
+}
+
 /* Reçus */
 const numero = v => v.num ? String(v.num).padStart(5,'0') : v.id.slice(-6).toUpperCase();
 /* Montant en lettres (usage RDC : septante, nonante) */
@@ -2476,7 +2608,7 @@ function afficherTransferts(){
   $('tr-hist').innerHTML = liste.length ? liste.map(t => `<div class="vente"><div class="av">${t.sens==='envoi'?'📤':'📥'}</div>
     <div class="tx"><b>${numTr(t)} · ${t.sens==='envoi'?'vers':'de'} ${esc(t.magasin)}</b><span class="muted">${new Date(t.date).toLocaleDateString('fr-FR')} · ${t.lignes.map(l=>l.qte+' × '+esc(l.nom)).join(', ')}${t.note?' · '+esc(t.note):''}</span></div>
     <div class="mt">${t.statut==='annulé' ? '<span class="tag ann">Annulé</span>' : `<span class="tag ${t.sens==='envoi'?'env':'rec'}">${t.sens==='envoi'?'−':'+'}${t.lignes.reduce((s,l)=>s+l.qte,0)}</span>`}</div>
-    <button class="btn small alt" onclick="voirBonTransfert('${t.id}')">🖨️</button>${t.statut!=='annulé' ? `<button class="btn small alt" onclick="annulerTransfert('${t.id}')">✕</button>` : ''}</div>`).join('')
+    <button class="btn small alt" onclick="voirBonTransfert('${t.id}')">🖨️</button>${t.statut!=='annulé' ? `<button class="btn small alt" onclick="ouvrirMvt('transfert','${t.id}')" aria-label="Modifier">✏️</button><button class="btn small alt" onclick="annulerTransfert('${t.id}')">✕</button>` : ''}</div>`).join('')
     : '<p class="muted" style="margin:0">Aucun transfert.</p>';
 }
 function htmlTransfert(t){
@@ -2821,6 +2953,7 @@ function afficherRapport(){
       <div class="r-actions"><button class="btn small" onclick="voirRecu('${v.id}')">🖨️ Reçu</button><button class="btn small alt" onclick="ouvrirModif('${v.id}')">✏️ Modifier</button><button class="btn small alt" onclick="annulerVente('${v.id}')">Annuler</button></div></td>
     <td class="num">${argent(v.total)}</td></tr>`).join('')
     : '<tr><td colspan="3" class="muted">Aucune vente ' + (P.unJour ? 'ce jour' : 'sur cette période') + '.</td></tr>';
+  afficherMvtRapport(P);
   const bas = db.produits.filter(p=>p.stock<=p.seuil);
   $('r-alertes').innerHTML = bas.length ? bas.map(p=>`${esc(p.nom)} : <b>${p.stock}</b> en stock ${etat(p)}`).join('<br>') : 'Tout va bien, aucun produit en alerte.';
 }
