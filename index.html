@@ -533,6 +533,16 @@
   .r-recu.a4 table{font-size:14px}
   .r-recu.a4 td,.r-recu.a4 th{padding:6px 4px}
   .r-recu.a4 .tot td{font-size:18px}
+  #blv{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:22;display:flex;align-items:flex-start;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #blv.hide{display:none}
+  #blv-carte{width:100%;max-width:620px;margin:0;background:var(--card)}
+  html.ios #blv #blv-carte{background:var(--barre);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+  .bl-l{border:1px solid var(--line2);border-radius:14px;padding:8px 10px;margin-top:8px}
+  .bl-l.non{border-color:var(--orange);background:rgba(245,165,36,.10)}
+  .bl-l .src{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace;overflow-wrap:anywhere}
+  .bl-l .g{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .bl-l .g{flex-wrap:wrap}.bl-l select{flex:1 1 100%;min-width:0;font-size:15px}.bl-l input{width:90px;flex:0 0 auto;text-align:right}.bl-l button{flex:0 0 auto}
+  .bl-l .qlib{flex:1;font-size:13px;color:var(--muted);text-align:right}
   #histo{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:21;display:flex;align-items:flex-start;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   #histo.hide{display:none}
   #histo-carte{width:100%;max-width:620px;margin:0;background:var(--card)}
@@ -798,6 +808,9 @@
         <button class="pill-sens" data-src="magasin" onclick="srcEn('magasin')">🏬 D'un autre magasin<small>enregistré aussi en transfert</small></button>
       </div>
       <div id="en-mag-ligne" class="hide"><label>Magasin d'origine</label><input id="en-mag" list="tr-mags" placeholder="Ex : Complast Limete" autocomplete="off"></div>
+      <button class="btn full" style="margin-top:12px" onclick="$('bl-fichier').click()">📷 Scanner le bon de livraison</button>
+      <input id="bl-fichier" type="file" accept="image/*" class="hide" onchange="scannerBL(this.files[0]);this.value=''">
+      <div id="bl-statut" class="muted hide" style="margin-top:6px;font-weight:700"></div>
       <label>Article</label>
       <input id="en-cherche" placeholder="Rechercher : nom, taille, D16, Bonheur…" oninput="filtrerEntree()" autocomplete="off">
       <select id="en-prod" style="margin-top:6px"></select>
@@ -1129,6 +1142,23 @@
     <button class="btn full alt" id="m-annuler" style="margin-top:8px" onclick="const id=mv.id;fermerModif();annulerVente(id)">🗑️ Annuler toute la vente</button>
   </div>
 </div>
+<div id="blv" class="hide">
+  <div class="card" id="blv-carte">
+    <div class="entete"><h2>📷 Bon de livraison scanné</h2><button class="btn small alt" onclick="fermerBL()">✕</button></div>
+    <p class="muted" style="margin:0 0 6px">Vérifiez ce qui a été lu. Corrigez l’article ou la quantité de chaque ligne, retirez les lignes en trop, ajoutez celles qui manquent. Rien n’entre en stock avant votre validation.</p>
+    <img id="bl-photo" alt="" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:#fff">
+    <label>N° du bon de livraison / note</label><input id="bl-num" placeholder="Ex : BL 2026-1234">
+    <label>Articles lus</label>
+    <div id="bl-lignes"></div>
+    <button class="btn small alt" style="margin-top:8px" onclick="blAjouter()">+ Ajouter une ligne</button>
+    <div id="bl-total" style="margin-top:10px;font-weight:800"></div>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">📝 Texte lu sur la photo (modifiable)</summary>
+      <textarea id="bl-texte" rows="8" style="width:100%;margin-top:8px;font-family:ui-monospace,monospace;font-size:13px"></textarea>
+      <button class="btn small alt" style="margin-top:6px" onclick="blAnalyser($('bl-texte').value)">🔄 Relire ce texte</button></details>
+    <button class="btn full" style="margin-top:12px" onclick="blConfirmer()">✅ Ajouter ces articles à l’entrée</button>
+    <button class="btn full alt" style="margin-top:8px" onclick="fermerBL()">Annuler</button>
+  </div>
+</div>
 <div id="histo" class="hide" onclick="if(event.target===this)fermerHisto()">
   <div class="card" id="histo-carte">
     <div class="entete"><h2 id="h-titre">📜 Historique</h2><button class="btn small alt" onclick="fermerHisto()">✕</button></div>
@@ -1176,7 +1206,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · historique des articles';
+const VERSION = '2026-11-26 · scan bon de livraison';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -1533,6 +1563,106 @@ function validerEntree(){
   if(!confirm(`Entrer ${n} pièce(s) reçues de l’usine ?`)) return;
   const sv = servis(enLignes), bon = entreeUsine(enLignes, note); enLignes = []; $('en-note').value = ''; afficherLignesEn();
   toast(n + ' pièce(s) entrées' + (sv ? ' · dont ' + sv + ' déjà vendue(s) déduite(s)' : '')); voirBonReception(bon);
+}
+/* Scanner un bon de livraison de l'usine : lecture de la photo (Tesseract), puis vérification / correction avant d'ajouter à l'entrée */
+let blLignes = [];
+function blStatut(t){ const e = $('bl-statut'); if(t){ e.textContent = t; e.classList.remove('hide'); } else e.classList.add('hide'); }
+async function scannerBL(f){
+  if(!f) return;
+  if(!navigator.onLine) return toast('Il faut internet pour lire la photo');
+  $('bl-photo').src = URL.createObjectURL(f);
+  blStatut('📷 Préparation de la lecture…'); let w;
+  try{
+    await chargerOCR();
+    w = await Tesseract.createWorker('eng', 1, { langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int',
+      logger: m => { if(m.status==='recognizing text') blStatut('📷 Lecture du bon… ' + Math.round(m.progress*100) + ' %'); } });
+    // Lecture mot par mot (les colonnes d'un tableau sont lues séparément), puis les mots sont regroupés en lignes selon leur hauteur
+    await w.setParameters({ tessedit_pageseg_mode:'11' });
+    const d = (await w.recognize(f)).data; await w.terminate(); w = null; blStatut('');
+    const texte = lignesParHauteur(d.words);
+    $('bl-texte').value = texte; blAnalyser(texte);
+    $('blv').classList.remove('hide'); $('blv').scrollTop = 0;
+  }catch(e){ if(w) try{ await w.terminate(); }catch(_){} blStatut(''); toast('Impossible de lire cette photo'); }
+}
+function lignesParHauteur(mots){
+  const M = mots.filter(m => m.text && m.text.trim() && m.confidence > 20).map(m => ({ t:m.text.trim(), x:m.bbox.x0, y:(m.bbox.y0+m.bbox.y1)/2, h:m.bbox.y1-m.bbox.y0 }));
+  if(!M.length) return '';
+  const hMed = M.map(m => m.h).sort((a,b)=>a-b)[M.length>>1] || 12;
+  M.sort((a,b) => a.y - b.y);
+  const L = [];
+  M.forEach(m => { const l = L.find(l => Math.abs(l.y - m.y) < hMed*0.6); if(l){ l.mots.push(m); l.y = (l.y*(l.mots.length-1) + m.y)/l.mots.length; } else L.push({ y:m.y, mots:[m] }); });
+  return L.sort((a,b) => a.y - b.y).map(l => l.mots.sort((a,b) => a.x - b.x).map(m => m.t).join(' ')).join('\n');
+}
+// Mesures d'une ligne de texte, ramenées en cm (190x90x20) pour comparer avec les articles
+function mesuresTexte(t){
+  const m = t.match(/(\d{2,4})\s*[x×*X.\/-]\s*(\d{2,4})(?:\s*[x×*X.\/-]\s*(\d{1,3}))?/); if(!m) return null;
+  const cm = v => v >= 1000 ? v/10 : v >= 300 ? v/10 : v;
+  const L = cm(+m[1]), W = cm(+m[2]), E = m[3] ? (+m[3] >= 30 ? +m[3]/10 : +m[3]) : null;
+  return { L, W, E, brut:m[0] };
+}
+function mesuresArticle(p){
+  if(p.cat==='Mousse'){ const m = mesuresMousse(p); return m.long ? { L:m.long, W:m.larg, E:m.ep } : null; }
+  const t = taille(p.nom); if(!t || !t[0]) return null; return { L:t[0]/10, W:t[1]/10, E:t[2] ? t[2]/10 : null };
+}
+// Note de ressemblance entre une ligne lue et un article
+function noteArticle(ligne, mes, p){
+  const motsL = new Set(sansAccent(ligne).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(x => x.length >= 3 && !/^\d+$/.test(x)));
+  const motsP = sansAccent(p.nom + ' ' + (p.gamme||'') + ' ' + p.cat).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(x => x.length >= 3 && !/^\d+$/.test(x));
+  let n = 0; motsP.forEach(x => { if(motsL.has(x)) n += 2; else if([...motsL].some(y => y.length >= 4 && (x.startsWith(y) || y.startsWith(x)))) n += 1; });
+  if(/matela/.test(sansAccent(ligne)) && p.cat==='Matelas') n += 2;
+  if(/mousse|foam/.test(sansAccent(ligne)) && p.cat==='Mousse') n += 2;
+  const dl = (sansAccent(ligne).match(/\bd\s?(\d{2})\b/)||[])[1]; if(dl && p.cat==='Mousse' && +dl === +densiteDe(p)) n += 3;
+  const ma = mesuresArticle(p);
+  if(mes && ma){ if(ma.L===mes.L && ma.W===mes.W) n += 4; if(mes.E!=null && ma.E!=null && Math.abs(ma.E - mes.E) < 0.01) n += 3; else if(mes.E!=null && ma.E!=null) n -= 3; }
+  return n;
+}
+function blAnalyser(texte){
+  // N° du bon
+  const bl = texte.match(/\b(?:B\.?\s?L|bon(?:\s+de)?\s+livraison|livraison|delivery)\s*(?:n[°o.]*)?\s*[:#]?\s*([A-Z0-9][A-Z0-9\/-]{2,})/i);
+  if(bl && !$('bl-num').value) $('bl-num').value = /^bl/i.test(bl[1]) ? bl[1] : 'BL ' + bl[1];
+  blLignes = [];
+  texte.split(/\n+/).map(l => l.trim()).filter(l => l.length >= 4).forEach(l => {
+    const t = sansAccent(l);
+    if(/total|signature|livre par|recu par|date|adresse|tel|rccm|page|client|livraison|facture/.test(t) && !/matela|mousse|\blit\b|bed/.test(t)) return;
+    if(bl && l.includes(bl[1]) && !/matela|mousse|\blit\b|bed/.test(t)) return;
+    const mes = mesuresTexte(l);
+    const scores = db.produits.map(p => [noteArticle(l, mes, p), p]).filter(x => x[0] >= 4).sort((a,b) => b[0]-a[0] || ordreProduit(a[1], b[1]));
+    if(!scores.length && !mes) return;
+    // Quantité : nombre entier seul (hors mesures, prix et références longues), le dernier de la ligne de préférence
+    let reste = mes ? l.replace(mes.brut, ' ') : l;
+    reste = reste.replace(/[|\[\](){}:;]/g, ' ').replace(/\d+[.,]\d+/g, ' ').replace(/\b[dD]\s?\d{2}\b/g, ' ');
+    const nbs = (reste.match(/(?:^|\s)(\d{1,3})(?=\s|$)/g) || []).map(x => +x.trim()).filter(x => x > 0 && x < 1000);
+    const qte = nbs.length ? nbs[nbs.length-1] : 1;
+    blLignes.push({ src:l, pid: scores[0] ? scores[0][1].id : '', choix: scores.slice(0,6).map(x => x[1].id), qte, sur: scores[0] && (!scores[1] || scores[0][0] > scores[1][0]) && scores[0][0] >= 7 });
+  });
+  afficherBL();
+  if(!blLignes.length) toast('Aucun article reconnu : ajoutez les lignes à la main ou corrigez le texte');
+}
+function optionsBL(l){
+  const tous = db.produits.slice().sort(ordreProduit), lib = p => esc(p.nom + (details(p) ? ' – ' + details(p) : ''));
+  return `<option value="">— Choisir l’article —</option>` + (l.choix && l.choix.length ? `<optgroup label="Les plus proches">${l.choix.map(id => { const p = db.produits.find(x => x.id===id); return p ? `<option value="${p.id}"${p.id===l.pid?' selected':''}>${lib(p)}</option>` : ''; }).join('')}</optgroup>` : '')
+    + `<optgroup label="Tous les articles">${tous.map(p => `<option value="${p.id}"${p.id===l.pid && !(l.choix||[]).includes(p.id)?' selected':''}>${lib(p)}</option>`).join('')}</optgroup>`;
+}
+function afficherBL(){
+  $('bl-lignes').innerHTML = blLignes.length ? blLignes.map((l,i) => `<div class="bl-l ${l.pid ? '' : 'non'}">${l.src ? `<div class="src">« ${esc(l.src)} »</div>` : '<div class="src">Ligne ajoutée à la main</div>'}
+      <div class="g"><select onchange="blLignes[${i}].pid=this.value;blLignes[${i}].sur=true;afficherBL()">${optionsBL(l)}</select>
+      <span class="qlib">Quantité</span><input type="number" min="1" step="1" inputmode="numeric" value="${l.qte}" aria-label="Quantité" oninput="blLignes[${i}].qte=Math.max(1,parseInt(this.value)||1);blTotal()"><button class="btn small alt" onclick="blLignes.splice(${i},1);afficherBL()">✕</button></div>
+      ${!l.pid ? '<div style="font-size:12.5px;color:var(--orange);margin-top:4px">⚠️ Article non reconnu : choisissez-le dans la liste</div>' : !l.sur ? '<div style="font-size:12.5px;color:var(--orange);margin-top:4px">À vérifier : plusieurs articles se ressemblent</div>' : ''}</div>`).join('')
+    : '<div class="muted">Aucune ligne. Ajoutez les articles avec « + Ajouter une ligne ».</div>';
+  blTotal();
+}
+function blTotal(){ const ok = blLignes.filter(l => l.pid); $('bl-total').textContent = ok.length + ' article(s) · ' + ok.reduce((s,l)=>s+l.qte,0) + ' pièce(s)' + (blLignes.length - ok.length ? ' · ' + (blLignes.length - ok.length) + ' ligne(s) à compléter' : ''); }
+function blAjouter(){ blLignes.push({ src:'', pid:'', choix:[], qte:1, sur:true }); afficherBL(); }
+function fermerBL(){ $('blv').classList.add('hide'); }
+function blConfirmer(){
+  const ok = blLignes.filter(l => l.pid);
+  if(!ok.length) return toast('Aucun article choisi');
+  if(blLignes.length > ok.length && !confirm((blLignes.length - ok.length) + ' ligne(s) sans article seront ignorées. Continuer ?')) return;
+  ok.forEach(l => { const p = db.produits.find(x => x.id===l.pid); if(!p) return; const ex = enLignes.find(x => x.pid===p.id); if(ex) ex.qte += l.qte; else enLignes.push({ pid:p.id, nom:p.nom, cat:p.cat, qte:l.qte }); });
+  if($('bl-num').value.trim()) $('en-note').value = $('bl-num').value.trim();
+  if(enSrc!=='usine') srcEn('usine');
+  fermerBL(); afficherLignesEn(); $('en-lignes').scrollIntoView({ behavior:'smooth', block:'center' });
+  toast(ok.length + ' article(s) ajouté(s) : vérifiez puis « Valider l’entrée en stock »');
 }
 function entreeRapide(pid){
   const p = db.produits.find(x => x.id===pid); if(!p) return;
