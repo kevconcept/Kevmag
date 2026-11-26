@@ -551,7 +551,7 @@
   html.ios #modif #modif-carte{background:var(--barre);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
   #modif.hide{display:none}
   .m-ligne{border:1px solid var(--line2,rgba(127,127,127,.25));border-radius:14px;padding:10px;margin-top:8px}
-  .m-ligne .g{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px;margin-top:6px}
+  .m-ligne .g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
   .m-ligne .g label{margin:0 0 2px;font-size:12px}
   .m-ligne input{padding:8px}
   #m-sugg button{display:block;width:100%;text-align:left;padding:9px 12px;margin-top:6px;border-radius:12px;border:1px solid var(--line2,rgba(127,127,127,.25));background:rgba(127,127,127,.08);color:inherit;font:inherit;cursor:pointer}
@@ -672,8 +672,7 @@
         <div><label>Quantité</label><input id="c-qte" type="number" min="1" value="1"></div>
         <div><label>Prix unitaire (<span class="dev-base">$</span>)</label><input id="c-prix" type="number" min="0" step="any" oninput="eqPrix('c-prix','c-prix-eq');infoRemise()"><div class="muted" id="c-prix-eq" style="margin-top:4px"></div><div id="c-remise" style="margin-top:4px;font-weight:700;color:var(--green)"></div></div>
       </div>
-      <div id="c-rem-bloc" class="hide" style="margin-top:8px"><label style="display:flex;align-items:center;gap:10px;margin:0;cursor:pointer;font-weight:700"><input type="checkbox" id="c-rem-opt" onchange="infoRemise()" style="width:22px;height:22px;flex:0 0 auto"> 🏷️ <span id="c-rem-lib">Appliquer la remise de 3 % (facultatif)</span></label>
-      </div>
+      <div id="c-rem-bloc" class="hide"><label>🏷️ Remise facultative (<span class="dev-base">$</span> par pièce)</label><input id="c-rem-mt" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex : 0,5 – 10 – 50 (vide = aucune)" oninput="infoRemise()"></div>
       <button class="btn alt full" onclick="ajouterLigne()">+ Ajouter au panier</button>
     </div>
     <div class="card">
@@ -997,8 +996,7 @@
     </div>
     <div class="card">
       <h2>🏷️ Remises à la caisse</h2>
-      <p class="muted" style="margin:0 0 4px">Remises automatiques quand un article est ajouté au panier, et remise facultative (à cocher à la caisse) pour les articles concernés.</p>
-      <label>Remise facultative proposée à la caisse (%)</label><input id="g-rem-opt" type="number" min="0" max="100" step="any" onchange="majRemises()">
+      <p class="muted" style="margin:0 0 4px">Remises automatiques quand un article est ajouté au panier. En plus, à la caisse, une remise facultative d’un montant libre (par pièce) peut être donnée sur les articles autorisés — jamais sur les mousses ni les matelas Elengi.</p>
       <div class="row"><div><label>Tous les articles – automatique (%)</label><input id="g-rem-def" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
         <div><label>Mousses (%)</label><input id="g-rem-mousse" type="number" min="0" max="100" step="any" onchange="majRemises()"></div></div>
       <div class="row"><div><label>Matelas Elengi (%)</label><input id="g-rem-elengi" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
@@ -1159,7 +1157,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · remise 3 % facultative';
+const VERSION = '2026-11-26 · remise libre facultative';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -1169,7 +1167,7 @@ let derniereVente = null, recuOuvert = null;
 
 function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) db = Object.assign(db, d); }catch(e){}
   if(!Array.isArray(db.depenses)) db.depenses = [];
-  if(!db.remV){ if(db.remises && +db.remises.defaut===3){ db.remises.defaut = 0; db.remises.option = 3; } db.remV = 1; setTimeout(sauver, 0); }
+  if((db.remV||0) < 2){ if(db.remises){ if(+db.remises.defaut===3) db.remises.defaut = 0; delete db.remises.option; } db.remV = 2; setTimeout(sauver, 0); }
   // Nouvelles catégories Garde-robe, Dresser table, Nightstand : on y range les produits « Chambre » concernés (une seule fois)
   if(!db.catsV){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Chambre' || p.cat==='Table'){ const c = devinerCat(p.nom); if(['Garde-robe','Dresser table','Nightstand'].includes(c)){ p.cat = c; n++; } } });
     db.catsV = 2; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); }
@@ -1881,16 +1879,20 @@ function remplirProduits(){
   majPrix();
 }
 function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; eqPrix('c-prix','c-prix-eq'); infoRemise(); }
-/* Remises : plus de remise automatique sur tout (0 %) ; remise facultative de 3 % au choix à la caisse sur les articles concernés
-   (pas les mousses ni les matelas Elengi) ; matelas Orthopédique 10 % automatique */
-const REMISES = { defaut:0, mousse:0, elengi:0, ortho:10, option:3 };
+/* Remises : pas de remise automatique sur tout (0 %) ; remise facultative d'un montant libre (ex. 0,5 $ à 50 $ ou plus, par pièce)
+   au choix à la caisse, seulement sur les articles autorisés (jamais sur les mousses ni les matelas Elengi) ; matelas Orthopédique 10 % automatique */
+const REMISES = { defaut:0, mousse:0, elengi:0, ortho:10 };
 function remises(){ return Object.assign({...REMISES}, db.remises||{}); }
-// Article concerné par la remise facultative (pas mousse, pas Elengi, pas Orthopédique qui a déjà sa remise)
+// Article autorisé pour la remise facultative (jamais les mousses ni les matelas Elengi)
 function remiseOptionPossible(p){
   if(!p || p.cat==='Mousse') return false;
-  if(p.cat==='Matelas'){ const g = p.gamme || devinerGamme(p.nom); if(g==='Elengi' || g==='Orthopédique') return false; }
-  return remises().option > 0;
+  if(p.cat==='Matelas'){ const g = p.gamme || devinerGamme(p.nom); if(g==='Elengi') return false; }
+  return true;
 }
+// Prix d'une ligne : prix normal − remise % (automatique) − remise en montant (par pièce)
+const prixLigne = (base, pc, mt) => Math.max(0, Math.round((prixRemise(base, pc) - (+mt||0)) * 1e6) / 1e6);
+const aRemise = l => (+l.prixBase || 0) > (+l.prix || 0) + 1e-9;
+const libRemise = (l, fmt = argent) => [l.remise ? l.remise + ' %' : '', +l.remiseMt ? fmt(+l.remiseMt) + '/pièce' : ''].filter(Boolean).join(' + ');
 function remiseDe(p){
   const r = remises();
   if(!p) return r.defaut;
@@ -1899,27 +1901,30 @@ function remiseDe(p){
   return r.defaut;
 }
 const prixRemise = (prix, pc) => +pc ? Math.round((+prix||0) * (1 - (+pc)/100) * 100) / 100 : (+prix||0);   // sans remise : prix exact (ex. prix fixés en FC)
-function remiseCaisse(p){ return remiseDe(p) + ($('c-rem-opt').checked && remiseOptionPossible(p) ? remises().option : 0); }
+function remiseMtCaisse(p){ return remiseOptionPossible(p) ? Math.max(0, nombre($('c-rem-mt').value)) : 0; }
 function infoRemise(){
   const p = db.produits.find(x => x.id === $('c-prod').value), v = +$('c-prix').value || 0, possible = remiseOptionPossible(p);
-  $('c-rem-bloc').classList.toggle('hide', !possible); $('c-rem-lib').textContent = 'Appliquer la remise de ' + remises().option + ' % (facultatif)';
-  if(!possible) $('c-rem-opt').checked = false;
-  const pc = remiseCaisse(p);
-  $('c-remise').textContent = p && v ? (pc ? `Remise ${pc} % → ${argent2(prixRemise(v, pc))}` : 'Pas de remise') : '';
-  $('c-remise').style.color = pc ? 'var(--green)' : 'var(--muted)';
+  $('c-rem-bloc').classList.toggle('hide', !possible); if(!possible) $('c-rem-mt').value = '';
+  const pc = remiseDe(p), mt = remiseMtCaisse(p), net = prixLigne(v, pc, mt);
+  if(mt > prixRemise(v, pc) && v){ $('c-remise').textContent = 'La remise dépasse le prix'; $('c-remise').style.color = 'var(--red)'; return; }
+  $('c-remise').textContent = p && v ? (pc || mt ? `Remise ${[pc ? pc + ' %' : '', mt ? argent(mt) + '/pièce' : ''].filter(Boolean).join(' + ')} → ${argent2(net)}` : (possible ? 'Pas de remise (facultative)' : 'Pas de remise sur cet article')) : '';
+  $('c-remise').style.color = pc || mt ? 'var(--green)' : 'var(--muted)';
 }
-// Panier : ajouter / retirer la remise facultative sur une ligne
-function basculerRemiseLigne(i){
-  const l = panier[i], p = db.produits.find(x => x.id===l.pid); if(!l || !remiseOptionPossible(p)) return;
-  const auto = remiseDe(p), opt = remises().option;
-  l.remise = (+l.remise||0) > auto ? auto : auto + opt; l.prixBase = l.prixBase ?? l.prix; l.prix = prixRemise(l.prixBase, l.remise); afficherPanier();
+// Panier : saisir / changer / enlever la remise (montant par pièce) d'une ligne
+function remiseLigne(i){
+  const l = panier[i], p = db.produits.find(x => x.id===l.pid); if(!l || !remiseOptionPossible(p)) return toast('Pas de remise sur cet article');
+  const r = prompt(`Remise sur « ${l.nom} »\nPrix normal : ${argent(l.prixBase ?? l.prix)} par pièce\n\nMontant de la remise par pièce en ${db.devise} (ex. 0,5 – 10 – 50) ; 0 pour enlever :`, +l.remiseMt || '');
+  if(r === null) return;
+  const mt = Math.max(0, nombre(r)); l.prixBase = l.prixBase ?? l.prix;
+  if(mt > prixRemise(l.prixBase, l.remise||0)) return toast('La remise dépasse le prix');
+  l.remiseMt = mt || 0; l.prix = prixLigne(l.prixBase, l.remise||0, l.remiseMt); afficherPanier();
 }
 function majRemises(){
-  db.remises = { defaut:+$('g-rem-def').value||0, mousse:+$('g-rem-mousse').value||0, elengi:+$('g-rem-elengi').value||0, ortho:+$('g-rem-ortho').value||0, option:+$('g-rem-opt').value||0 };
+  db.remises = { defaut:+$('g-rem-def').value||0, mousse:+$('g-rem-mousse').value||0, elengi:+$('g-rem-elengi').value||0, ortho:+$('g-rem-ortho').value||0 };
   sauver(); infoRemise(); toast('Remises enregistrées');
 }
 // Texte « remise » d'une ligne vendue (pour les reçus)
-const txtRemise = l => l.remise ? `remise ${l.remise} % (${argent(l.prixBase)} → ${argent(l.prix)})` : '';
+const txtRemise = l => aRemise(l) ? `remise ${libRemise(l)} (${argent(l.prixBase)} → ${argent(l.prix)})` : '';
 function eqPrix(src, cible){ const v = +$(src).value || 0; $(cible).textContent = v && db.taux ? '≈ ' + autreMontant(v) : ''; }
 $('c-prod').onchange = majPrix;
 /* Recherche instantanée de la caisse : dès les premières lettres, tous les articles correspondants (nom, mesures, catégorie, gamme) */
@@ -1963,9 +1968,10 @@ function ajouterLigne(){
   const dejà = panier.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
   if(qte + dejà > p.stock){ const manque = qte + dejà - Math.max(0, p.stock);
     if(!confirm(`Stock disponible : ${Math.max(0,p.stock)}${p.stock<0 ? ' (déjà ' + (-p.stock) + ' vendu(s) à livrer)' : ''}.\n\nVendre quand même ?\n${manque} pièce(s) seront notées « −${manque} vendue(s) · à livrer » et seront déduites automatiquement à l'arrivage.`)) return; }
-  const base = +$('c-prix').value||0, pc = remiseCaisse(p);
-  panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prixBase:base, remise:pc, prix:prixRemise(base, pc) });
-  $('c-qte').value=1; $('c-rem-opt').checked = false; infoRemise(); afficherPanier();
+  const base = +$('c-prix').value||0, pc = remiseDe(p), mt = remiseMtCaisse(p);
+  if(mt > prixRemise(base, pc)) return toast('La remise dépasse le prix');
+  panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prixBase:base, remise:pc, remiseMt:mt, prix:prixLigne(base, pc, mt) });
+  $('c-qte').value=1; $('c-rem-mt').value = ''; infoRemise(); afficherPanier();
 }
 function retirerLigne(i){ panier.splice(i,1); afficherPanier(); }
 /* Deux devises : les prix sont dans la devise de base (Réglages), la vente peut être payée en $ ou en FC au taux du jour */
@@ -1985,7 +1991,7 @@ function changerDeviseVente(){
   afficherPanier();
 }
 function afficherPanier(){
-  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${l.remise ? '<s>'+argent(l.prixBase)+'</s> <b style="color:var(--green)">−'+l.remise+' %</b> ' : ''}${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num">${remiseOptionPossible(db.produits.find(x => x.id===l.pid)) ? `<button class="btn small alt" style="margin-bottom:4px" onclick="basculerRemiseLigne(${i})">${(+l.remise||0) > remiseDe(db.produits.find(x => x.id===l.pid)) ? '− remise' : '🏷️ ' + remises().option + ' %'}</button><br>` : ''}<button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
+  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${aRemise(l) ? '<s>'+argent(l.prixBase)+'</s> <b style="color:var(--green)">−'+libRemise(l)+'</b> ' : ''}${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num">${remiseOptionPossible(db.produits.find(x => x.id===l.pid)) ? `<button class="btn small alt" style="margin-bottom:4px" onclick="remiseLigne(${i})">🏷️ ${+l.remiseMt ? 'Remise' : 'Remise'}</button><br>` : ''}<button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
   const tot = panier.reduce((s,l)=>s+l.qte*l.prix,0), dv = $('c-devise').value || db.devise;
   const eco = Math.round(panier.reduce((s,l)=>s+l.qte*((l.prixBase||l.prix)-l.prix),0)*100)/100;
@@ -2058,7 +2064,8 @@ function afficherModif(recalc = true){
   $('m-lignes').innerHTML = mv.lignes.length ? mv.lignes.map((l,i) => `<div class="m-ligne"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(l.nom)}${l.desc ? ' <span class="muted">(' + esc(l.desc) + ')</span>' : ''}</b><button class="btn small alt" onclick="mv.lignes.splice(${i},1);afficherModif()">✕</button></div>
     <div class="g"><div><label>Quantité</label><input type="number" min="1" step="1" inputmode="numeric" value="${l.qte}" data-i="${i}" data-k="qte" oninput="lireLignesModif();resumeModif(true)" onchange="lireLignesModif();afficherModif()"></div>
     <div><label>Prix normal (${db.devise})</label><input type="number" min="0" step="any" inputmode="decimal" value="${+(l.prixBase ?? l.prix)}" data-i="${i}" data-k="base" oninput="lireLignesModif();resumeModif(true)" onchange="lireLignesModif();afficherModif()"></div>
-    <div><label>Remise %</label><input type="number" min="0" max="100" step="any" inputmode="decimal" value="${+(l.remise||0)}" data-i="${i}" data-k="rem" oninput="lireLignesModif();resumeModif(true)" onchange="lireLignesModif();afficherModif()"></div></div>
+    <div><label>Remise %</label><input type="number" min="0" max="100" step="any" inputmode="decimal" value="${+(l.remise||0)}" data-i="${i}" data-k="rem" oninput="lireLignesModif();resumeModif(true)" onchange="lireLignesModif();afficherModif()"></div>
+    ${remiseOptionPossible(db.produits.find(p => p.id===l.pid)) || +l.remiseMt ? `<div><label>Remise ${db.devise}/pièce</label><input type="number" min="0" step="any" inputmode="decimal" value="${+(l.remiseMt||0)}" data-i="${i}" data-k="mt" oninput="lireLignesModif();resumeModif(true)" onchange="lireLignesModif();afficherModif()"></div>` : ''}</div>
     <div class="muted m-sous" style="margin-top:4px">${l.qte} × ${argent2(l.prix)} = <b>${argent(l.qte*l.prix)}</b></div></div>`).join('')
     : '<div class="muted">Aucun article : ajoutez-en un, ou annulez la vente.</div>';
   resumeModif(recalc);
@@ -2070,8 +2077,9 @@ function lireLignesModif(){
   document.querySelectorAll('#m-lignes input[data-i]').forEach(x => { const L = mv.lignes[+x.dataset.i]; if(!L || x.value==='') return;
     if(x.dataset.k==='qte'){ const q = parseInt(x.value); if(q >= 1) L.qte = q; }
     else if(x.dataset.k==='base'){ L.prixBase = nombre(x.value); }
-    else if(x.dataset.k==='rem'){ L.remise = Math.min(100, Math.max(0, +x.value || 0)); } });
-  mv.lignes.forEach(L => { L.prixBase = L.prixBase ?? L.prix; L.prix = prixRemise(L.prixBase, L.remise||0); });
+    else if(x.dataset.k==='rem'){ L.remise = Math.min(100, Math.max(0, +x.value || 0)); }
+    else if(x.dataset.k==='mt'){ L.remiseMt = Math.max(0, nombre(x.value)); } });
+  mv.lignes.forEach(L => { L.prixBase = L.prixBase ?? L.prix; L.prix = prixLigne(L.prixBase, L.remise||0, L.remiseMt||0); });
 }
 function resumeModif(recalc){
   if(!mv) return;
@@ -2402,7 +2410,7 @@ function factureA4(v){
   const titre = credit ? 'FACTURE (VENTE À CRÉDIT)' : 'REÇU DE VENTE';
   const num = 'REC-' + d.getFullYear() + '-' + numero(v);
   const totPaye = convertir(v.total, base, dev, P.taux);
-  const aRem = v.lignes.some(l => l.remise), brut = Math.round(v.lignes.reduce((s,l)=>s+l.qte*(l.prixBase||l.prix),0)*100)/100;
+  const aRem = v.lignes.some(aRemise), brut = Math.round(v.lignes.reduce((s,l)=>s+l.qte*(l.prixBase||l.prix),0)*100)/100;
   const taux = P.taux ? `<div class="fa-taux">Taux appliqué : 1 $ = ${(+P.taux).toLocaleString('fr-FR')} FC · équivalent ${fmtDev(convertir(v.total, base, autreDev(dev), P.taux), autreDev(dev))}</div>` : '';
   return `<div class="fa">
     ${enteteFa()}
@@ -2411,7 +2419,7 @@ function factureA4(v){
       <div><h4>CLIENT</h4><b>Nom :</b> ${esc(nomClient||'Client comptant')}<br><b>Téléphone :</b> ${esc(tel||'—')}</div>
     </div>
     <table class="fa-table"><thead><tr><th>Réf.</th><th>Description</th><th class="n">P.U. (${dev==='$'?'USD':'CDF'})</th>${aRem?'<th class="n">Remise</th>':''}<th class="n">Qté</th><th class="n">Montant (${dev==='$'?'USD':'CDF'})</th></tr></thead><tbody>
-      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}${l.aLivrer?`<br><small><b>⚠️ ${l.aLivrer} à livrer à l'arrivage</b></small>`:''}</td><td class="n">${m(l.prixBase||l.prix)}</td>${aRem?`<td class="n">${l.remise?'−'+l.remise+' %':'—'}</td>`:''}<td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
+      ${v.lignes.map((l,i)=>`<tr><td>P${String(i+1).padStart(4,'0')}</td><td>${esc(l.nom)}${l.desc?`<br><small>${esc(l.desc)}</small>`:''}${l.aLivrer?`<br><small><b>⚠️ ${l.aLivrer} à livrer à l'arrivage</b></small>`:''}</td><td class="n">${m(l.prixBase||l.prix)}</td>${aRem?`<td class="n">${aRemise(l)?'−'+libRemise(l, m):'—'}</td>`:''}<td class="n">${l.qte}</td><td class="n">${m(l.qte*l.prix)}</td></tr>`).join('')}
     </tbody></table>
     ${aRem?`<div class="fa-sous"><span>Total avant remise :</span><span>${m(brut)}</span></div><div class="fa-sous"><span>Remises :</span><span>− ${m(brut-v.total)}</span></div>`:''}
     <div class="fa-sous"><span>Total :</span><span>${m(v.total)}</span></div>
@@ -2444,7 +2452,7 @@ function htmlRecu(v, format){
     ${v.client?`<div>Client : ${esc(v.client)}</div>`:''}
     <hr>
     <table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th></tr></thead><tbody>
-    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}${l.aLivrer?'<br><small><b>À LIVRER À L\'ARRIVAGE : '+l.aLivrer+'</b></small>':''}<br><small>${l.remise?m(l.prixBase)+' −'+l.remise+' % = ':''}${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
+    ${v.lignes.map(l=>`<tr><td>${esc(l.nom)}${l.desc?'<br><small>'+esc(l.desc)+'</small>':''}${l.aLivrer?'<br><small><b>À LIVRER À L\'ARRIVAGE : '+l.aLivrer+'</b></small>':''}<br><small>${aRemise(l)?m(l.prixBase)+' −'+libRemise(l, m)+' = ':''}${m(l.prix)} / u</small></td><td class="num">${l.qte}</td><td class="num">${m(l.qte*l.prix)}</td></tr>`).join('')}
     <tr class="tot"><td>TOTAL</td><td class="num">${nb}</td><td class="num">${m(v.total)}</td></tr>
     </tbody></table>
     <div>Paiement : ${esc(v.paiement)}</div>
@@ -2497,7 +2505,7 @@ function texteRecu(v){
   const b = db.boutique, P = payeDe(v), dev = P.dev, m = n => fmtDev(convertir(n, v.devise || db.devise, dev, P.taux), dev), d = new Date(v.date);
   return `*${b.nom}* – Reçu n° ${numero(v)}\n${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`
     + (v.client ? `\nClient : ${v.client}` : '') + '\n\n'
-    + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}${l.remise?' (remise '+l.remise+' %)':''}${l.aLivrer?' — ⚠️ '+l.aLivrer+' à livrer à l\'arrivage':''}`).join('\n')
+    + v.lignes.map(l => `• ${l.qte} × ${l.nom}${l.desc?' ('+l.desc+')':''} : ${m(l.qte*l.prix)}${aRemise(l)?' (remise '+libRemise(l, m)+')':''}${l.aLivrer?' — ⚠️ '+l.aLivrer+' à livrer à l\'arrivage':''}`).join('\n')
     + `\n\n*TOTAL : ${m(v.total)}*\nPaiement : ${v.paiement}` + (v.paiement==='Crédit' ? `\nReste à payer : ${m(v.total)}` : '')
     + (b.adresse ? `\n\n${b.nom} – ${b.adresse}` : '') + (b.tel ? `\nTél : ${b.tel}` : '') + (b.message ? `\n${b.message}` : '');
 }
@@ -2989,7 +2997,7 @@ function donneesRapport(P){
   const recus = ventes.map(v => { const P = payeDe(v);
     return { num:numero(v), heure:heure(v.date), client:v.client||'', articles:v.lignes.map(l => l.qte + ' x ' + l.nom + (l.desc ? ' (' + l.desc + ')' : '')).join(', '),
       paiement: v.acompte ? 'Acompte livré (déjà payé)' : (v.paiement||''), total:v.total, dev:P.dev, montant: v.acompte ? 0 : P.montant, remise: remiseVente(v) }; });
-  const remises = []; ventes.forEach(v => v.lignes.forEach(l => { if(l.remise && l.prixBase > l.prix) remises.push({ num:numero(v), nom:l.nom + (l.desc ? ' (' + l.desc + ')' : ''), qte:l.qte, taux:l.remise, base:l.prixBase, prix:l.prix, montant:Math.round((l.prixBase - l.prix) * l.qte * 100) / 100 }); }));
+  const remises = []; ventes.forEach(v => v.lignes.forEach(l => { if(aRemise(l)) remises.push({ num:numero(v), nom:l.nom + (l.desc ? ' (' + l.desc + ')' : ''), qte:l.qte, taux:libRemise(l), base:l.prixBase, prix:l.prix, montant:Math.round((l.prixBase - l.prix) * l.qte * 100) / 100 }); }));
   const totRemise = Math.round(remises.reduce((s,r) => s + r.montant, 0) * 100) / 100;
   const art = {}; ventes.forEach(v => v.lignes.forEach(l => { const k = l.nom + (l.desc ? ' (' + l.desc + ')' : '');
     const a = art[k] = art[k] || { nom:k, qte:0, montant:0 }; a.qte += l.qte; a.montant += l.qte * l.prix; }));
@@ -3010,7 +3018,7 @@ function donneesRapport(P){
   const usine = Object.values(bons).map(b => ({ ...b, articles:b.lignes.join(', ') }));
   // Partie 1 : détail par article (prix sans remise, remise, net)
   const det = {}; ventes.forEach(v => v.lignes.forEach(l => { const k = l.nom + (l.desc ? ' (' + l.desc + ')' : ''), base = (l.prixBase ?? l.prix) * l.qte, net = l.prix * l.qte;
-    const a = det[k] = det[k] || { nom:k, qte:0, base:0, remise:0, net:0, taux:new Set() }; a.qte += l.qte; a.base += base; a.net += net; a.remise += base - net; if(l.remise) a.taux.add(l.remise); }));
+    const a = det[k] = det[k] || { nom:k, qte:0, base:0, remise:0, net:0, taux:new Set() }; a.qte += l.qte; a.base += base; a.net += net; a.remise += base - net; if(aRemise(l)) a.taux.add(libRemise(l)); }));
   const detail = Object.values(det).map(a => ({ ...a, base:Math.round(a.base*100)/100, net:Math.round(a.net*100)/100, remise:Math.round(a.remise*100)/100, taux:[...a.taux].join(' / ') })).sort((a,b) => a.nom.localeCompare(b.nom));
   // Acomptes : articles, quantité, montant donné
   const acomptes = []; (db.acomptes||[]).forEach(a => a.versements.forEach(x => { if(!dansP(x.date, P)) return;
@@ -3018,7 +3026,7 @@ function donneesRapport(P){
   // Partie 2 : toutes les factures
   const factures = ventes.map(v => { const Pp = payeDe(v); return { num:numero(v), quand:new Date(v.date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}), client:v.client||'', paiement:v.acompte ? 'Acompte livré (déjà payé)' : (v.paiement||''),
     paye: v.acompte ? '' : fmtDev(Pp.montant, Pp.dev), total:v.total, remise:remiseVente(v), echange:!!v.echange,
-    lignes:v.lignes.map(l => ({ nom:l.nom + (l.desc ? ' (' + l.desc + ')' : ''), qte:l.qte, base:l.prixBase ?? l.prix, taux:l.remise||0, prix:l.prix, montant:Math.round(l.qte*l.prix*100)/100 })) }; });
+    lignes:v.lignes.map(l => ({ nom:l.nom + (l.desc ? ' (' + l.desc + ')' : ''), qte:l.qte, base:l.prixBase ?? l.prix, taux:aRemise(l) ? libRemise(l) : '', prix:l.prix, montant:Math.round(l.qte*l.prix*100)/100 })) }; });
   const depL = depensesP(P), depenses = depL.map(d => ({ heure:heure(d.date), motif:d.motif, montant:+d.montant||0, dev:d.dev, taux:tauxDep(d), eq:eqTxt(d) })), dep = totDep(depenses);
   const depTot = { '$': Math.round(totDepEn(depL,'$')*100)/100, FC: Math.round(totDepEn(depL,'FC')) };
   const tx = +db.taux || 0, recuEn$ = tx ? tot['$'] + tot.FC / tx : null;
@@ -3028,7 +3036,7 @@ function donneesRapport(P){
     ca: ventes.reduce((s,v)=>s+v.total,0), nbArt: articles.reduce((s,a)=>s+a.qte,0), remises, totRemise, avantRemise: ventes.reduce((s,v)=>s+v.total,0) + totRemise };
 }
 // Montant des remises d'une vente (prix normal − prix remisé)
-const remiseVente = v => Math.round(v.lignes.reduce((s,l) => s + (l.remise && l.prixBase > l.prix ? (l.prixBase - l.prix) * l.qte : 0), 0) * 100) / 100;
+const remiseVente = v => Math.round(v.lignes.reduce((s,l) => s + (aRemise(l) ? (l.prixBase - l.prix) * l.qte : 0), 0) * 100) / 100;
 const txtPdf = t => String(t ?? '').replace(/≈/g,'~').replace(/[\u202f\u00a0]/g,' ').replace(/[\u2212\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[^\x00-\xff€]/g,'');
 const nbDev = (x, dev) => txtPdf(fmtDev(x, dev));
 function blobRapportPDF(R){
@@ -3050,7 +3058,7 @@ function blobRapportPDF(R){
   // ================= PARTIE 1 : SYNTHÈSE =================
   partie('PARTIE 1 – SYNTHÈSE');
   titre('Articles vendus');
-  if(R.detail.length) table(['Article','Quantité','Prix sans remise','Remise','Après remise'], R.detail.map(a => [a.nom, String(a.qte), argent(a.base), a.remise ? '- ' + argent(a.remise) + (a.taux ? ' (' + a.taux + ' %)' : '') : '-', argent(a.net)])
+  if(R.detail.length) table(['Article','Quantité','Prix sans remise','Remise','Après remise'], R.detail.map(a => [a.nom, String(a.qte), argent(a.base), a.remise ? '- ' + argent(a.remise) + (a.taux ? ' (' + a.taux + ')' : '') : '-', argent(a.net)])
       .concat([['TOTAL', String(R.nbArt), argent(R.avantRemise), R.totRemise ? '- ' + argent(R.totRemise) : '-', argent(R.ca)]]),
     { columnStyles:{ 1:{ ...R2, cellWidth:18 }, 2:{ ...R2, cellWidth:30 }, 3:{ ...R2, cellWidth:32 }, 4:{ ...R2, cellWidth:28 } }, didParseCell: d => tot(d, R.detail.length) });
   else table(['Articles vendus'], [['Aucune vente ' + CJ + '.']]);
@@ -3082,7 +3090,7 @@ function blobRapportPDF(R){
     y += 7; if(y > 250){ doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(...BLEU); doc.text(txtPdf('Facture N° ' + fc.num + '  ·  ' + fc.quand), 14, y);
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60); doc.text(txtPdf('Client : ' + (fc.client || '-') + '   ·   Paiement : ' + (fc.paiement || '-') + (fc.paye ? '   ·   Payé : ' + fc.paye : '')), 14, y + 4.5); y += 6.5;
-    table(['Article','Qté','Prix unitaire','Remise','Prix remisé','Montant'], fc.lignes.map(l => [l.nom, String(l.qte), argent(l.base), l.taux ? l.taux + ' %' : '-', argent(l.prix), argent(l.montant)])
+    table(['Article','Qté','Prix unitaire','Remise','Prix remisé','Montant'], fc.lignes.map(l => [l.nom, String(l.qte), argent(l.base), l.taux ? txtPdf(l.taux) : '-', argent(l.prix), argent(l.montant)])
         .concat([['Total' + (fc.remise ? ' (remise - ' + argent(fc.remise) + ')' : ''), '', '', '', '', argent(fc.total)]]),
       { columnStyles:{ 1:{ ...R2, cellWidth:11 }, 2:{ ...R2, cellWidth:24 }, 3:{ ...R2, cellWidth:15 }, 4:{ ...R2, cellWidth:24 }, 5:{ ...R2, cellWidth:24 } }, didParseCell: d => tot(d, fc.lignes.length), pageBreak:'avoid' });
   });
@@ -3097,7 +3105,7 @@ function blobRapportXLSX(R){
   const wb = XLSX.utils.book_new(), feuille = (nom, lignes, cols) => { const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = cols.map(w => ({ wch:w })); XLSX.utils.book_append_sheet(wb, ws, nom); };
   const en = [db.boutique.nom + ' – Rapport ' + R.date], r2 = x => Math.round(x*100)/100, dv = ' (' + db.devise + ')';
   // Partie 1 : synthèse sur une feuille
-  const p1 = [en, ['PARTIE 1 – SYNTHÈSE'], [], ['ARTICLES VENDUS'], ['Article','Quantité','Prix sans remise' + dv,'Remise' + dv,'Taux remise (%)','Après remise' + dv]]
+  const p1 = [en, ['PARTIE 1 – SYNTHÈSE'], [], ['ARTICLES VENDUS'], ['Article','Quantité','Prix sans remise' + dv,'Remise' + dv,'Remise appliquée','Après remise' + dv]]
     .concat(R.detail.length ? R.detail.map(a => [a.nom, a.qte, a.base, a.remise, a.taux, a.net]).concat([['TOTAL', R.nbArt, r2(R.avantRemise), R.totRemise, '', r2(R.ca)]]) : [['Aucune vente ' + CJ]])
     .concat([[], ['ACOMPTES'], ['Article(s)','Quantité','Client','Montant donné','Devise']])
     .concat(R.acomptes.length ? R.acomptes.map(x => [x.articles, x.qte, x.client, x.montant, x.dev]) : [['Aucun acompte ' + CJ]])
@@ -3111,7 +3119,7 @@ function blobRapportXLSX(R){
     .concat(R.usine.length ? [[], ['RÉCEPTIONS DE L\'USINE'], ['N°','Articles','Pièces','Note']].concat(R.usine.map(u => [u.num, u.articles, u.pieces, u.note])) : []);
   feuille('Partie 1 - Synthèse', p1, [46,10,18,14,14,16]);
   // Partie 2 : toutes les factures, ligne par ligne
-  const p2 = [en, ['PARTIE 2 – TOUTES LES FACTURES (' + R.factures.length + ')'], [], ['Facture N°','Date et heure','Client','Paiement','Payé','Article','Quantité','Prix unitaire' + dv,'Remise (%)','Prix remisé' + dv,'Montant' + dv]];
+  const p2 = [en, ['PARTIE 2 – TOUTES LES FACTURES (' + R.factures.length + ')'], [], ['Facture N°','Date et heure','Client','Paiement','Payé','Article','Quantité','Prix unitaire' + dv,'Remise','Prix remisé' + dv,'Montant' + dv]];
   R.factures.forEach(fc => { fc.lignes.forEach((l,k) => p2.push([k ? '' : fc.num, k ? '' : fc.quand, k ? '' : fc.client, k ? '' : fc.paiement, k ? '' : String(fc.paye).replace(/[\u202f\u00a0]/g,' '), l.nom, l.qte, r2(l.base), l.taux, r2(l.prix), l.montant]));
     p2.push(['', '', '', '', '', 'Total facture ' + fc.num + (fc.remise ? ' (remise ' + fc.remise + ')' : ''), '', '', '', '', r2(fc.total)], []); });
   if(!R.factures.length) p2.push(['Aucune facture ' + CJ]);
@@ -3196,7 +3204,7 @@ function htmlRapport(R){
     <div class="fa-total" style="margin-bottom:12px"><span>${R.unJour ? 'RAPPORT DU JOUR' : 'RAPPORT DE LA PÉRIODE'} – ${esc(sousTitre.charAt(0).toUpperCase() + sousTitre.slice(1))}</span></div>
     <div class="rp-partie">PARTIE 1 – SYNTHÈSE</div>
     ${R.detail.length ? T('Articles vendus', ['Article','Quantité','Prix sans remise','Remise','Après remise'],
-        R.detail.map(a => [esc(a.nom), a.qte, argent(a.base), a.remise ? '− ' + argent(a.remise) + (a.taux ? ' <small>(' + a.taux + ' %)</small>' : '') : '–', argent(a.net)])
+        R.detail.map(a => [esc(a.nom), a.qte, argent(a.base), a.remise ? '− ' + argent(a.remise) + (a.taux ? ' <small>(' + a.taux + ')</small>' : '') : '–', argent(a.net)])
         .concat([{ cls:'rp-tot', c:['TOTAL', R.nbArt, argent(R.avantRemise), R.totRemise ? '− ' + argent(R.totRemise) : '–', argent(R.ca)] }]), [1,2,3,4])
       : '<h3 class="rp-h">Articles vendus</h3>' + vide('Aucune vente ' + CJ + '.')}
     ${R.acomptes.length ? T('Acomptes', ['Article(s)','Quantité','Client','Montant donné'], R.acomptes.map(x => [esc(x.articles), x.qte, esc(x.client), D(x.montant, x.dev)]), [1,3])
@@ -3222,7 +3230,7 @@ function htmlRapport(R){
     ${R.factures.length ? R.factures.map(fc => `<div class="rp-fac"><div class="rp-fac-t"><b>Facture N° ${fc.num}</b> · ${esc(fc.quand)}</div>
       <div class="rp-fac-i">Client : <b>${esc(fc.client || '–')}</b> · Paiement : ${esc(fc.paiement || '–')}${fc.paye ? ' · Payé : <b>' + esc(fc.paye) + '</b>' : ''}</div>
       <table class="fa-table"><thead><tr><th>Article</th><th class="n">Qté</th><th class="n">Prix unitaire</th><th class="n">Remise</th><th class="n">Prix remisé</th><th class="n">Montant</th></tr></thead><tbody>
-      ${fc.lignes.map(l => `<tr><td>${esc(l.nom)}</td><td class="n">${l.qte}</td><td class="n">${argent(l.base)}</td><td class="n">${l.taux ? l.taux + ' %' : '–'}</td><td class="n">${argent(l.prix)}</td><td class="n">${argent(l.montant)}</td></tr>`).join('')}
+      ${fc.lignes.map(l => `<tr><td>${esc(l.nom)}</td><td class="n">${l.qte}</td><td class="n">${argent(l.base)}</td><td class="n">${l.taux ? esc(l.taux) : '–'}</td><td class="n">${argent(l.prix)}</td><td class="n">${argent(l.montant)}</td></tr>`).join('')}
       <tr class="rp-tot"><td colspan="5">Total${fc.remise ? ' (remise − ' + argent(fc.remise) + ')' : ''}</td><td class="n">${argent(fc.total)}</td></tr></tbody></table></div>`).join('')
       : vide('Aucune facture ' + CJ + '.')}
     <div style="display:flex;justify-content:space-between;margin-top:26px;font-size:12.5px"><span>Établi par : ____________________</span><span>Signature : ______________</span></div>
@@ -3566,7 +3574,7 @@ function toutEffacer(){
   db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], transferts:[], depenses:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); afficherEntrees(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; if(!document.activeElement || !document.activeElement.closest('#v-tarifs')) afficherTarifs(); { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; $('g-rem-opt').value = r.option; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); afficherEntrees(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; if(!document.activeElement || !document.activeElement.closest('#v-tarifs')) afficherTarifs(); { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
