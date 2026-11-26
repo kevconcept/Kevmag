@@ -672,6 +672,8 @@
         <div><label>Quantité</label><input id="c-qte" type="number" min="1" value="1"></div>
         <div><label>Prix unitaire (<span class="dev-base">$</span>)</label><input id="c-prix" type="number" min="0" step="any" oninput="eqPrix('c-prix','c-prix-eq');infoRemise()"><div class="muted" id="c-prix-eq" style="margin-top:4px"></div><div id="c-remise" style="margin-top:4px;font-weight:700;color:var(--green)"></div></div>
       </div>
+      <div id="c-rem-bloc" class="hide" style="margin-top:8px"><label style="display:flex;align-items:center;gap:10px;margin:0;cursor:pointer;font-weight:700"><input type="checkbox" id="c-rem-opt" onchange="infoRemise()" style="width:22px;height:22px;flex:0 0 auto"> 🏷️ <span id="c-rem-lib">Appliquer la remise de 3 % (facultatif)</span></label>
+      </div>
       <button class="btn alt full" onclick="ajouterLigne()">+ Ajouter au panier</button>
     </div>
     <div class="card">
@@ -995,8 +997,9 @@
     </div>
     <div class="card">
       <h2>🏷️ Remises à la caisse</h2>
-      <p class="muted" style="margin:0 0 4px">Appliquées automatiquement quand un article est ajouté au panier.</p>
-      <div class="row"><div><label>Tous les articles (%)</label><input id="g-rem-def" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
+      <p class="muted" style="margin:0 0 4px">Remises automatiques quand un article est ajouté au panier, et remise facultative (à cocher à la caisse) pour les articles concernés.</p>
+      <label>Remise facultative proposée à la caisse (%)</label><input id="g-rem-opt" type="number" min="0" max="100" step="any" onchange="majRemises()">
+      <div class="row"><div><label>Tous les articles – automatique (%)</label><input id="g-rem-def" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
         <div><label>Mousses (%)</label><input id="g-rem-mousse" type="number" min="0" max="100" step="any" onchange="majRemises()"></div></div>
       <div class="row"><div><label>Matelas Elengi (%)</label><input id="g-rem-elengi" type="number" min="0" max="100" step="any" onchange="majRemises()"></div>
         <div><label>Matelas Orthopédique (%)</label><input id="g-rem-ortho" type="number" min="0" max="100" step="any" onchange="majRemises()"></div></div>
@@ -1156,7 +1159,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · dépenses au taux du jour';
+const VERSION = '2026-11-26 · remise 3 % facultative';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -1166,6 +1169,7 @@ let derniereVente = null, recuOuvert = null;
 
 function charger(){ try{ const d = JSON.parse(localStorage.getItem(CLE)); if(d) db = Object.assign(db, d); }catch(e){}
   if(!Array.isArray(db.depenses)) db.depenses = [];
+  if(!db.remV){ if(db.remises && +db.remises.defaut===3){ db.remises.defaut = 0; db.remises.option = 3; } db.remV = 1; setTimeout(sauver, 0); }
   // Nouvelles catégories Garde-robe, Dresser table, Nightstand : on y range les produits « Chambre » concernés (une seule fois)
   if(!db.catsV){ setTimeout(() => { let n = 0; db.produits.forEach(p => { if(p.cat==='Chambre' || p.cat==='Table'){ const c = devinerCat(p.nom); if(['Garde-robe','Dresser table','Nightstand'].includes(c)){ p.cat = c; n++; } } });
     db.catsV = 2; sauver(); if(n){ rafraichir(); toast(n + ' produit' + (n>1?'s':'') + ' rangé' + (n>1?'s':'') + ' dans les nouvelles catégories'); } }, 0); }
@@ -1877,9 +1881,16 @@ function remplirProduits(){
   majPrix();
 }
 function majPrix(){ const p = db.produits.find(x => x.id === $('c-prod').value); $('c-prix').value = p ? p.prix : ''; eqPrix('c-prix','c-prix-eq'); infoRemise(); }
-/* Remises : 3 % sur tout, sauf mousses et matelas Elengi (0 %) ; matelas Orthopédique 10 % */
-const REMISES = { defaut:3, mousse:0, elengi:0, ortho:10 };
+/* Remises : plus de remise automatique sur tout (0 %) ; remise facultative de 3 % au choix à la caisse sur les articles concernés
+   (pas les mousses ni les matelas Elengi) ; matelas Orthopédique 10 % automatique */
+const REMISES = { defaut:0, mousse:0, elengi:0, ortho:10, option:3 };
 function remises(){ return Object.assign({...REMISES}, db.remises||{}); }
+// Article concerné par la remise facultative (pas mousse, pas Elengi, pas Orthopédique qui a déjà sa remise)
+function remiseOptionPossible(p){
+  if(!p || p.cat==='Mousse') return false;
+  if(p.cat==='Matelas'){ const g = p.gamme || devinerGamme(p.nom); if(g==='Elengi' || g==='Orthopédique') return false; }
+  return remises().option > 0;
+}
 function remiseDe(p){
   const r = remises();
   if(!p) return r.defaut;
@@ -1888,13 +1899,23 @@ function remiseDe(p){
   return r.defaut;
 }
 const prixRemise = (prix, pc) => +pc ? Math.round((+prix||0) * (1 - (+pc)/100) * 100) / 100 : (+prix||0);   // sans remise : prix exact (ex. prix fixés en FC)
+function remiseCaisse(p){ return remiseDe(p) + ($('c-rem-opt').checked && remiseOptionPossible(p) ? remises().option : 0); }
 function infoRemise(){
-  const p = db.produits.find(x => x.id === $('c-prod').value), pc = remiseDe(p), v = +$('c-prix').value || 0;
-  $('c-remise').textContent = p && v ? (pc ? `Remise ${pc} % → ${argent2(prixRemise(v, pc))}` : 'Pas de remise sur cet article') : '';
+  const p = db.produits.find(x => x.id === $('c-prod').value), v = +$('c-prix').value || 0, possible = remiseOptionPossible(p);
+  $('c-rem-bloc').classList.toggle('hide', !possible); $('c-rem-lib').textContent = 'Appliquer la remise de ' + remises().option + ' % (facultatif)';
+  if(!possible) $('c-rem-opt').checked = false;
+  const pc = remiseCaisse(p);
+  $('c-remise').textContent = p && v ? (pc ? `Remise ${pc} % → ${argent2(prixRemise(v, pc))}` : 'Pas de remise') : '';
   $('c-remise').style.color = pc ? 'var(--green)' : 'var(--muted)';
 }
+// Panier : ajouter / retirer la remise facultative sur une ligne
+function basculerRemiseLigne(i){
+  const l = panier[i], p = db.produits.find(x => x.id===l.pid); if(!l || !remiseOptionPossible(p)) return;
+  const auto = remiseDe(p), opt = remises().option;
+  l.remise = (+l.remise||0) > auto ? auto : auto + opt; l.prixBase = l.prixBase ?? l.prix; l.prix = prixRemise(l.prixBase, l.remise); afficherPanier();
+}
 function majRemises(){
-  db.remises = { defaut:+$('g-rem-def').value||0, mousse:+$('g-rem-mousse').value||0, elengi:+$('g-rem-elengi').value||0, ortho:+$('g-rem-ortho').value||0 };
+  db.remises = { defaut:+$('g-rem-def').value||0, mousse:+$('g-rem-mousse').value||0, elengi:+$('g-rem-elengi').value||0, ortho:+$('g-rem-ortho').value||0, option:+$('g-rem-opt').value||0 };
   sauver(); infoRemise(); toast('Remises enregistrées');
 }
 // Texte « remise » d'une ligne vendue (pour les reçus)
@@ -1942,9 +1963,9 @@ function ajouterLigne(){
   const dejà = panier.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.qte,0);
   if(qte + dejà > p.stock){ const manque = qte + dejà - Math.max(0, p.stock);
     if(!confirm(`Stock disponible : ${Math.max(0,p.stock)}${p.stock<0 ? ' (déjà ' + (-p.stock) + ' vendu(s) à livrer)' : ''}.\n\nVendre quand même ?\n${manque} pièce(s) seront notées « −${manque} vendue(s) · à livrer » et seront déduites automatiquement à l'arrivage.`)) return; }
-  const base = +$('c-prix').value||0, pc = remiseDe(p);
+  const base = +$('c-prix').value||0, pc = remiseCaisse(p);
   panier.push({ pid:p.id, nom:p.nom, desc:details(p), qte, prixBase:base, remise:pc, prix:prixRemise(base, pc) });
-  $('c-qte').value=1; afficherPanier();
+  $('c-qte').value=1; $('c-rem-opt').checked = false; infoRemise(); afficherPanier();
 }
 function retirerLigne(i){ panier.splice(i,1); afficherPanier(); }
 /* Deux devises : les prix sont dans la devise de base (Réglages), la vente peut être payée en $ ou en FC au taux du jour */
@@ -1964,7 +1985,7 @@ function changerDeviseVente(){
   afficherPanier();
 }
 function afficherPanier(){
-  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${l.remise ? '<s>'+argent(l.prixBase)+'</s> <b style="color:var(--green)">−'+l.remise+' %</b> ' : ''}${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num"><button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
+  $('c-panier').innerHTML = panier.length ? panier.map((l,i)=>`<tr><td>${esc(l.nom)}${l.desc?'<br><span class="muted">'+esc(l.desc)+'</span>':''}<br><span class="muted">${l.remise ? '<s>'+argent(l.prixBase)+'</s> <b style="color:var(--green)">−'+l.remise+' %</b> ' : ''}${argent2(l.prix)} / u</span></td><td class="num">${l.qte}</td><td class="num">${argent2h(l.qte*l.prix)}</td><td class="num">${remiseOptionPossible(db.produits.find(x => x.id===l.pid)) ? `<button class="btn small alt" style="margin-bottom:4px" onclick="basculerRemiseLigne(${i})">${(+l.remise||0) > remiseDe(db.produits.find(x => x.id===l.pid)) ? '− remise' : '🏷️ ' + remises().option + ' %'}</button><br>` : ''}<button class="btn small alt" onclick="retirerLigne(${i})">✕</button></td></tr>`).join('')
     : '<tr><td colspan="4" class="muted">Panier vide</td></tr>';
   const tot = panier.reduce((s,l)=>s+l.qte*l.prix,0), dv = $('c-devise').value || db.devise;
   const eco = Math.round(panier.reduce((s,l)=>s+l.qte*((l.prixBase||l.prix)-l.prix),0)*100)/100;
@@ -3545,7 +3566,7 @@ function toutEffacer(){
   db = { produits:[], ventes:[], acomptes:[], echanges:[], entrees:[], transferts:[], depenses:[], devise:db.devise, numRecu:0, boutique:db.boutique }; panier=[]; derniereVente=null; $('c-derniere').classList.add('hide'); sauver(); rafraichir();
 }
 
-function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); afficherEntrees(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; if(!document.activeElement || !document.activeElement.closest('#v-tarifs')) afficherTarifs(); { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
+function rafraichir(){ majDevisesForm(); afficherAcomptes(); afficherEchanges(); afficherTransferts(); afficherEntrees(); if(!$('c-devise').dataset.init){ $('c-devise').value = db.devise; $('c-devise').dataset.init = 1; } remplirProduits(); afficherPanier(); afficherStock(); afficherRapport(); afficherAccueil(); $('g-devise').value = db.devise; $('g-theme').value = db.theme || 'ios'; if(!document.activeElement || !document.activeElement.closest('#v-tarifs')) afficherTarifs(); { const r = remises(); $('g-rem-def').value = r.defaut; $('g-rem-mousse').value = r.mousse; $('g-rem-elengi').value = r.elengi; $('g-rem-ortho').value = r.ortho; $('g-rem-opt').value = r.option; } $('g-anim').value = modeFond(); $('g-taux').value = db.taux || '';
   const b = db.boutique; $('g-nom').value=b.nom; $('g-adresse').value=b.adresse; CHAMPS_B.forEach(([k,id]) => $(id).value = b[k]||''); $('g-tel').value=b.tel; $('g-message').value=b.message; $('g-format').value=b.format; }
 
 charger();
