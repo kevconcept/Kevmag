@@ -356,6 +356,7 @@
   .rp .rp-h{color:#22307a;font-size:15px;margin:16px 0 6px}
   .rp .fa-table{font-size:11.5px}.rp .fa-table td,.rp .fa-table th{padding:6px 7px}
   .rp .rp-res td:first-child{width:58%}.rp .rp-res td:last-child{text-align:right}.rp .rp-res{border-top:2px solid #22307a}
+  .rp tr.rp-tr td{color:#22307a;background:#f4f6fb}
   .rp tr.rp-tot td{background:#dfe6f3;font-weight:800}
   .rp .rp-partie{background:#22307a;color:#fff;text-align:center;font-weight:800;font-size:14px;padding:7px;margin:18px 0 4px;letter-spacing:.03em}
   .rp .rp-fac{margin-top:14px;page-break-inside:avoid;break-inside:avoid}
@@ -1157,7 +1158,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · remise libre facultative';
+const VERSION = '2026-11-26 · ventes et transferts ensemble';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -3032,7 +3033,9 @@ function donneesRapport(P){
   const tx = +db.taux || 0, recuEn$ = tx ? tot['$'] + tot.FC / tx : null;
   const resteGlobal = tx ? { '$': Math.round((recuEn$ - depTot['$'])*100)/100, FC: Math.round(recuEn$*tx - depTot.FC) } : null;
   const reste = { '$': Math.round((tot['$'] - dep['$'])*100)/100, FC: Math.round(tot.FC - dep.FC) };
-  return { j:P.cle, unJour:P.unJour, date:(P.unJour ? 'du ' : '') + P.lib, recus, articles, detail, acomptes, factures, depenses, dep, reste, depTot, resteGlobal, tx, argentV, argentA, tot, modes, versements, devises, transferts, usine,
+  const trArt = []; (db.transferts||[]).filter(t => t.statut!=='annulé' && dansP(t.date, P)).forEach(t => t.lignes.forEach(l => trArt.push({ nom:l.nom, qte:l.qte, envoi:t.sens==='envoi', mvt:(t.sens==='envoi' ? 'Transféré à ' : 'Reçu de ') + (t.magasin||'') + ' (' + numTr(t) + ')' })));
+  const trEnv = trArt.filter(x => x.envoi).reduce((s,x)=>s+x.qte,0), trRec = trArt.filter(x => !x.envoi).reduce((s,x)=>s+x.qte,0);
+  return { j:P.cle, unJour:P.unJour, date:(P.unJour ? 'du ' : '') + P.lib, recus, articles, detail, trArt, trEnv, trRec, acomptes, factures, depenses, dep, reste, depTot, resteGlobal, tx, argentV, argentA, tot, modes, versements, devises, transferts, usine,
     ca: ventes.reduce((s,v)=>s+v.total,0), nbArt: articles.reduce((s,a)=>s+a.qte,0), remises, totRemise, avantRemise: ventes.reduce((s,v)=>s+v.total,0) + totRemise };
 }
 // Montant des remises d'une vente (prix normal − prix remisé)
@@ -3057,11 +3060,16 @@ function blobRapportPDF(R){
     doc.setFillColor(...BLEU); doc.rect(14, y - 5.5, 182, 8.5, 'F'); doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(255); doc.text(txtPdf(t), 105, y, { align:'center' }); y += 4; };
   // ================= PARTIE 1 : SYNTHÈSE =================
   partie('PARTIE 1 – SYNTHÈSE');
-  titre('Articles vendus');
-  if(R.detail.length) table(['Article','Quantité','Prix sans remise','Remise','Après remise'], R.detail.map(a => [a.nom, String(a.qte), argent(a.base), a.remise ? '- ' + argent(a.remise) + (a.taux ? ' (' + a.taux + ')' : '') : '-', argent(a.net)])
-      .concat([['TOTAL', String(R.nbArt), argent(R.avantRemise), R.totRemise ? '- ' + argent(R.totRemise) : '-', argent(R.ca)]]),
-    { columnStyles:{ 1:{ ...R2, cellWidth:18 }, 2:{ ...R2, cellWidth:30 }, 3:{ ...R2, cellWidth:32 }, 4:{ ...R2, cellWidth:28 } }, didParseCell: d => tot(d, R.detail.length) });
-  else table(['Articles vendus'], [['Aucune vente ' + CJ + '.']]);
+  titre('Articles vendus et transférés');
+  { const lv = R.detail.map(a => [a.nom, 'Vendu', String(a.qte), argent(a.base), a.remise ? '- ' + argent(a.remise) + (a.taux ? ' (' + a.taux + ')' : '') : '-', argent(a.net)]);
+    const totV = ['TOTAL VENDU', '', String(R.nbArt), argent(R.avantRemise), R.totRemise ? '- ' + argent(R.totRemise) : '-', argent(R.ca)];
+    const lt = R.trArt.map(x => [x.nom, x.mvt, (x.envoi ? '-' : '+') + x.qte, '', '', '']);
+    const totT = ['TOTAL TRANSFERTS', 'envoyés ' + R.trEnv + ' · reçus ' + R.trRec, '', '', '', ''];
+    const corps = (lv.length ? lv.concat([totV]) : [['Aucune vente ' + CJ + '.', '', '', '', '', '']]).concat(lt.length ? lt.concat([totT]) : [['Aucun transfert ' + CJ + '.', '', '', '', '', '']]);
+    const iTot = new Set([lv.length ? lv.length : -1, lt.length ? corps.length - 1 : -1]);
+    table(['Article','Mouvement','Qté','Prix sans remise','Remise','Après remise'], corps,
+      { columnStyles:{ 1:{ cellWidth:38 }, 2:{ ...R2, cellWidth:12 }, 3:{ ...R2, cellWidth:26 }, 4:{ ...R2, cellWidth:28 }, 5:{ ...R2, cellWidth:24 } },
+        didParseCell: d => { if(d.section!=='body') return; if(iTot.has(d.row.index)){ d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = [223,230,243]; } else if(d.row.index > (lv.length ? lv.length : 0) && d.column.index < 3) d.cell.styles.textColor = [34,48,122]; } }); }
   titre('Acomptes');
   if(R.acomptes.length) table(['Article(s)','Quantité','Client','Montant donné'], R.acomptes.map(x => [x.articles, String(x.qte), x.client, nbDev(x.montant, x.dev)]), { columnStyles:{ 1:{ ...R2, cellWidth:18 }, 3:{ ...R2, cellWidth:32 } } });
   else table(['Acomptes'], [['Aucun acompte reçu ' + CJ + '.']]);
@@ -3078,10 +3086,7 @@ function blobRapportPDF(R){
       .concat([['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? nbDev(R.dep['$'],'$') : '', R.dep.FC ? nbDev(R.dep.FC,'FC') : ''].filter(Boolean).join(' + '), R.tx ? '~ ' + nbDev(R.depTot['$'],'$') + ' · ~ ' + nbDev(R.depTot.FC,'FC') : '']]),
     { columnStyles:{ 0:{cellWidth:22}, 2:{ ...R2, cellWidth:34 }, 3:{ ...R2, cellWidth:52 } }, didParseCell: d => tot(d, R.depenses.length) });
   else table(['Dépenses'], [['Aucune dépense ' + CJ + '.']]);
-  titre('Transferts');
-  if(R.transferts.length) table(['N°','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.sens, t.magasin, t.articles + (t.note ? ' – ' + t.note : ''), String(t.pieces)]), { columnStyles:{ 0:{cellWidth:26}, 1:{cellWidth:18}, 4:{ ...R2, cellWidth:14 } } });
-  else table(['Transferts'], [['Aucun transfert envoyé ou reçu ' + CJ + '.']]);
-  if(R.usine.length){ y += 4; table(['Réception usine','Articles','Pièces'], R.usine.map(u => [u.num, u.articles + (u.note ? ' – ' + u.note : ''), String(u.pieces)]), { columnStyles:{ 0:{cellWidth:28}, 2:{ ...R2, cellWidth:14 } } }); }
+  if(R.usine.length){ titre('Réceptions de l\'usine'); table(['Réception usine','Articles','Pièces'], R.usine.map(u => [u.num, u.articles + (u.note ? ' – ' + u.note : ''), String(u.pieces)]), { columnStyles:{ 0:{cellWidth:28}, 2:{ ...R2, cellWidth:14 } } }); }
   // ================= PARTIE 2 : FACTURES =================
   doc.addPage(); y = 10;
   partie('PARTIE 2 – TOUTES LES FACTURES (' + R.factures.length + ')');
@@ -3105,8 +3110,9 @@ function blobRapportXLSX(R){
   const wb = XLSX.utils.book_new(), feuille = (nom, lignes, cols) => { const ws = XLSX.utils.aoa_to_sheet(lignes); ws['!cols'] = cols.map(w => ({ wch:w })); XLSX.utils.book_append_sheet(wb, ws, nom); };
   const en = [db.boutique.nom + ' – Rapport ' + R.date], r2 = x => Math.round(x*100)/100, dv = ' (' + db.devise + ')';
   // Partie 1 : synthèse sur une feuille
-  const p1 = [en, ['PARTIE 1 – SYNTHÈSE'], [], ['ARTICLES VENDUS'], ['Article','Quantité','Prix sans remise' + dv,'Remise' + dv,'Remise appliquée','Après remise' + dv]]
-    .concat(R.detail.length ? R.detail.map(a => [a.nom, a.qte, a.base, a.remise, a.taux, a.net]).concat([['TOTAL', R.nbArt, r2(R.avantRemise), R.totRemise, '', r2(R.ca)]]) : [['Aucune vente ' + CJ]])
+  const p1 = [en, ['PARTIE 1 – SYNTHÈSE'], [], ['ARTICLES VENDUS ET TRANSFÉRÉS'], ['Article','Mouvement','Quantité','Prix sans remise' + dv,'Remise' + dv,'Remise appliquée','Après remise' + dv]]
+    .concat(R.detail.length ? R.detail.map(a => [a.nom, 'Vendu', a.qte, a.base, a.remise, a.taux, a.net]).concat([['TOTAL VENDU', '', R.nbArt, r2(R.avantRemise), R.totRemise, '', r2(R.ca)]]) : [['Aucune vente ' + CJ]])
+    .concat(R.trArt.length ? R.trArt.map(x => [x.nom, x.mvt, (x.envoi ? -1 : 1) * x.qte]).concat([['TOTAL TRANSFERTS', 'envoyés ' + R.trEnv + ' · reçus ' + R.trRec]]) : [['Aucun transfert ' + CJ]])
     .concat([[], ['ACOMPTES'], ['Article(s)','Quantité','Client','Montant donné','Devise']])
     .concat(R.acomptes.length ? R.acomptes.map(x => [x.articles, x.qte, x.client, x.montant, x.dev]) : [['Aucun acompte ' + CJ]])
     .concat([[], ['TOTAUX'], ['Total des prix sans remise' + dv, r2(R.avantRemise)], ['Total des remises' + dv, R.totRemise], [(R.unJour ? 'Chiffre du jour' : 'Chiffre de la période') + ' après remises' + dv, r2(R.ca)],
@@ -3114,10 +3120,8 @@ function blobRapportXLSX(R){
       ['Dépenses ($)', R.dep['$']], ['Dépenses (FC)', R.dep.FC], ['Total dépenses converti en $', R.depTot['$']], ['Total dépenses converti en FC', R.depTot.FC],
       ['Reste en caisse ($)', R.reste['$']], ['Reste en caisse (FC)', R.reste.FC], ['Reste total au taux du jour ($)', R.resteGlobal ? R.resteGlobal['$'] : ''], ['Reste total au taux du jour (FC)', R.resteGlobal ? R.resteGlobal.FC : ''], ['Taux du jour (FC pour 1 $)', R.tx || '']])
     .concat(R.depenses.length ? [[], ['DÉPENSES'], ['Heure','Motif','Montant','Devise','Taux','Équivalent $','Équivalent FC']].concat(R.depenses.map(d => [d.heure, d.motif, d.montant, d.dev, d.taux || '', d.taux ? Math.round((d.dev==='$' ? d.montant : d.montant/d.taux)*100)/100 : '', d.taux ? Math.round(d.dev==='FC' ? d.montant : d.montant*d.taux) : ''])) : [])
-    .concat([[], ['TRANSFERTS'], ['N°','Sens','Magasin','Articles','Pièces','Note']])
-    .concat(R.transferts.length ? R.transferts.map(t => [t.num, t.sens, t.magasin, t.articles, t.pieces, t.note]) : [['Aucun transfert ' + CJ]])
     .concat(R.usine.length ? [[], ['RÉCEPTIONS DE L\'USINE'], ['N°','Articles','Pièces','Note']].concat(R.usine.map(u => [u.num, u.articles, u.pieces, u.note])) : []);
-  feuille('Partie 1 - Synthèse', p1, [46,10,18,14,14,16]);
+  feuille('Partie 1 - Synthèse', p1, [46,30,10,18,14,16,16]);
   // Partie 2 : toutes les factures, ligne par ligne
   const p2 = [en, ['PARTIE 2 – TOUTES LES FACTURES (' + R.factures.length + ')'], [], ['Facture N°','Date et heure','Client','Paiement','Payé','Article','Quantité','Prix unitaire' + dv,'Remise','Prix remisé' + dv,'Montant' + dv]];
   R.factures.forEach(fc => { fc.lignes.forEach((l,k) => p2.push([k ? '' : fc.num, k ? '' : fc.quand, k ? '' : fc.client, k ? '' : fc.paiement, k ? '' : String(fc.paye).replace(/[\u202f\u00a0]/g,' '), l.nom, l.qte, r2(l.base), l.taux, r2(l.prix), l.montant]));
@@ -3203,10 +3207,13 @@ function htmlRapport(R){
   return `<div class="fa rp"><div class="rp-tete"><img src="logo.png" alt="" class="fa-logo"><div class="rp-contact">${db.boutique.adresse ? `<b>Siège social :</b> ${esc(db.boutique.adresse)}<br>` : ''}<b>WhatsApp :</b> ${esc(tel)}<br><b>Gérant :</b> ${esc(NOM_GERANT)}</div></div>
     <div class="fa-total" style="margin-bottom:12px"><span>${R.unJour ? 'RAPPORT DU JOUR' : 'RAPPORT DE LA PÉRIODE'} – ${esc(sousTitre.charAt(0).toUpperCase() + sousTitre.slice(1))}</span></div>
     <div class="rp-partie">PARTIE 1 – SYNTHÈSE</div>
-    ${R.detail.length ? T('Articles vendus', ['Article','Quantité','Prix sans remise','Remise','Après remise'],
-        R.detail.map(a => [esc(a.nom), a.qte, argent(a.base), a.remise ? '− ' + argent(a.remise) + (a.taux ? ' <small>(' + a.taux + ')</small>' : '') : '–', argent(a.net)])
-        .concat([{ cls:'rp-tot', c:['TOTAL', R.nbArt, argent(R.avantRemise), R.totRemise ? '− ' + argent(R.totRemise) : '–', argent(R.ca)] }]), [1,2,3,4])
-      : '<h3 class="rp-h">Articles vendus</h3>' + vide('Aucune vente ' + CJ + '.')}
+    ${T('Articles vendus et transférés', ['Article','Mouvement','Qté','Prix sans remise','Remise','Après remise'],
+        (R.detail.length ? R.detail.map(a => [esc(a.nom), 'Vendu', a.qte, argent(a.base), a.remise ? '− ' + argent(a.remise) + (a.taux ? ' <small>(' + a.taux + ')</small>' : '') : '–', argent(a.net)])
+            .concat([{ cls:'rp-tot', c:['TOTAL VENDU', '', R.nbArt, argent(R.avantRemise), R.totRemise ? '− ' + argent(R.totRemise) : '–', argent(R.ca)] }])
+          : [['<i>Aucune vente ' + CJ + '.</i>', '', '', '', '', '']])
+        .concat(R.trArt.length ? R.trArt.map(x => ({ cls:'rp-tr', c:[esc(x.nom), esc(x.mvt), (x.envoi ? '−' : '+') + x.qte, '', '', ''] }))
+            .concat([{ cls:'rp-tot', c:['TOTAL TRANSFERTS', 'envoyés ' + R.trEnv + ' · reçus ' + R.trRec, '', '', '', ''] }])
+          : [['<i>Aucun transfert ' + CJ + '.</i>', '', '', '', '', '']]), [2,3,4,5])}
     ${R.acomptes.length ? T('Acomptes', ['Article(s)','Quantité','Client','Montant donné'], R.acomptes.map(x => [esc(x.articles), x.qte, esc(x.client), D(x.montant, x.dev)]), [1,3])
       : '<h3 class="rp-h">Acomptes</h3>' + vide('Aucun acompte reçu ' + CJ + '.')}
     ${T('Totaux', null, [
@@ -3223,8 +3230,6 @@ function htmlRapport(R){
     ${R.depenses.length ? T(R.unJour ? 'Dépenses du jour' : 'Dépenses de la période', ['Heure','Motif','Montant','Équivalent (taux)'], R.depenses.map(d => [d.heure, esc(d.motif), D(d.montant, d.dev), d.eq ? d.eq + ' <small>(' + D(d.taux,'FC') + ')</small>' : '–'])
         .concat([{ cls:'rp-tot', c:['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? D(R.dep['$'],'$') : '', R.dep.FC ? D(R.dep.FC,'FC') : ''].filter(Boolean).join(' + '), R.tx ? '≈ ' + D(R.depTot['$'],'$') + ' · ≈ ' + D(R.depTot.FC,'FC') : ''] }]), [2,3])
       : '<h3 class="rp-h">' + (R.unJour ? 'Dépenses du jour' : 'Dépenses de la période') + '</h3>' + vide('Aucune dépense ' + CJ + '.')}
-    ${R.transferts.length ? T('Transferts', ['N°','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.sens, esc(t.magasin), esc(t.articles) + (t.note ? ' – ' + esc(t.note) : ''), t.pieces]), [4])
-      : '<h3 class="rp-h">Transferts</h3>' + vide('Aucun transfert envoyé ou reçu ' + CJ + '.')}
     ${R.usine.length ? T('Réceptions de l’usine', ['N°','Articles','Pièces'], R.usine.map(u => [u.num, esc(u.articles) + (u.note ? ' – ' + esc(u.note) : ''), u.pieces]), [2]) : ''}
     <div class="rp-partie rp-saut">PARTIE 2 – TOUTES LES FACTURES (${R.factures.length})</div>
     ${R.factures.length ? R.factures.map(fc => `<div class="rp-fac"><div class="rp-fac-t"><b>Facture N° ${fc.num}</b> · ${esc(fc.quand)}</div>
