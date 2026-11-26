@@ -953,7 +953,9 @@
       <div id="r-dep-liste"></div>
       <div id="r-dep-form" style="margin-top:10px">
         <label style="margin-top:0">Motif de la dépense</label><input id="d-motif" placeholder="Ex : transport, nourriture, carburant, électricité…" list="d-motifs"><datalist id="d-motifs"></datalist>
-        <div class="row"><div><label>Montant</label><input id="d-montant" type="number" min="0" step="any" inputmode="decimal"></div><div><label>Devise</label><select id="d-dev"><option value="FC">FC (francs)</option><option value="$">$ (dollars)</option></select></div></div>
+        <div class="row"><div><label>Montant</label><input id="d-montant" type="number" min="0" step="any" inputmode="decimal" oninput="eqDepense()"></div><div><label>Devise</label><select id="d-dev" onchange="eqDepense()"><option value="FC">FC (francs)</option><option value="$">$ (dollars)</option></select></div></div>
+        <label>Taux du jour (FC pour 1 $)</label><input id="d-taux" type="number" min="1" step="any" inputmode="decimal" oninput="eqDepense()">
+        <div class="muted" id="d-eq" style="margin-top:4px;font-weight:700"></div>
         <label>Date et heure</label><input id="d-date" type="datetime-local" step="60">
         <button class="btn full" style="margin-top:10px" id="d-ok" onclick="enregistrerDepense()">➕ Ajouter la dépense</button>
         <button class="btn full alt hide" style="margin-top:8px" id="d-annuler" onclick="annulerEditionDepense()">Annuler la modification</button>
@@ -1154,7 +1156,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · dépenses du jour';
+const VERSION = '2026-11-26 · dépenses au taux du jour';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2142,35 +2144,48 @@ let mm = null;
 let depEdit = null;
 const depensesP = P => (db.depenses||[]).filter(d => dansP(d.date, P)).sort((a,b) => a.date.localeCompare(b.date));
 function totDep(L){ const t = { '$':0, FC:0 }; L.forEach(d => t[d.dev] = (t[d.dev]||0) + (+d.montant||0)); return t; }
+// Taux d'une dépense (taux du jour enregistré avec elle, sinon taux actuel) et équivalents
+const tauxDep = d => +d.taux || +db.taux || 0;
+const depEn = (d, dev) => d.dev===dev ? +d.montant||0 : (tauxDep(d) ? (dev==='$' ? (+d.montant||0) / tauxDep(d) : (+d.montant||0) * tauxDep(d)) : 0);
+const eqTxt = d => tauxDep(d) ? '≈ ' + fmtDev(depEn(d, d.dev==='$' ? 'FC' : '$'), d.dev==='$' ? 'FC' : '$') : '';
+// Total des dépenses converti entièrement en $ ou en FC (au taux de chaque dépense)
+const totDepEn = (L, dev) => L.reduce((s,d) => s + depEn(d, dev), 0);
+function eqDepense(){
+  const m = nombre($('d-montant').value), dev = $('d-dev').value, t = +$('d-taux').value || 0;
+  $('d-eq').textContent = m > 0 && t ? '≈ ' + fmtDev(dev==='$' ? m*t : m/t, dev==='$' ? 'FC' : '$') + ' au taux de ' + fmtDev(t,'FC') + ' pour 1 $' : (m > 0 ? 'Indiquez le taux du jour pour voir l’équivalent' : '');
+}
 function afficherDepenses(P){
   if(!$('r-dep-liste')) return;
   const L = depensesP(P), t = totDep(L);
   $('r-dep-titre').textContent = '💸 Dépenses ' + (P.unJour ? 'du jour' : 'de la période');
   $('r-dep').textContent = [t['$'] ? fmtDev(t['$'],'$') : '', t.FC ? fmtDev(t.FC,'FC') : ''].filter(Boolean).join(' + ') || '0';
   $('r-dep-liste').innerHTML = L.length ? L.map(d => `<div class="m-ligne"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(d.motif)}</b><b style="white-space:nowrap">${fmtDev(d.montant, d.dev)}</b></div>
-      <div class="muted" style="font-size:13px">${new Date(d.date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}</div>
+      <div class="muted" style="font-size:13px">${new Date(d.date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}${tauxDep(d) ? ' · ' + eqTxt(d) + ' (taux ' + fmtDev(tauxDep(d),'FC') + ')' : ''}</div>
       <div class="r-actions"><button class="btn small alt" onclick="editerDepense('${d.id}')">✏️ Modifier</button><button class="btn small alt" onclick="supprimerDepense('${d.id}')">✕ Supprimer</button></div></div>`).join('')
       + `<div style="text-align:right;font-weight:800;margin-top:8px">Total : ${[fmtDev(t['$'],'$'), fmtDev(t.FC,'FC')].join(' · ')}</div>`
+      + (db.taux || L.some(tauxDep) ? `<div class="muted" style="text-align:right;font-size:13px">soit ≈ ${fmtDev(totDepEn(L,'$'),'$')} ou ≈ ${fmtDev(totDepEn(L,'FC'),'FC')} au taux du jour</div>` : '')
     : '<div class="muted">Aucune dépense ' + (P.unJour ? 'ce jour' : 'sur cette période') + '.</div>';
   $('d-motifs').innerHTML = [...new Set((db.depenses||[]).map(d => d.motif))].slice(-30).map(m => `<option value="${esc(m)}">`).join('');
   if(!depEdit && document.activeElement !== $('d-date')) $('d-date').value = dateAjoutRapport();
+  if(!depEdit && document.activeElement !== $('d-taux')) $('d-taux').value = db.taux || '';
+  eqDepense();
 }
 function enregistrerDepense(){
-  const motif = $('d-motif').value.trim(), montant = nombre($('d-montant').value), dev = $('d-dev').value;
+  const motif = $('d-motif').value.trim(), montant = nombre($('d-montant').value), dev = $('d-dev').value, taux = +$('d-taux').value || 0;
   if(!motif){ $('d-motif').focus(); return toast('Indiquez le motif de la dépense'); }
   if(!(montant > 0)){ $('d-montant').focus(); return toast('Indiquez le montant'); }
   const d = $('d-date').value ? new Date($('d-date').value) : new Date();
   if(isNaN(d)) return toast('Date invalide');
   if(d > new Date(Date.now() + 6e4)) return toast('La date ne peut pas être dans le futur');
   db.depenses = db.depenses || [];
-  if(depEdit){ const x = db.depenses.find(e => e.id===depEdit); if(x){ x.modifs = (x.modifs||[]).concat([{ le:new Date().toISOString(), avant:{ motif:x.motif, montant:x.montant, dev:x.dev, date:x.date } }]); Object.assign(x, { motif, montant, dev, date:d.toISOString() }); } toast('Dépense modifiée'); }
-  else { db.depenses.push({ id:id(), date:d.toISOString(), motif, montant, dev }); toast('Dépense ajoutée : ' + fmtDev(montant, dev)); }
+  if(depEdit){ const x = db.depenses.find(e => e.id===depEdit); if(x){ x.modifs = (x.modifs||[]).concat([{ le:new Date().toISOString(), avant:{ motif:x.motif, montant:x.montant, dev:x.dev, date:x.date } }]); Object.assign(x, { motif, montant, dev, taux, date:d.toISOString() }); } toast('Dépense modifiée'); }
+  else { db.depenses.push({ id:id(), date:d.toISOString(), motif, montant, dev, taux }); toast('Dépense ajoutée : ' + fmtDev(montant, dev)); }
   depEdit = null; $('d-motif').value = ''; $('d-montant').value = ''; $('d-ok').textContent = '➕ Ajouter la dépense'; $('d-annuler').classList.add('hide');
   sauver(); if(modeRap==='jour') $('r-date').value = jour(d); rafraichir();
 }
 function editerDepense(did){
   const x = (db.depenses||[]).find(e => e.id===did); if(!x) return;
-  depEdit = did; $('d-motif').value = x.motif; $('d-montant').value = x.montant; $('d-dev').value = x.dev; $('d-date').value = versLocal(x.date);
+  depEdit = did; $('d-motif').value = x.motif; $('d-montant').value = x.montant; $('d-dev').value = x.dev; $('d-date').value = versLocal(x.date); $('d-taux').value = tauxDep(x) || ''; eqDepense();
   $('d-ok').textContent = '💾 Enregistrer la dépense'; $('d-annuler').classList.remove('hide'); $('d-motif').scrollIntoView({ behavior:'smooth', block:'center' });
 }
 function annulerEditionDepense(){ depEdit = null; $('d-motif').value = ''; $('d-montant').value = ''; $('d-ok').textContent = '➕ Ajouter la dépense'; $('d-annuler').classList.add('hide'); afficherRapport(); }
@@ -2484,8 +2499,9 @@ function rapportWhatsApp(){
     + `💰 Chiffre ${P.unJour ? 'du jour' : 'de la période'} : *${argent(duJour.reduce((s,v)=>s+v.total,0))}*\n🏷️ Remises accordées : ${argent(duJour.reduce((s,v)=>s+remiseVente(v),0))}\n🧾 Ventes : ${duJour.length}\n📦 Articles vendus : ${duJour.reduce((s,v)=>s+v.lignes.reduce((a,l)=>a+l.qte,0),0)}\n📅 Chiffre du mois : ${argent(duMois.reduce((s,v)=>s+v.total,0))}\n💵 Encaissé en dollars : ${fmtDev(encaisse(duJour)['$'],'$')}\n💴 Encaissé en francs : ${fmtDev(encaisse(duJour).FC,'FC')}\n⏳ Acomptes reçus : ${fmtDev(versementsP(P)['$'],'$')}${versementsP(P).FC ? ' + ' + fmtDev(versementsP(P).FC,'FC') : ''}\n💸 Dépenses : ${fmtDev(totDep(depensesP(P))['$'],'$')} + ${fmtDev(totDep(depensesP(P)).FC,'FC')}\n📋 Acomptes en cours : ${(db.acomptes||[]).filter(a=>a.statut==='en cours').length} (reste ${argent((db.acomptes||[]).filter(a=>a.statut==='en cours').reduce((s,a)=>s+resteAcompte(a),0))})`
     + (Object.keys(parPaie).length ? '\n\n*Par paiement*\n' + Object.entries(parPaie).map(([k,x]) => `• ${k} : ${argent(x)}`).join('\n') : '')
     + (duJour.length ? '\n\n*Ventes*\n' + duJour.map(v => `• ${P.unJour ? '' : new Date(v.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' '}${new Date(v.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${v.lignes.map(l=>l.qte+' × '+l.nom).join(', ')} : ${argent(v.total)}`).join('\n') : '')
-    + (depensesP(P).length ? '\n\n💸 *Dépenses ' + (P.unJour ? 'du jour' : 'de la période') + '*\n' + depensesP(P).map(d => `• ${P.unJour ? '' : new Date(d.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' '}${new Date(d.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${d.motif} : ${fmtDev(d.montant, d.dev)}`).join('\n')
-        + `\n*Total des dépenses : ${fmtDev(totDep(depensesP(P))['$'],'$')} + ${fmtDev(totDep(depensesP(P)).FC,'FC')}*\n💰 Reste en caisse : ${fmtDev(encaisse(duJour)['$'] + versementsP(P)['$'] - totDep(depensesP(P))['$'],'$')} · ${fmtDev(encaisse(duJour).FC + versementsP(P).FC - totDep(depensesP(P)).FC,'FC')}` : '\n\n💸 Aucune dépense ' + (P.unJour ? 'ce jour' : 'sur cette période'))
+    + (depensesP(P).length ? '\n\n💸 *Dépenses ' + (P.unJour ? 'du jour' : 'de la période') + '*\n' + depensesP(P).map(d => `• ${P.unJour ? '' : new Date(d.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' '}${new Date(d.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} – ${d.motif} : ${fmtDev(d.montant, d.dev)}${eqTxt(d) ? ' (' + eqTxt(d) + ')' : ''}`).join('\n')
+        + `\n*Total des dépenses : ${fmtDev(totDep(depensesP(P))['$'],'$')} + ${fmtDev(totDep(depensesP(P)).FC,'FC')}*${db.taux ? ` (≈ ${fmtDev(totDepEn(depensesP(P),'$'),'$')} au taux de ${fmtDev(db.taux,'FC')})` : ''}`
+        + `\n💰 Reste en caisse : ${fmtDev(encaisse(duJour)['$'] + versementsP(P)['$'] - totDep(depensesP(P))['$'],'$')} · ${fmtDev(encaisse(duJour).FC + versementsP(P).FC - totDep(depensesP(P)).FC,'FC')}` : '\n\n💸 Aucune dépense ' + (P.unJour ? 'ce jour' : 'sur cette période'))
     + (bas.length ? `\n\n⚠️ *À réapprovisionner (${bas.length})*\n` + bas.slice(0,15).map(p => `• ${p.nom} : ${p.stock}`).join('\n') + (bas.length>15 ? `\n… et ${bas.length-15} autres` : '') : '');
   const n = numeroWA(db.boutique.whatsapp);
   if(!n) toast('Astuce : ajoutez votre numéro WhatsApp dans Réglages → Reçus');
@@ -2982,14 +2998,17 @@ function donneesRapport(P){
   const factures = ventes.map(v => { const Pp = payeDe(v); return { num:numero(v), quand:new Date(v.date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}), client:v.client||'', paiement:v.acompte ? 'Acompte livré (déjà payé)' : (v.paiement||''),
     paye: v.acompte ? '' : fmtDev(Pp.montant, Pp.dev), total:v.total, remise:remiseVente(v), echange:!!v.echange,
     lignes:v.lignes.map(l => ({ nom:l.nom + (l.desc ? ' (' + l.desc + ')' : ''), qte:l.qte, base:l.prixBase ?? l.prix, taux:l.remise||0, prix:l.prix, montant:Math.round(l.qte*l.prix*100)/100 })) }; });
-  const depenses = depensesP(P).map(d => ({ heure:heure(d.date), motif:d.motif, montant:+d.montant||0, dev:d.dev })), dep = totDep(depenses);
+  const depL = depensesP(P), depenses = depL.map(d => ({ heure:heure(d.date), motif:d.motif, montant:+d.montant||0, dev:d.dev, taux:tauxDep(d), eq:eqTxt(d) })), dep = totDep(depenses);
+  const depTot = { '$': Math.round(totDepEn(depL,'$')*100)/100, FC: Math.round(totDepEn(depL,'FC')) };
+  const tx = +db.taux || 0, recuEn$ = tx ? tot['$'] + tot.FC / tx : null;
+  const resteGlobal = tx ? { '$': Math.round((recuEn$ - depTot['$'])*100)/100, FC: Math.round(recuEn$*tx - depTot.FC) } : null;
   const reste = { '$': Math.round((tot['$'] - dep['$'])*100)/100, FC: Math.round(tot.FC - dep.FC) };
-  return { j:P.cle, unJour:P.unJour, date:(P.unJour ? 'du ' : '') + P.lib, recus, articles, detail, acomptes, factures, depenses, dep, reste, argentV, argentA, tot, modes, versements, devises, transferts, usine,
+  return { j:P.cle, unJour:P.unJour, date:(P.unJour ? 'du ' : '') + P.lib, recus, articles, detail, acomptes, factures, depenses, dep, reste, depTot, resteGlobal, tx, argentV, argentA, tot, modes, versements, devises, transferts, usine,
     ca: ventes.reduce((s,v)=>s+v.total,0), nbArt: articles.reduce((s,a)=>s+a.qte,0), remises, totRemise, avantRemise: ventes.reduce((s,v)=>s+v.total,0) + totRemise };
 }
 // Montant des remises d'une vente (prix normal − prix remisé)
 const remiseVente = v => Math.round(v.lignes.reduce((s,l) => s + (l.remise && l.prixBase > l.prix ? (l.prixBase - l.prix) * l.qte : 0), 0) * 100) / 100;
-const txtPdf = t => String(t ?? '').replace(/[\u202f\u00a0]/g,' ').replace(/[\u2212\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[^\x00-\xff€]/g,'');
+const txtPdf = t => String(t ?? '').replace(/≈/g,'~').replace(/[\u202f\u00a0]/g,' ').replace(/[\u2212\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[^\x00-\xff€]/g,'');
 const nbDev = (x, dev) => txtPdf(fmtDev(x, dev));
 function blobRapportPDF(R){
   const CJ = R.unJour ? 'ce jour' : 'sur cette période';
@@ -3021,11 +3040,14 @@ function blobRapportPDF(R){
   table(['Total', 'Montant'], [['Total des prix sans remise', argent(R.avantRemise)], ['Total des remises', R.totRemise ? '- ' + argent(R.totRemise) : '0'], [(R.unJour ? 'Chiffre du jour' : 'Chiffre de la période') + ' (après remises)', argent(R.ca)],
       ['ARGENT REÇU EN DOLLARS ($)', nbDev(R.tot['$'],'$')], ['ARGENT REÇU EN FRANCS CONGOLAIS (FC)', nbDev(R.tot.FC,'FC')], ['Dont acomptes', [R.argentA['$'] ? nbDev(R.argentA['$'],'$') : '', R.argentA.FC ? nbDev(R.argentA.FC,'FC') : ''].filter(Boolean).join(' + ') || '0'],
       ['Dépenses en dollars ($)', R.dep['$'] ? '- ' + nbDev(R.dep['$'],'$') : '0 $'], ['Dépenses en francs congolais (FC)', R.dep.FC ? '- ' + nbDev(R.dep.FC,'FC') : '0 FC'],
-      ['RESTE EN CAISSE ($)', nbDev(R.reste['$'],'$')], ['RESTE EN CAISSE (FC)', nbDev(R.reste.FC,'FC')]],
-    { columnStyles:{ 0:{ fontStyle:'bold', cellWidth:110 }, 1:R2 }, didParseCell: d => { if(d.section==='body' && [3,4,8,9].includes(d.row.index)){ d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = [223,230,243]; } } });
+      ...(R.depenses.length && R.tx ? [['Total des dépenses converti au taux du jour', '≈ ' + nbDev(R.depTot['$'],'$') + ' · ≈ ' + nbDev(R.depTot.FC,'FC')]] : []),
+      ['RESTE EN CAISSE ($)', nbDev(R.reste['$'],'$')], ['RESTE EN CAISSE (FC)', nbDev(R.reste.FC,'FC')],
+      ...(R.resteGlobal ? [['RESTE TOTAL au taux du jour (1 $ = ' + nbDev(R.tx,'FC') + ')', '≈ ' + nbDev(R.resteGlobal['$'],'$') + ' · ≈ ' + nbDev(R.resteGlobal.FC,'FC')]] : [])],
+    { columnStyles:{ 0:{ fontStyle:'bold', cellWidth:110 }, 1:R2 }, didParseCell: d => { if(d.section==='body' && (/^(ARGENT|RESTE)/.test(String(d.row.raw[0])))){ d.cell.styles.fontStyle = 'bold'; d.cell.styles.fillColor = [223,230,243]; } } });
   titre(R.unJour ? 'Dépenses du jour' : 'Dépenses de la période');
-  if(R.depenses.length) table(['Heure','Motif','Montant'], R.depenses.map(d => [d.heure, d.motif, nbDev(d.montant, d.dev)]).concat([['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? nbDev(R.dep['$'],'$') : '', R.dep.FC ? nbDev(R.dep.FC,'FC') : ''].filter(Boolean).join(' + ')]]),
-    { columnStyles:{ 0:{cellWidth:30}, 2:{ ...R2, cellWidth:40 } }, didParseCell: d => tot(d, R.depenses.length) });
+  if(R.depenses.length) table(['Heure','Motif','Montant','Équivalent (taux)'], R.depenses.map(d => [d.heure, d.motif, nbDev(d.montant, d.dev), d.eq ? txtPdf(d.eq.replace('≈','~')) + ' (' + nbDev(d.taux,'FC') + ')' : '-'])
+      .concat([['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? nbDev(R.dep['$'],'$') : '', R.dep.FC ? nbDev(R.dep.FC,'FC') : ''].filter(Boolean).join(' + '), R.tx ? '~ ' + nbDev(R.depTot['$'],'$') + ' · ~ ' + nbDev(R.depTot.FC,'FC') : '']]),
+    { columnStyles:{ 0:{cellWidth:22}, 2:{ ...R2, cellWidth:34 }, 3:{ ...R2, cellWidth:52 } }, didParseCell: d => tot(d, R.depenses.length) });
   else table(['Dépenses'], [['Aucune dépense ' + CJ + '.']]);
   titre('Transferts');
   if(R.transferts.length) table(['N°','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.sens, t.magasin, t.articles + (t.note ? ' – ' + t.note : ''), String(t.pieces)]), { columnStyles:{ 0:{cellWidth:26}, 1:{cellWidth:18}, 4:{ ...R2, cellWidth:14 } } });
@@ -3060,8 +3082,9 @@ function blobRapportXLSX(R){
     .concat(R.acomptes.length ? R.acomptes.map(x => [x.articles, x.qte, x.client, x.montant, x.dev]) : [['Aucun acompte ' + CJ]])
     .concat([[], ['TOTAUX'], ['Total des prix sans remise' + dv, r2(R.avantRemise)], ['Total des remises' + dv, R.totRemise], [(R.unJour ? 'Chiffre du jour' : 'Chiffre de la période') + ' après remises' + dv, r2(R.ca)],
       ['Argent reçu en dollars ($)', R.tot['$']], ['Argent reçu en francs (FC)', R.tot.FC], ['Dont acomptes ($)', R.argentA['$']], ['Dont acomptes (FC)', R.argentA.FC],
-      ['Dépenses ($)', R.dep['$']], ['Dépenses (FC)', R.dep.FC], ['Reste en caisse ($)', R.reste['$']], ['Reste en caisse (FC)', R.reste.FC]])
-    .concat(R.depenses.length ? [[], ['DÉPENSES'], ['Heure','Motif','Montant','Devise']].concat(R.depenses.map(d => [d.heure, d.motif, d.montant, d.dev])) : [])
+      ['Dépenses ($)', R.dep['$']], ['Dépenses (FC)', R.dep.FC], ['Total dépenses converti en $', R.depTot['$']], ['Total dépenses converti en FC', R.depTot.FC],
+      ['Reste en caisse ($)', R.reste['$']], ['Reste en caisse (FC)', R.reste.FC], ['Reste total au taux du jour ($)', R.resteGlobal ? R.resteGlobal['$'] : ''], ['Reste total au taux du jour (FC)', R.resteGlobal ? R.resteGlobal.FC : ''], ['Taux du jour (FC pour 1 $)', R.tx || '']])
+    .concat(R.depenses.length ? [[], ['DÉPENSES'], ['Heure','Motif','Montant','Devise','Taux','Équivalent $','Équivalent FC']].concat(R.depenses.map(d => [d.heure, d.motif, d.montant, d.dev, d.taux || '', d.taux ? Math.round((d.dev==='$' ? d.montant : d.montant/d.taux)*100)/100 : '', d.taux ? Math.round(d.dev==='FC' ? d.montant : d.montant*d.taux) : ''])) : [])
     .concat([[], ['TRANSFERTS'], ['N°','Sens','Magasin','Articles','Pièces','Note']])
     .concat(R.transferts.length ? R.transferts.map(t => [t.num, t.sens, t.magasin, t.articles, t.pieces, t.note]) : [['Aucun transfert ' + CJ]])
     .concat(R.usine.length ? [[], ['RÉCEPTIONS DE L\'USINE'], ['N°','Articles','Pièces','Note']].concat(R.usine.map(u => [u.num, u.articles, u.pieces, u.note])) : []);
@@ -3165,9 +3188,11 @@ function htmlRapport(R){
       { cls:'rp-tot', c:['ARGENT REÇU EN FRANCS CONGOLAIS (FC)', D(R.tot.FC,'FC')] },
       ['Dont acomptes', [R.argentA['$'] ? D(R.argentA['$'],'$') : '', R.argentA.FC ? D(R.argentA.FC,'FC') : ''].filter(Boolean).join(' + ') || '0'],
       ['Dépenses en dollars ($)', R.dep['$'] ? '− ' + D(R.dep['$'],'$') : '0 $'], ['Dépenses en francs congolais (FC)', R.dep.FC ? '− ' + D(R.dep.FC,'FC') : '0 FC'],
-      { cls:'rp-tot', c:['RESTE EN CAISSE ($)', D(R.reste['$'],'$')] }, { cls:'rp-tot', c:['RESTE EN CAISSE (FC)', D(R.reste.FC,'FC')] }], [])}
-    ${R.depenses.length ? T(R.unJour ? 'Dépenses du jour' : 'Dépenses de la période', ['Heure','Motif','Montant'], R.depenses.map(d => [d.heure, esc(d.motif), D(d.montant, d.dev)])
-        .concat([{ cls:'rp-tot', c:['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? D(R.dep['$'],'$') : '', R.dep.FC ? D(R.dep.FC,'FC') : ''].filter(Boolean).join(' + ')] }]), [2])
+      ...(R.depenses.length && R.tx ? [['Total des dépenses converti au taux du jour', '≈ ' + D(R.depTot['$'],'$') + ' · ≈ ' + D(R.depTot.FC,'FC')]] : []),
+      { cls:'rp-tot', c:['RESTE EN CAISSE ($)', D(R.reste['$'],'$')] }, { cls:'rp-tot', c:['RESTE EN CAISSE (FC)', D(R.reste.FC,'FC')] },
+      ...(R.resteGlobal ? [{ cls:'rp-tot', c:['RESTE TOTAL au taux du jour (1 $ = ' + D(R.tx,'FC') + ')', '≈ ' + D(R.resteGlobal['$'],'$') + ' · ≈ ' + D(R.resteGlobal.FC,'FC')] }] : [])], [])}
+    ${R.depenses.length ? T(R.unJour ? 'Dépenses du jour' : 'Dépenses de la période', ['Heure','Motif','Montant','Équivalent (taux)'], R.depenses.map(d => [d.heure, esc(d.motif), D(d.montant, d.dev), d.eq ? d.eq + ' <small>(' + D(d.taux,'FC') + ')</small>' : '–'])
+        .concat([{ cls:'rp-tot', c:['', 'TOTAL DES DÉPENSES', [R.dep['$'] ? D(R.dep['$'],'$') : '', R.dep.FC ? D(R.dep.FC,'FC') : ''].filter(Boolean).join(' + '), R.tx ? '≈ ' + D(R.depTot['$'],'$') + ' · ≈ ' + D(R.depTot.FC,'FC') : ''] }]), [2,3])
       : '<h3 class="rp-h">' + (R.unJour ? 'Dépenses du jour' : 'Dépenses de la période') + '</h3>' + vide('Aucune dépense ' + CJ + '.')}
     ${R.transferts.length ? T('Transferts', ['N°','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.sens, esc(t.magasin), esc(t.articles) + (t.note ? ' – ' + esc(t.note) : ''), t.pieces]), [4])
       : '<h3 class="rp-h">Transferts</h3>' + vide('Aucun transfert envoyé ou reçu ' + CJ + '.')}
