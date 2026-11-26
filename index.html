@@ -334,6 +334,12 @@
   .fa-cadres>div{background:#f3f5fa;border:1px solid #dde3ee;padding:12px 14px;font-size:12.5px;line-height:1.7}
   .fa-cadres h4{margin:0 0 4px;color:#22307a;font-size:13px;letter-spacing:.02em}
   .fa-table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .rp .rp-h{color:#22307a;font-size:15px;margin:16px 0 6px}
+  .rp .fa-table{font-size:11.5px}.rp .fa-table td,.rp .fa-table th{padding:6px 7px}
+  .rp .rp-res td:first-child{width:58%}.rp .rp-res td:last-child{text-align:right}.rp .rp-res{border-top:2px solid #22307a}
+  .rp tr.rp-tot td{background:#dfe6f3;font-weight:800}
+  .rp .rp-vide{color:#555;font-style:italic;margin:4px 0}
+  #apercu .feuille.a4 .rp{overflow-x:auto}
   .fa-table th, html.ios .fa-table th{background:#22307a;color:#fff!important;text-align:left;padding:9px 10px;font-weight:700;text-transform:none;letter-spacing:0;font-size:12.5px}
   .fa-table td{padding:9px 10px;border-bottom:1px solid #e3e7ef;color:#1f2a44;vertical-align:top}
   .fa-table small{color:#667}
@@ -879,7 +885,7 @@
         <button class="btn full btn-ok" style="margin-top:8px" onclick="okDateRapport()">OK – afficher cette période</button></div>
       <div class="chips" style="padding-bottom:4px"><button class="chip" onclick="raccourciRapport('auj')">Aujourd’hui</button><button class="chip" onclick="raccourciRapport('hier')">Hier</button><button class="chip" onclick="raccourciRapport('semaine')">Cette semaine</button><button class="chip" onclick="raccourciRapport('mois')">Ce mois</button><button class="chip" onclick="raccourciRapport('moisPrec')">Mois dernier</button></div>
       <div id="r-lib" style="font-weight:700;margin-top:4px"></div>
-      <button class="btn full" style="margin-top:10px" onclick="voirDetailRapport()">📋 Voir et modifier ce rapport ⬇️</button>
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="ouvrirApercuRapport()">🖨️ Afficher / imprimer / envoyer</button><button class="btn alt" onclick="voirDetailRapport()">✏️ Modifier ⬇️</button></div>
       <div id="r-bloc-deplacer" style="margin-top:10px">
         <details><summary style="cursor:pointer;font-weight:700">📅 Changer la date de tout ce rapport</summary>
           <div class="muted" style="margin:8px 0 4px">Toutes les opérations de ce jour (ventes, acomptes, échanges, transferts, entrées) passent à la nouvelle date, à la même heure. Le stock ne change pas.</div>
@@ -1091,19 +1097,28 @@
 </div>
 <div id="apercu" class="hide" onclick="if(event.target===this)fermerRecu()">
   <div class="feuille" id="apercu-feuille">
+    <div id="apercu-rap-haut" class="hide" style="margin-bottom:14px">
+      <div class="row"><button class="btn alt" onclick="fermerRecu()">✕ Fermer</button><button class="btn" onclick="imprimerRecu()">🖨️ Imprimer</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn wa" onclick="partagerRapport('pdf')">📲 WhatsApp PDF</button><button class="btn wa" onclick="partagerRapport('xlsx')">📲 WhatsApp Excel</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn alt" onclick="partagerRapport('pdf','mail')">✉️ Mail PDF</button><button class="btn alt" onclick="partagerRapport('xlsx','mail')">✉️ Mail Excel</button></div>
+    </div>
     <div id="apercu-contenu"></div>
     <div class="row" style="margin-top:14px">
       <button class="btn alt" onclick="fermerRecu()">Fermer</button>
       <button class="btn" onclick="imprimerRecu()">🖨️ Imprimer</button>
     </div>
-    <button class="btn full wa" onclick="recuWhatsApp()">📲 Envoyer sur WhatsApp</button>
+    <button class="btn full wa" id="apercu-wa" onclick="recuWhatsApp()">📲 Envoyer sur WhatsApp</button>
+    <div id="apercu-rap" class="hide">
+      <div class="row" style="margin-top:8px"><button class="btn wa" onclick="partagerRapport('pdf')">📲 WhatsApp (PDF)</button><button class="btn wa" onclick="partagerRapport('xlsx')">📲 WhatsApp (Excel)</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn alt" onclick="partagerRapport('pdf','mail')">✉️ Mail (PDF)</button><button class="btn alt" onclick="partagerRapport('xlsx','mail')">✉️ Mail (Excel)</button></div>
+    </div>
   </div>
 </div>
 <div id="recu"></div>
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · bouton OK date';
+const VERSION = '2026-11-26 · aperçu rapport';
 const NUM_GERANT = '+243 810 288 890';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
@@ -2332,8 +2347,9 @@ function voirRecu(vid){
   $('apercu-contenu').innerHTML = htmlRecu(v, f);
   $('apercu').classList.remove('hide');
 }
-function fermerRecu(){ $('apercu').classList.add('hide'); recuOuvert=null; acompteOuvert=null; echangeOuvert=null; transfertOuvert=null; receptionOuverte=null; }
+function fermerRecu(){ $('apercu').classList.add('hide'); rapportOuvert=null; $('apercu-rap').classList.add('hide'); $('apercu-rap-haut').classList.add('hide'); $('apercu-wa').textContent='📲 Envoyer sur WhatsApp'; recuOuvert=null; acompteOuvert=null; echangeOuvert=null; transfertOuvert=null; receptionOuverte=null; }
 function imprimerRecu(){
+  if(rapportOuvert){ $('recu').innerHTML = htmlRapport(donneesRapport(rapportOuvert)); $('page-print').textContent = '@page{size:A4;margin:12mm}'; return window.print(); }
   if(receptionOuverte && !recuOuvert){ const b = bonsUsine().find(x => x.bon===receptionOuverte); if(!b) return;
     $('recu').innerHTML = htmlReception(b); $('page-print').textContent = '@page{size:A4;margin:15mm}'; return window.print(); }
   if(transfertOuvert && !recuOuvert){ const t = (db.transferts||[]).find(x => x.id===transfertOuvert); if(!t) return;
@@ -2371,6 +2387,7 @@ function texteRecu(v){
     + (b.adresse ? `\n\n${b.nom} – ${b.adresse}` : '') + (b.tel ? `\nTél : ${b.tel}` : '') + (b.message ? `\n${b.message}` : '');
 }
 function recuWhatsApp(){
+  if(rapportOuvert) return rapportWhatsApp();
   if(receptionOuverte && !recuOuvert){ const b = bonsUsine().find(x => x.bon===receptionOuverte); if(b) ouvrirWA('', texteReception(b)); return; }
   if(transfertOuvert && !recuOuvert){ const t = (db.transferts||[]).find(x => x.id===transfertOuvert); if(t) ouvrirWA('', texteTransfert(t)); return; }
   if(echangeOuvert && !recuOuvert){ const e = (db.echanges||[]).find(x => x.id===echangeOuvert); if(e) ouvrirWA(numeroWA((String(e.client).match(/\+?\d[\d\s.-]{7,}\d/)||[''])[0]), texteEchange(e)); return; }
@@ -2953,24 +2970,25 @@ function blobRapportXLSX(R){
     .concat(R.usine.length ? R.usine.map(u => [u.num, u.heure, u.articles, u.pieces, u.note]) : [['Aucune réception de l\'usine ' + CJ]]), [16,7,12,18,60,8,20]);
   return new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
-async function partagerRapport(format){
-  const R = donneesRapport(periodeRapport());
+async function partagerRapport(format, canal){
+  const R = donneesRapport(rapportOuvert || periodeRapport());
   const nom = 'Kevmag-rapport-' + R.j + (format==='pdf' ? '.pdf' : '.xlsx');
   let blob;
   try{
     if(format==='pdf'){ await Promise.all([chargerPDF(), chargerLogo()]); blob = blobRapportPDF(R); }
     else { await chargerXLSX(); blob = blobRapportXLSX(R); }
   }catch(err){ console.error(err); return toast('Il faut internet pour préparer le fichier'); }
-  return partagerFichier(blob, nom, `${db.boutique.nom} – Rapport ${R.date}`);
+  return partagerFichier(blob, nom, `${db.boutique.nom} – Rapport ${R.date}`, canal);
 }
-async function partagerFichier(blob, nom, texte){
+async function partagerFichier(blob, nom, texte, canal){
   const fichier = new File([blob], nom, { type: blob.type });
   if(navigator.canShare && navigator.canShare({ files:[fichier] })){
     try{ await navigator.share({ files:[fichier], title:texte, text:texte }); return; }
     catch(err){ if(err && err.name==='AbortError') return; }
   }
-  // Pas de partage de fichier possible : on télécharge le fichier et on ouvre WhatsApp
+  // Pas de partage de fichier possible : on télécharge le fichier et on ouvre WhatsApp (ou la messagerie)
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; a.click();
+  if(canal==='mail'){ toast('Fichier téléchargé : joignez-le au mail (📎)'); setTimeout(() => { location.href = 'mailto:?subject=' + encodeURIComponent(texte) + '&body=' + encodeURIComponent(texte + '\n\n(fichier joint : ' + nom + ')'); }, 1200); return; }
   toast('Fichier téléchargé : joignez-le dans WhatsApp (📎)');
   setTimeout(() => ouvrirWA(numeroWA(db.boutique.whatsapp), texte + ' (fichier joint)'), 1200);
 }
@@ -3009,8 +3027,50 @@ function modeRapport(m){
   if(m==='periode' && !$('r-du').value){ const j = $('r-date').value || jour(new Date()); $('r-du').value = j.slice(0,8) + '01'; $('r-au').value = j; }
   afficherRapport();
 }
-// Bouton OK après le choix de la date : affiche le rapport et descend jusqu'au détail
-function okDateRapport(){ document.activeElement && document.activeElement.blur && document.activeElement.blur(); afficherRapport(); voirDetailRapport(); }
+// Bouton OK après le choix de la date : affiche le rapport recherché (aperçu à imprimer / envoyer), puis le détail modifiable
+function okDateRapport(){ document.activeElement && document.activeElement.blur && document.activeElement.blur(); afficherRapport(); voirDetailRapport(); ouvrirApercuRapport(); }
+let rapportOuvert = null;
+function ouvrirApercuRapport(){
+  const P = periodeRapport(); rapportOuvert = P;
+  recuOuvert = null; acompteOuvert = null; echangeOuvert = null; transfertOuvert = null; receptionOuverte = null;
+  $('apercu-feuille').classList.add('a4');
+  $('apercu-contenu').innerHTML = htmlRapport(donneesRapport(P));
+  $('apercu-rap').classList.remove('hide'); $('apercu-rap-haut').classList.remove('hide'); $('apercu-wa').textContent = '📲 WhatsApp (message texte)';
+  $('apercu').classList.remove('hide'); $('apercu').scrollTop = 0;
+}
+// Rapport en page A4 (aperçu et impression), mêmes données que le PDF / Excel
+function htmlRapport(R){
+  const T = (titre, head, rows, num=[]) => `<h3 class="rp-h">${titre}</h3><table class="fa-table${head ? '' : ' rp-res'}">${head ? `<thead><tr>${head.map((h,i) => `<th${num.includes(i)?' class="n"':''}>${h}</th>`).join('')}</tr></thead>` : ''}<tbody>${rows.map(r => `<tr${r.cls?` class="${r.cls}"`:''}>${(r.c||r).map((c,i) => `<td${num.includes(i)?' class="n"':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const vide = t => `<p class="rp-vide">${t}</p>`, CJ = R.unJour ? 'ce jour' : 'sur cette période', D = (x,d) => fmtDev(x,d);
+  const sousTitre = R.date.replace(/^du /,''), nbEnv = R.transferts.filter(t=>t.sens==='Envoyé à').length, nbRec = R.transferts.length - nbEnv;
+  return `<div class="fa rp">${enteteFa()}
+    <div class="fa-total" style="margin-bottom:12px"><span>${R.unJour ? 'RAPPORT DU JOUR' : 'RAPPORT DE LA PÉRIODE'} – ${esc(sousTitre.charAt(0).toUpperCase() + sousTitre.slice(1))}</span></div>
+    ${T('Résumé', null, [
+      ['Ventes au prix normal (avant remises)', argent(R.avantRemise)],
+      ['Remises accordées', R.totRemise ? '− ' + argent(R.totRemise) + ' (' + R.remises.length + ' article' + (R.remises.length>1?'s':'') + ')' : 'Aucune remise'],
+      ['<b>' + (R.unJour ? 'Chiffre du jour' : 'Chiffre de la période') + ' (après remises)</b>', '<b>' + argent(R.ca) + '</b>'],
+      ['Nombre de ventes', R.recus.length], ['Articles vendus', R.nbArt],
+      ['Argent reçu en dollars', D(R.tot['$'],'$')], ['Argent reçu en francs congolais', D(R.tot.FC,'FC')], ['Devises reçues', esc(R.devises)],
+      ['Transferts envoyés / reçus', nbEnv + ' / ' + nbRec], ['Réceptions de l’usine', R.usine.length]], [])}
+    ${R.recus.length ? T('1. Ventes des articles', ['Reçu','Heure','Articles','Client','Paiement','Remise','Total','Payé'],
+        R.recus.map(r => [r.num, r.heure, esc(r.articles), esc(r.client), esc(r.paiement), r.remise ? '− ' + argent(r.remise) : '–', argent(r.total), r.montant ? D(r.montant, r.dev) : '–']), [5,6,7])
+      + T('Articles vendus', ['Article','Quantité','Montant'], R.articles.map(a => [esc(a.nom), a.qte, argent(a.montant)]).concat([{ cls:'rp-tot', c:['Total', R.nbArt, argent(R.ca)] }]), [1,2])
+      : '<h3 class="rp-h">1. Ventes des articles</h3>' + vide('Aucune vente ' + CJ + '.')}
+    ${R.remises.length ? T('Remises accordées', ['Reçu','Article','Qté','Taux','Prix normal','Prix remisé','Remise'],
+        R.remises.map(r => [r.num, esc(r.nom), r.qte, r.taux + ' %', argent(r.base), argent(r.prix), '− ' + argent(r.montant)]).concat([{ cls:'rp-tot', c:['', 'Total des remises', '', '', '', '', '− ' + argent(R.totRemise)] }]), [2,3,4,5,6])
+      : '<h3 class="rp-h">Remises accordées</h3>' + vide('Aucune remise accordée ' + CJ + '.')}
+    ${T('2. Argent reçu', ['Provenance','Dollars ($)','Francs congolais (FC)'], [['Ventes', D(R.argentV['$'],'$'), D(R.argentV.FC,'FC')], ['Acomptes versés', D(R.argentA['$'],'$'), D(R.argentA.FC,'FC')], { cls:'rp-tot', c:['TOTAL REÇU', D(R.tot['$'],'$'), D(R.tot.FC,'FC')] }], [1,2])}
+    <p style="margin:6px 0 0"><b>Devises reçues :</b> ${esc(R.devises)}${db.taux ? ' · taux : 1 $ = ' + D(db.taux,'FC') : ''}</p>
+    ${Object.keys(R.modes).length ? T('Par mode de paiement', ['Mode','Dollars ($)','Francs (FC)'], Object.entries(R.modes).map(([m,x]) => [esc(m), x['$'] ? D(x['$'],'$') : '–', x.FC ? D(x.FC,'FC') : '–']), [1,2]) : ''}
+    ${R.versements.length ? T('Versements d’acomptes', ['Acompte','Heure','Client','Mode','Versé'], R.versements.map(x => [x.num, x.heure, esc(x.client), esc(x.mode), D(x.montant, x.dev)]), [4]) : ''}
+    ${R.transferts.length ? T('3. Transferts', ['N°','Heure','Sens','Magasin','Articles','Pièces'], R.transferts.map(t => [t.num, t.heure, t.sens, esc(t.magasin), esc(t.articles) + (t.note ? ' – ' + esc(t.note) : ''), t.pieces]), [5])
+      : '<h3 class="rp-h">3. Transferts</h3>' + vide('Aucun transfert envoyé ou reçu ' + CJ + '.')}
+    ${R.usine.length ? T('Réceptions de l’usine', ['N°','Heure','Articles','Pièces'], R.usine.map(u => [u.num, u.heure, esc(u.articles) + (u.note ? ' – ' + esc(u.note) : ''), u.pieces]), [3])
+      : '<h3 class="rp-h">Réceptions de l’usine</h3>' + vide('Aucune réception de l’usine ' + CJ + '.')}
+    <div style="display:flex;justify-content:space-between;margin-top:26px;font-size:12.5px"><span>Établi par : ____________________</span><span>Signature : ______________</span></div>
+    <div class="fa-pied" style="margin-top:14px;text-align:center;font-size:10.5px;color:#888">Document généré par Kevmag · ${esc(db.boutique.nom)}</div>
+  </div>`;
+}
 function voirDetailRapport(){ const c = $('r-detail'); if(c) c.scrollIntoView({ behavior:'smooth', block:'start' }); }
 // Déplacer toutes les opérations d'un jour vers une autre date (même heure) : utile si la date du téléphone était fausse ou si un jour a été saisi le lendemain
 function deplacerRapport(){
@@ -3040,12 +3100,12 @@ function deplacerRapport(){
 function decalerRapport(n){ const d = new Date(($('r-date').value || jour(new Date())) + 'T12:00'); d.setDate(d.getDate() + n); $('r-date').value = jour(d); afficherRapport(); }
 function raccourciRapport(k){
   const n = new Date(), j = x => jour(x);
-  if(k==='auj' || k==='hier'){ const d = new Date(); if(k==='hier') d.setDate(d.getDate()-1); $('r-date').value = j(d); modeRapport('jour'); return voirDetailRapport(); }
+  if(k==='auj' || k==='hier'){ const d = new Date(); if(k==='hier') d.setDate(d.getDate()-1); $('r-date').value = j(d); modeRapport('jour'); voirDetailRapport(); return ouvrirApercuRapport(); }
   let a, b;
   if(k==='semaine'){ a = new Date(n); a.setDate(n.getDate() - (n.getDay()+6)%7); b = n; }
   else if(k==='mois'){ a = new Date(n.getFullYear(), n.getMonth(), 1); b = n; }
   else { a = new Date(n.getFullYear(), n.getMonth()-1, 1); b = new Date(n.getFullYear(), n.getMonth(), 0); }
-  $('r-du').value = j(a); $('r-au').value = j(b); modeRapport('periode');
+  $('r-du').value = j(a); $('r-au').value = j(b); modeRapport('periode'); voirDetailRapport(); ouvrirApercuRapport();
 }
 // Liste des jours où il y a eu des ventes, acomptes, transferts ou entrées (mois choisi)
 function afficherJoursActivite(){
@@ -3058,7 +3118,7 @@ function afficherJoursActivite(){
   (db.acomptes||[]).forEach(a => a.versements.forEach(x => add(x.date, 'ac')));
   const jours = Object.keys(J).sort().reverse(), P = periodeRapport();
   box.innerHTML = jours.length ? jours.map(j => { const o = J[j];
-    return `<button class="${P.unJour && P.d1===j ? 'on' : ''}" onclick="$('r-date').value='${j}';modeRapport('jour');voirDetailRapport()"><span><b>${esc(dateLongue(j))}</b><br><span class="muted" style="font-size:13px">${o.v} vente${o.v>1?'s':''}${o.ac ? ' · ' + o.ac + ' acompte' + (o.ac>1?'s':'') : ''}${o.tr ? ' · ' + o.tr + ' transfert' + (o.tr>1?'s':'') : ''}${o.en ? ' · entrée usine' : ''}</span></span><b style="white-space:nowrap">${argent(o.ca)}</b></button>`; }).join('')
+    return `<button class="${P.unJour && P.d1===j ? 'on' : ''}" onclick="$('r-date').value='${j}';modeRapport('jour');voirDetailRapport();ouvrirApercuRapport()"><span><b>${esc(dateLongue(j))}</b><br><span class="muted" style="font-size:13px">${o.v} vente${o.v>1?'s':''}${o.ac ? ' · ' + o.ac + ' acompte' + (o.ac>1?'s':'') : ''}${o.tr ? ' · ' + o.tr + ' transfert' + (o.tr>1?'s':'') : ''}${o.en ? ' · entrée usine' : ''}</span></span><b style="white-space:nowrap">${argent(o.ca)}</b></button>`; }).join('')
     : '<div class="muted">Aucune activité ce mois-ci.</div>';
 }
 function afficherRapport(){
