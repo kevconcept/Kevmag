@@ -808,8 +808,12 @@
         <button class="pill-sens" data-src="magasin" onclick="srcEn('magasin')">🏬 D'un autre magasin<small>enregistré aussi en transfert</small></button>
       </div>
       <div id="en-mag-ligne" class="hide"><label>Magasin d'origine</label><input id="en-mag" list="tr-mags" placeholder="Ex : Complast Limete" autocomplete="off"></div>
-      <button class="btn full" style="margin-top:12px" onclick="$('bl-fichier').click()">📷 Scanner le bon de livraison</button>
-      <input id="bl-fichier" type="file" accept="image/*" class="hide" onchange="scannerBL(this.files[0]);this.value=''">
+      <label>Bon de livraison de l’usine</label>
+      <div class="row"><button class="btn" style="margin-top:0" onclick="$('bl-fichier').click()">📷 Scanner (photo)</button>
+        <button class="btn alt" style="margin-top:0" onclick="$('bl-import').click()">📂 Importer un fichier</button></div>
+      <div class="muted" style="font-size:12.5px;margin-top:4px">Fichier accepté : Excel (.xlsx, .xls), PDF, CSV ou photo (JPG, PNG).</div>
+      <input id="bl-fichier" type="file" accept="image/*" capture="environment" class="hide" onchange="scannerBL(this.files[0]);this.value=''">
+      <input id="bl-import" type="file" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,image/*,application/pdf,text/csv" class="hide" onchange="importerBL(this.files[0]);this.value=''">
       <div id="bl-statut" class="muted hide" style="margin-top:6px;font-weight:700"></div>
       <label>Article</label>
       <input id="en-cherche" placeholder="Rechercher : nom, taille, D16, Bonheur…" oninput="filtrerEntree()" autocomplete="off">
@@ -1147,6 +1151,7 @@
     <div class="entete"><h2>📷 Bon de livraison scanné</h2><button class="btn small alt" onclick="fermerBL()">✕</button></div>
     <p class="muted" style="margin:0 0 6px">Vérifiez ce qui a été lu. Corrigez l’article ou la quantité de chaque ligne, retirez les lignes en trop, ajoutez celles qui manquent. Rien n’entre en stock avant votre validation.</p>
     <img id="bl-photo" alt="" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:#fff">
+    <div id="bl-source" class="muted" style="font-weight:700"></div>
     <label>N° du bon de livraison / note</label><input id="bl-num" placeholder="Ex : BL 2026-1234">
     <label>Articles lus</label>
     <div id="bl-lignes"></div>
@@ -1206,7 +1211,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · scan bon de livraison';
+const VERSION = '2026-11-26 · import bon de livraison';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -1567,10 +1572,11 @@ function validerEntree(){
 /* Scanner un bon de livraison de l'usine : lecture de la photo (Tesseract), puis vérification / correction avant d'ajouter à l'entrée */
 let blLignes = [];
 function blStatut(t){ const e = $('bl-statut'); if(t){ e.textContent = t; e.classList.remove('hide'); } else e.classList.add('hide'); }
-async function scannerBL(f){
+async function scannerBL(f, nom){
   if(!f) return;
   if(!navigator.onLine) return toast('Il faut internet pour lire la photo');
-  $('bl-photo').src = URL.createObjectURL(f);
+  $('bl-photo').src = URL.createObjectURL(f); $('bl-photo').classList.remove('hide'); $('bl-source').textContent = nom ? '📄 ' + nom : '';
+  $('bl-num').value = '';
   blStatut('📷 Préparation de la lecture…'); let w;
   try{
     await chargerOCR();
@@ -1592,6 +1598,61 @@ function lignesParHauteur(mots){
   const L = [];
   M.forEach(m => { const l = L.find(l => Math.abs(l.y - m.y) < hMed*0.6); if(l){ l.mots.push(m); l.y = (l.y*(l.mots.length-1) + m.y)/l.mots.length; } else L.push({ y:m.y, mots:[m] }); });
   return L.sort((a,b) => a.y - b.y).map(l => l.mots.sort((a,b) => a.x - b.x).map(m => m.t).join(' ')).join('\n');
+}
+// Importer le bon de livraison depuis un fichier : Excel / CSV (cellules), PDF (texte, ou lecture de l'image si PDF scanné), photo
+function ouvrirRevueBL(texte, nom){
+  $('bl-photo').classList.add('hide'); $('bl-photo').removeAttribute('src'); $('bl-source').textContent = '📄 ' + nom;
+  $('bl-num').value = ''; $('bl-texte').value = texte; blAnalyser(texte);
+  $('blv').classList.remove('hide'); $('blv').scrollTop = 0;
+}
+async function importerBL(f){
+  if(!f) return;
+  const nom = f.name || 'fichier', ext = (nom.match(/\.([a-z0-9]+)$/i) || [,''])[1].toLowerCase();
+  try{
+    if(/^image\//.test(f.type) || /^(jpe?g|png|heic|webp)$/.test(ext)) return scannerBL(f, nom);
+    if(ext==='pdf' || f.type==='application/pdf') return await importerPdfBL(f, nom);
+    if(['xlsx','xls','csv','ods','txt'].includes(ext)){
+      blStatut('📂 Lecture du fichier…');
+      await chargerXLSX();
+      const wb = ext==='csv' || ext==='txt' ? XLSX.read(await f.text(), { type:'string' }) : XLSX.read(await f.arrayBuffer(), { type:'array' });
+      const lignes = [];
+      wb.SheetNames.forEach(n => lignes.push(...lignesTableau(XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:'', raw:false }))));
+      blStatut(''); return ouvrirRevueBL(lignes.join('\n'), nom);
+    }
+    toast('Format non reconnu : Excel, PDF, CSV ou photo');
+  }catch(e){ console.error(e); blStatut(''); toast(navigator.onLine ? 'Impossible de lire ce fichier' : 'Il faut internet pour lire ce fichier'); }
+}
+// Lignes d'un tableau : si les colonnes « désignation » et « quantité » sont trouvées, on met « désignation … quantité » ; sinon toute la ligne
+function lignesTableau(rows){
+  rows = rows.map(r => r.map(c => String(c ?? '').trim())).filter(r => r.some(Boolean));
+  const ent = rows.findIndex(r => r.some(c => /qt[eé]|quantit|qty|pi[eè]ces?|nombre/i.test(c)) && r.some(c => /d[ée]signation|article|produit|libell|description|nom/i.test(c)));
+  if(ent < 0) return rows.map(r => r.filter(Boolean).join(' '));
+  const h = rows[ent], iQ = h.findIndex(c => /qt[eé]|quantit|qty|pi[eè]ces?|nombre/i.test(c));
+  const iD = h.map((c,i) => /d[ée]signation|article|produit|libell|description|nom|taille|dimension|mesure|densit|gamme|r[ée]f/i.test(c) ? i : -1).filter(i => i >= 0 && i !== iQ);
+  const avant = rows.slice(0, ent).map(r => r.filter(Boolean).join(' '));
+  return avant.concat(rows.slice(ent + 1).map(r => { const d = (iD.length ? iD : r.map((_,i) => i).filter(i => i !== iQ)).map(i => r[i]).filter(Boolean).join(' '); const q = String(r[iQ]||'').replace(/[^\d]/g,''); return d + (q ? ' ' + q : ''); }));
+}
+function chargerPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve();
+  return new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(); }; sc.onerror = ko; document.head.appendChild(sc); });
+}
+async function importerPdfBL(f, nom){
+  blStatut('📂 Lecture du PDF…');
+  await chargerPdfJs();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise, lignes = [];
+  for(let n = 1; n <= Math.min(pdf.numPages, 10); n++){
+    const pg = await pdf.getPage(n), tc = await pg.getTextContent();
+    const mots = tc.items.filter(it => it.str && it.str.trim()).map(it => ({ text:it.str, confidence:99, bbox:{ x0:it.transform[4], x1:it.transform[4] + (it.width||0), y0:-it.transform[5] - (it.height||10), y1:-it.transform[5] } }));
+    const t = lignesParHauteur(mots); if(t) lignes.push(t);
+  }
+  const texte = lignes.join('\n');
+  if(texte.replace(/\s/g,'').length >= 15){ blStatut(''); return ouvrirRevueBL(texte, nom); }
+  // PDF scanné (image sans texte) : on lit l'image de la première page
+  const pg = await pdf.getPage(1), vp = pg.getViewport({ scale:2.5 }), cv = document.createElement('canvas');
+  cv.width = vp.width; cv.height = vp.height; await pg.render({ canvasContext:cv.getContext('2d'), viewport:vp }).promise;
+  const blob = await new Promise(ok => cv.toBlob(ok, 'image/png'));
+  return scannerBL(blob, nom + ' (page 1 lue comme une photo)');
 }
 // Mesures d'une ligne de texte, ramenées en cm (190x90x20) pour comparer avec les articles
 function mesuresTexte(t){
