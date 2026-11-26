@@ -1137,7 +1137,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · en-tête rapport simple';
+const VERSION = '2026-11-26 · en-tête rapport + siège';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2922,9 +2922,9 @@ function blobRapportPDF(R){
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:'mm', format:'a4' }), b = db.boutique, BLEU = [34,48,122];
   if(logoDataURL) try{ doc.addImage(logoDataURL, 'PNG', 14, 10, 42, 16); }catch(_){}
   doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...BLEU); doc.text(txtPdf((b.nom||'').toUpperCase() + (R.unJour ? ' – RAPPORT DU JOUR' : ' – RAPPORT DE LA PÉRIODE')), 196, 16, { align:'right' });
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90); const sous = R.date.replace(/^du /, ''); doc.text([sous.charAt(0).toUpperCase() + sous.slice(1), 'WhatsApp : ' + (b.whatsapp || b.tel || NUM_GERANT) + '  ·  Gérant : ' + NOM_GERANT].map(txtPdf), 196, 22, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90); const sous = R.date.replace(/^du /, ''); doc.text([sous.charAt(0).toUpperCase() + sous.slice(1)].concat(b.adresse ? ['Siège social : ' + b.adresse] : [], ['WhatsApp : ' + (b.whatsapp || b.tel || NUM_GERANT) + '  ·  Gérant : ' + NOM_GERANT]).map(txtPdf), 196, 22, { align:'right' });
   const base = { theme:'grid', styles:{ font:'helvetica', fontSize:8.5, cellPadding:1.5, textColor:20, lineColor:[170,170,170], lineWidth:.15 }, headStyles:{ fillColor:BLEU, textColor:255, fontStyle:'bold' }, margin:{ left:14, right:14, bottom:16 } };
-  let y = 32;
+  let y = 36;
   const titre = t => { y = (doc.lastAutoTable && doc.lastAutoTable.finalY > y ? doc.lastAutoTable.finalY : y) + 8; if(y > 265){ doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...BLEU); doc.text(txtPdf(t), 14, y); y += 2; };
   const table = (head, body, opts={}) => { doc.autoTable({ ...base, startY:y, head:[head.map(txtPdf)], body: body.map(r => r.map(txtPdf)), ...opts }); y = doc.lastAutoTable.finalY; };
@@ -3064,7 +3064,7 @@ function htmlRapport(R){
   const vide = t => `<p class="rp-vide">${t}</p>`, CJ = R.unJour ? 'ce jour' : 'sur cette période', D = (x,d) => fmtDev(x,d);
   const sousTitre = R.date.replace(/^du /,''), nbEnv = R.transferts.filter(t=>t.sens==='Envoyé à').length, nbRec = R.transferts.length - nbEnv;
   const tel = db.boutique.whatsapp || db.boutique.tel || NUM_GERANT;
-  return `<div class="fa rp"><div class="rp-tete"><img src="logo.png" alt="" class="fa-logo"><div class="rp-contact"><b>WhatsApp :</b> ${esc(tel)}<br><b>Gérant :</b> ${esc(NOM_GERANT)}</div></div>
+  return `<div class="fa rp"><div class="rp-tete"><img src="logo.png" alt="" class="fa-logo"><div class="rp-contact">${db.boutique.adresse ? `<b>Siège social :</b> ${esc(db.boutique.adresse)}<br>` : ''}<b>WhatsApp :</b> ${esc(tel)}<br><b>Gérant :</b> ${esc(NOM_GERANT)}</div></div>
     <div class="fa-total" style="margin-bottom:12px"><span>${R.unJour ? 'RAPPORT DU JOUR' : 'RAPPORT DE LA PÉRIODE'} – ${esc(sousTitre.charAt(0).toUpperCase() + sousTitre.slice(1))}</span></div>
     ${T('Résumé', null, [
       ['Ventes au prix normal (avant remises)', argent(R.avantRemise)],
