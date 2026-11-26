@@ -539,6 +539,12 @@
   .r-recu.a4 table{font-size:14px}
   .r-recu.a4 td,.r-recu.a4 th{padding:6px 4px}
   .r-recu.a4 .tot td{font-size:18px}
+  #choix-stock{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:22;display:flex;align-items:flex-start;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #choix-stock.hide{display:none}
+  #cs-carte{width:100%;max-width:620px;margin:0;background:var(--card)}
+  html.ios #choix-stock #cs-carte{background:var(--barre);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+  #cs-liste .ok{color:var(--green);font-weight:700}#cs-liste .non{color:var(--red);font-weight:700}
+  .e-res{margin-bottom:6px}.e-res .e-avec{margin:2px 0 4px 54px}
   #blv{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:22;display:flex;align-items:flex-start;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   #blv.hide{display:none}
   #blv-carte{width:100%;max-width:620px;margin:0;background:var(--card)}
@@ -759,6 +765,7 @@
         <h3 class="e-h">2. Articles rapportés par le client</h3>
         <div id="e-rendus"></div>
         <h3 class="e-h">3. Nouveaux articles choisis</h3>
+        <button class="btn full" style="margin:0 0 8px" onclick="ouvrirChoixStock()">🔁 Échangé avec… (choisir dans le stock)</button>
         <input id="e-cherche-art" type="search" placeholder="Rechercher l’article en stock (2-3 lettres)…" oninput="chercherArtEch()" autocomplete="off">
         <div id="e-art-sugg" class="sugg-art"></div>
         <select id="e-prod" style="margin-top:6px"></select>
@@ -1155,6 +1162,15 @@
     <button class="btn full alt" id="m-annuler" style="margin-top:8px" onclick="const id=mv.id;fermerModif();annulerVente(id)">🗑️ Annuler toute la vente</button>
   </div>
 </div>
+<div id="choix-stock" class="hide" onclick="if(event.target===this)fermerChoixStock()">
+  <div class="card" id="cs-carte">
+    <div class="entete"><h2>🔁 Échangé avec…</h2><button class="btn small alt" onclick="fermerChoixStock()">✕</button></div>
+    <div id="cs-info" class="muted" style="margin-bottom:6px"></div>
+    <input id="cs-cherche" type="search" placeholder="Rechercher dans le stock (2-3 lettres)…" oninput="afficherChoixStock()" autocomplete="off">
+    <div class="chips" id="cs-cats"></div>
+    <div id="cs-liste" class="sugg-art" style="max-height:none"></div>
+  </div>
+</div>
 <div id="blv" class="hide">
   <div class="card" id="blv-carte">
     <div class="entete"><h2>📷 Bon de livraison scanné</h2><button class="btn small alt" onclick="fermerBL()">✕</button></div>
@@ -1220,7 +1236,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · recherche échange';
+const VERSION = '2026-11-26 · échangé avec';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2917,9 +2933,42 @@ function chercherVenteEch(){
     + res.slice(0, 30).map(p => boutonArticle(p, mots, `$('e-cherche').value=${esc(JSON.stringify(p.nom)).replace(/"/g,'&quot;')};chercherVenteEch()`)).join('') : '';
   const motsV = sansAccent(brut).split(/\s+/).filter(Boolean);
   const l = db.ventes.filter(v => { if(v.echange) return false; const t = sansAccent((v.client||'')+' '+numero(v)+' '+v.lignes.map(x=>x.nom + ' ' + (x.desc||'')).join(' ')); return motsV.every(m => t.includes(m)); }).slice(-8).reverse();
-  box.innerHTML = l.length ? l.map(v => `<button class="res" onclick="choisirVenteEch('${v.id}')"><i>🧾</i><span><b>Reçu n° ${numero(v)}${v.client?' · '+esc(v.client):''}</b><br><span class="muted">${new Date(v.date).toLocaleDateString('fr-FR')} · ${v.lignes.map(x=>esc(x.qte+' × '+x.nom)).join(', ')} · ${argent(v.total)}</span></span></button>`).join('')
+  box.innerHTML = l.length ? l.map(v => `<div class="e-res"><button class="res" onclick="choisirVenteEch('${v.id}')"><i>🧾</i><span><b>Reçu n° ${numero(v)}${v.client?' · '+esc(v.client):''}</b><br><span class="muted">${new Date(v.date).toLocaleDateString('fr-FR')} · ${v.lignes.map(x=>esc(x.qte+' × '+x.nom)).join(', ')} · ${argent(v.total)}</span></span></button>
+      <button class="btn small e-avec" onclick="echangerAvec('${v.id}')">🔁 Échangé avec…</button></div>`).join('')
     : '<p class="muted">Aucun achat trouvé.</p>';
   if(l.length) box.insertAdjacentHTML('afterbegin', '<div class="info muted" style="font-weight:700;font-size:13px;margin-top:8px">🧾 Achats correspondants (' + l.length + ')</div>');
+}
+// « Échangé avec… » : choisir l'achat, cocher l'article rapporté (celui cherché), puis choisir le nouvel article dans le stock
+function echangerAvec(vid){
+  const mots = sansAccent($('e-cherche').value).split(/\s+/).filter(Boolean);
+  choisirVenteEch(vid);
+  const v = db.ventes.find(x => x.id===vid); if(!v) return;
+  const libres = v.lignes.map((l,i) => ({ l, i, max:l.qte - (l.rendu||0) })).filter(x => x.max > 0);
+  const vis = libres.filter(x => mots.length && mots.every(m => sansAccent(x.l.nom + ' ' + (x.l.desc||'')).includes(m)));
+  (vis.length ? vis : libres.length===1 ? libres : []).forEach(x => ech.rendus[x.i] = 1);
+  afficherEch(); ouvrirChoixStock();
+}
+let csCat = 'Tous';
+function ouvrirChoixStock(){ if(!ech || !ech.vente) return toast('Choisissez d’abord l’achat du client'); $('cs-cherche').value = ''; csCat = 'Tous'; afficherChoixStock(); $('choix-stock').classList.remove('hide'); $('choix-stock').scrollTop = 0; }
+function fermerChoixStock(){ $('choix-stock').classList.add('hide'); }
+function afficherChoixStock(){
+  const { vr } = valeursEch(), q = $('cs-cherche').value;
+  $('cs-info').innerHTML = vr ? `Valeur de l’article rapporté : <b>${argent2(vr)}</b>. Choisissez un article de prix <b>égal ou supérieur</b> (le client paie la différence).` : 'Cochez d’abord l’article rapporté (étape 2) pour comparer les prix.';
+  const { mots, res } = q.replace(/\s/g,'').length >= 2 ? articlesCorrespondants(q) : { mots:[], res: db.produits.slice().sort(ordreProduit) };
+  const cats = ['Tous', ...CATS.filter(c => res.some(p => p.cat===c))];
+  if(!cats.includes(csCat)) csCat = 'Tous';
+  $('cs-cats').innerHTML = cats.map(c => `<button class="chip ${c===csCat?'on':''}" onclick="csCat='${c}';afficherChoixStock()">${c==='Tous' ? 'Tous' : (ICONES[c]||'') + ' ' + c}<small>${c==='Tous' ? res.length : res.filter(p => p.cat===c).length}</small></button>`).join('');
+  const L = res.filter(p => csCat==='Tous' || p.cat===csCat).slice(0, 150);
+  $('cs-liste').innerHTML = L.length ? L.map(p => { const pr = prixRemise(p.prix, remiseDe(p)), ok = !vr || pr >= vr - 0.005;
+      return `<button type="button" onclick="choisirEchangeStock('${p.id}')"><span>${surligner(p.nom, mots)}</span><br><span class="muted" style="font-size:13px">${details(p) ? esc(details(p)) + ' · ' : ''}${esc(p.cat)} · <b>stock ${p.stock}</b>${p.stock<=0 ? ' ⚠️' : ''} · ${p.prix ? argent2(pr) : 'sans prix'}</span>${vr && p.prix ? `<br><span class="${ok ? 'ok' : 'non'}" style="font-size:13px">${ok ? '✅ ' + (pr > vr + 0.005 ? 'le client paie ' + argent2(pr - vr) : 'même prix') : '❌ moins cher : échange refusé'}</span>` : ''}</button>`; }).join('')
+      + (res.length > 150 ? '<div class="info">… précisez la recherche pour voir les autres articles</div>' : '')
+    : '<div class="info">Aucun article.</div>';
+}
+function choisirEchangeStock(pid){
+  const p = db.produits.find(x => x.id===pid); if(!p) return;
+  if(p.stock <= 0 && !confirm(`Stock de ${p.nom} : ${p.stock}. Ajouter quand même ?`)) return;
+  const pc = remiseDe(p); ech.nouveaux.push({ pid:p.id, nom:p.nom, desc:details(p), qte:1, prixBase:p.prix, remise:pc, prix:prixRemise(p.prix, pc) });
+  fermerChoixStock(); afficherEch(); toast('✔ Échangé avec ' + p.nom); $('e-bilan').scrollIntoView({ behavior:'smooth', block:'center' });
 }
 function chercherArtEch(){
   const { mots, res } = articlesCorrespondants($('e-cherche-art').value), box = $('e-art-sugg');
