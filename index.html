@@ -309,6 +309,8 @@
     .gerant figcaption{font-size:8.5px;text-align:left}
   }
   /* En-tête réduit dans l'aperçu du rapport */
+  .rp .rp-tete{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:6px;margin-bottom:8px;border-bottom:1.5px solid #22307a}
+  .rp .rp-contact{text-align:right;font-size:11.5px;line-height:1.5}
   .rp .fa-tete{gap:12px;padding-bottom:2px}
   .rp .fa-logo{height:36px}
   .rp .fa-nom h1{font-size:17px}
@@ -1135,8 +1137,9 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · en-tête compact';
+const VERSION = '2026-11-26 · en-tête rapport simple';
 const NUM_GERANT = '+243 810 288 890';
+const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
 let db = { produits: [], ventes: [], acomptes: [], echanges: [], entrees: [], transferts: [], devise: '$', numRecu: 0, boutique: {...BOUTIQUE} };
 let panier = [];
@@ -2919,7 +2922,7 @@ function blobRapportPDF(R){
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:'mm', format:'a4' }), b = db.boutique, BLEU = [34,48,122];
   if(logoDataURL) try{ doc.addImage(logoDataURL, 'PNG', 14, 10, 42, 16); }catch(_){}
   doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...BLEU); doc.text(txtPdf((b.nom||'').toUpperCase() + (R.unJour ? ' – RAPPORT DU JOUR' : ' – RAPPORT DE LA PÉRIODE')), 196, 16, { align:'right' });
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90); const sous = R.date.replace(/^du /, ''); doc.text([sous.charAt(0).toUpperCase() + sous.slice(1), b.adresse||''].map(txtPdf), 196, 22, { align:'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90); const sous = R.date.replace(/^du /, ''); doc.text([sous.charAt(0).toUpperCase() + sous.slice(1), 'WhatsApp : ' + (b.whatsapp || b.tel || NUM_GERANT) + '  ·  Gérant : ' + NOM_GERANT].map(txtPdf), 196, 22, { align:'right' });
   const base = { theme:'grid', styles:{ font:'helvetica', fontSize:8.5, cellPadding:1.5, textColor:20, lineColor:[170,170,170], lineWidth:.15 }, headStyles:{ fillColor:BLEU, textColor:255, fontStyle:'bold' }, margin:{ left:14, right:14, bottom:16 } };
   let y = 32;
   const titre = t => { y = (doc.lastAutoTable && doc.lastAutoTable.finalY > y ? doc.lastAutoTable.finalY : y) + 8; if(y > 265){ doc.addPage(); y = 18; }
@@ -3060,7 +3063,8 @@ function htmlRapport(R){
   const T = (titre, head, rows, num=[]) => `<h3 class="rp-h">${titre}</h3><table class="fa-table${head ? '' : ' rp-res'}">${head ? `<thead><tr>${head.map((h,i) => `<th${num.includes(i)?' class="n"':''}>${h}</th>`).join('')}</tr></thead>` : ''}<tbody>${rows.map(r => `<tr${r.cls?` class="${r.cls}"`:''}>${(r.c||r).map((c,i) => `<td${num.includes(i)?' class="n"':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const vide = t => `<p class="rp-vide">${t}</p>`, CJ = R.unJour ? 'ce jour' : 'sur cette période', D = (x,d) => fmtDev(x,d);
   const sousTitre = R.date.replace(/^du /,''), nbEnv = R.transferts.filter(t=>t.sens==='Envoyé à').length, nbRec = R.transferts.length - nbEnv;
-  return `<div class="fa rp">${enteteFa()}
+  const tel = db.boutique.whatsapp || db.boutique.tel || NUM_GERANT;
+  return `<div class="fa rp"><div class="rp-tete"><img src="logo.png" alt="" class="fa-logo"><div class="rp-contact"><b>WhatsApp :</b> ${esc(tel)}<br><b>Gérant :</b> ${esc(NOM_GERANT)}</div></div>
     <div class="fa-total" style="margin-bottom:12px"><span>${R.unJour ? 'RAPPORT DU JOUR' : 'RAPPORT DE LA PÉRIODE'} – ${esc(sousTitre.charAt(0).toUpperCase() + sousTitre.slice(1))}</span></div>
     ${T('Résumé', null, [
       ['Ventes au prix normal (avant remises)', argent(R.avantRemise)],
