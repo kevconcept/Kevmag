@@ -533,6 +533,17 @@
   .r-recu.a4 table{font-size:14px}
   .r-recu.a4 td,.r-recu.a4 th{padding:6px 4px}
   .r-recu.a4 .tot td{font-size:18px}
+  #histo{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:21;display:flex;align-items:flex-start;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #histo.hide{display:none}
+  #histo-carte{width:100%;max-width:620px;margin:0;background:var(--card)}
+  html.ios #histo #histo-carte{background:var(--barre);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+  .h-ev{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)}
+  .h-ev .q{font-weight:800;text-align:right;min-width:44px}.h-ev .q.plus{color:var(--green)}.h-ev .q.moins{color:var(--red)}
+  .h-ev .sol{text-align:right;min-width:56px;font-variant-numeric:tabular-nums}
+  .h-ev .d{grid-column:1/-1;font-size:12.5px;color:var(--muted);margin-top:-2px}
+  .h-tete{display:grid;grid-template-columns:1fr auto auto;gap:10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:4px 2px;border-bottom:1px solid var(--line2)}
+  .h-tete span:nth-child(2),.h-tete span:nth-child(3){text-align:right;min-width:44px}.h-tete span:nth-child(3){min-width:56px}
+  #e-liste tr.clic{cursor:pointer}#e-liste tr.clic td:first-child::after{content:' ›';color:var(--muted)}
   #modif2{position:fixed;inset:0;background:rgba(3,10,22,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:21;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
   #modif2.hide{display:none}
   #modif,#modif2{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:calc(120px + env(safe-area-inset-bottom));padding-top:calc(16px + env(safe-area-inset-top))}
@@ -1118,6 +1129,13 @@
     <button class="btn full alt" id="m-annuler" style="margin-top:8px" onclick="const id=mv.id;fermerModif();annulerVente(id)">🗑️ Annuler toute la vente</button>
   </div>
 </div>
+<div id="histo" class="hide" onclick="if(event.target===this)fermerHisto()">
+  <div class="card" id="histo-carte">
+    <div class="entete"><h2 id="h-titre">📜 Historique</h2><button class="btn small alt" onclick="fermerHisto()">✕</button></div>
+    <div id="h-resume" class="muted" style="margin-bottom:8px"></div>
+    <div id="h-liste"></div>
+  </div>
+</div>
 <div id="modif2" class="hide" onclick="if(event.target===this)fermerMvt()">
   <div class="card" id="modif2-carte">
     <div class="entete"><h2 id="mm-titre">✏️ Modifier</h2><button class="btn small alt" onclick="fermerMvt()">✕</button></div>
@@ -1158,7 +1176,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-26 · ventes et transferts ensemble';
+const VERSION = '2026-11-26 · historique des articles';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2913,10 +2931,48 @@ function afficherEtat(){
   $('e-liste').innerHTML = e.length ? e.map((c,i) => (i ? '<tr class="vide"><td colspan="2"></td></tr>' : '')
       + `<tr class="groupe"><td>${ICONES[c.cat]||''} ${c.cat}</td><td class="num">${c.total}</td></tr>`
       + c.groupes.map(g => (g.titre ? `<tr class="sous"><td colspan="2">${esc(g.titre)}<span>${g.produits.reduce((s,p)=>s+(p.stock||0),0)}</span></td></tr>` : '')
-        + g.produits.map(p => `<tr><td>${esc(p.nom)}</td><td class="num ${p.stock>0?'':'zero'}">${p.stock}</td></tr>`).join('')).join('')).join('')
+        + g.produits.map(p => `<tr class="clic" onclick="voirHistorique('${p.id}')"><td>${esc(p.nom)}</td><td class="num ${p.stock>0?'':'zero'}">${p.stock}</td></tr>`).join('')).join('')).join('')
       + `<tr class="vide"><td colspan="2"></td></tr><tr class="total"><td>Total général</td><td class="num">${tot}</td></tr>`
     : '<tr><td colspan="2" class="muted">Aucun produit.</td></tr>';
 }
+/* Historique d'un article : toutes les entrées et sorties depuis son enregistrement, avec le stock après chaque mouvement */
+const dateDeId = x => { const t = parseInt(String(x||'').slice(0,-4), 36); return t > 1577836800000 && t < Date.now() + 864e5 ? new Date(t).toISOString() : null; };
+function mouvementsArticle(pid){
+  const ev = [], add = (date, qte, type, ref, detail) => { if(date && qte) ev.push({ date, qte, type, ref, detail:detail||'' }); };
+  db.ventes.forEach(v => v.lignes.forEach(l => { if(l.pid!==pid) return;
+    if(v.acompte) add(v.date, 0.0000001, 'Livré (acompte soldé)', 'Reçu ' + numero(v), v.client);   // déjà sorti à la réservation
+    else add(v.date, -l.qte, 'Vente', 'Reçu ' + numero(v), [v.client, v.paiement].filter(Boolean).join(' · ')); }));
+  (db.acomptes||[]).forEach(a => (a.lignes||[]).forEach(l => { if(l.pid!==pid) return;
+    add(a.date, -l.qte, 'Réservé (acompte)', numAcp(a), a.client);
+    if(a.statut==='annulé') add(a.dateAnnul || a.date, l.qte, 'Acompte annulé (retour)', numAcp(a), a.client); }));
+  (db.echanges||[]).forEach(e => { (e.rendus||[]).forEach(l => { if(l.pid===pid) add(e.date, l.qte, 'Échange : article rapporté', numEch(e), e.client); });
+    (e.nouveaux||[]).forEach(l => { if(l.pid===pid) add(e.date, -l.qte, 'Échange : article donné', numEch(e), e.client); }); });
+  (db.transferts||[]).forEach(t => t.lignes.forEach(l => { if(l.pid!==pid) return;
+    const s = t.sens==='envoi' ? -1 : 1;
+    add(t.date, s*l.qte, t.sens==='envoi' ? 'Transfert envoyé' : (t.viaEntree ? 'Entrée d’un autre magasin' : 'Transfert reçu'), numTr(t), (t.sens==='envoi' ? 'vers ' : 'de ') + (t.magasin||'') + (t.note ? ' · ' + t.note : ''));
+    if(t.statut==='annulé') add(t.dateAnnul || t.date, -s*l.qte, 'Transfert annulé', numTr(t), t.magasin); }));
+  (db.entrees||[]).forEach(e => { if(e.pid===pid) add(e.date, e.qte, 'Entrée de l’usine', e.num ? numBR(e.num, e.date) : 'Entrée', e.note); });
+  ev.forEach(e => { if(Math.abs(e.qte) < 1e-3) e.qte = 0; });
+  return ev.sort((a,b) => a.date.localeCompare(b.date));
+}
+function voirHistorique(pid){
+  const p = db.produits.find(x => x.id===pid); if(!p) return;
+  const ev = mouvementsArticle(pid), somme = ev.reduce((s,e) => s + e.qte, 0), initial = (p.stock||0) - somme;
+  const cree = dateDeId(p.id) || (ev[0] && ev[0].date) || null;
+  let sol = initial;
+  const lignes = ev.map(e => { sol += e.qte; return { ...e, sol }; });
+  const fd = d => new Date(d).toLocaleString('fr-FR',{ day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  const entrees = ev.filter(e => e.qte > 0).reduce((s,e)=>s+e.qte,0), sorties = -ev.filter(e => e.qte < 0).reduce((s,e)=>s+e.qte,0);
+  $('h-titre').textContent = '📜 ' + p.nom;
+  $('h-resume').innerHTML = `${esc(p.cat)}${details(p) ? ' · ' + esc(details(p)) : ''}<br>Stock actuel : <b style="color:var(--ink)">${p.stock}</b> · Entrées : <b style="color:var(--green)">+${entrees}</b> · Sorties : <b style="color:var(--red)">−${sorties}</b>`;
+  $('h-liste').innerHTML = `<div class="h-tete"><span>Date · mouvement</span><span>Qté</span><span>Stock</span></div>`
+    + `<div class="h-ev"><b>📦 Enregistrement de l’article</b><span class="q">${initial ? (initial > 0 ? '+' : '') + initial : ''}</span><span class="sol">${initial}</span><div class="d">${cree ? fd(cree) : 'date inconnue'} · stock de départ${initial !== 0 ? ' (import, saisie ou correction manuelle)' : ''}</div></div>`
+    + (lignes.length ? lignes.map(e => `<div class="h-ev"><span>${e.qte > 0 ? '📥' : e.qte < 0 ? '📤' : '✅'} <b>${esc(e.type)}</b> <span class="muted">· ${esc(e.ref)}</span></span><span class="q ${e.qte > 0 ? 'plus' : e.qte < 0 ? 'moins' : ''}">${e.qte > 0 ? '+' + e.qte : e.qte < 0 ? '−' + (-e.qte) : '0'}</span><span class="sol">${e.sol}</span><div class="d">${fd(e.date)}${e.detail ? ' · ' + esc(e.detail) : ''}</div></div>`).join('')
+      : '<div class="muted" style="padding:10px 2px">Aucune entrée ni sortie depuis l’enregistrement.</div>')
+    + `<div class="h-ev" style="border-bottom:0"><b>🔎 Vérification (${fd(new Date())})</b><span class="q"></span><span class="sol"><b>${p.stock}</b></span></div>`;
+  $('histo').classList.remove('hide'); $('histo').scrollTop = 0;
+}
+function fermerHisto(){ $('histo').classList.add('hide'); }
 function imprimerEtat(){
   const e = etatStock(), tot = e.reduce((s,c) => s+c.total, 0);
   $('recu').innerHTML = `<div class="etat-print"><h3>${esc(db.boutique.nom)} — État du stock</h3><div style="margin-bottom:8px">${esc(db.boutique.adresse||'')} · Stock du ${dateEtat()}</div>
