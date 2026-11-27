@@ -962,6 +962,7 @@
         <button class="btn alt" id="r-ajout-ech" style="margin-top:0" onclick="echangePasse()">🔁 Ajouter un échange</button></div>
       <div class="row" style="margin-top:8px"><button class="btn alt" style="margin-top:0" onclick="nouveauMvtPasse('envoi')">🚚📤 Ajouter un transfert envoyé</button>
         <button class="btn alt" style="margin-top:0" onclick="nouveauMvtPasse('reception')">🚚📥 Ajouter un transfert reçu</button></div>
+      <button class="btn alt full" style="margin-top:8px" onclick="nouveauMvtPasse('usine')">🏭 Ajouter une entrée de l’usine</button>
       <div id="r-bloc-deplacer" style="margin-top:10px">
         <details><summary style="cursor:pointer;font-weight:700">📅 Changer la date de tout ce rapport</summary>
           <div class="muted" style="margin:8px 0 4px">Toutes les opérations de ce jour (ventes, acomptes, échanges, transferts, entrées) passent à la nouvelle date, à la même heure. Le stock ne change pas.</div>
@@ -1226,6 +1227,7 @@
       <div class="row"><button class="btn alt" onclick="fermerRecu()">✕ Fermer</button><button class="btn" onclick="imprimerRecu()">🖨️ Imprimer</button></div>
       <div class="row" style="margin-top:8px"><button class="btn ajout-vente" style="margin-top:0" onclick="fermerRecu();nouvelleVentePassee()">➕ Ajouter une vente</button><button class="btn alt" style="margin-top:0" onclick="fermerRecu();echangePasse()">🔁 Ajouter un échange</button></div>
       <div class="row" style="margin-top:8px"><button class="btn alt" style="margin-top:0" onclick="fermerRecu();nouveauMvtPasse('envoi')">🚚📤 Transfert envoyé</button><button class="btn alt" style="margin-top:0" onclick="fermerRecu();nouveauMvtPasse('reception')">🚚📥 Transfert reçu</button></div>
+      <button class="btn alt full" style="margin-top:8px" onclick="fermerRecu();nouveauMvtPasse('usine')">🏭 Ajouter une entrée de l’usine</button>
       <div class="row" style="margin-top:8px"><button class="btn wa" onclick="partagerRapport('pdf')">📲 WhatsApp PDF</button><button class="btn wa" onclick="partagerRapport('xlsx')">📲 WhatsApp Excel</button></div>
       <div class="row" style="margin-top:8px"><button class="btn alt" onclick="partagerRapport('pdf','mail')">✉️ Mail PDF</button><button class="btn alt" onclick="partagerRapport('xlsx','mail')">✉️ Mail Excel</button></div>
     </div>
@@ -1245,7 +1247,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-27 · transfert dans un rapport passé';
+const VERSION = '2026-11-27 · entrée usine dans un rapport passé';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
