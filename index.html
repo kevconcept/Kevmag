@@ -756,6 +756,7 @@
   <section id="v-echanges" class="hide">
     <div class="card">
       <h2>🔁 Nouvel échange</h2>
+      <div id="e-date-forcee" class="hide" style="background:rgba(10,132,255,.14);border:1px solid var(--blue);border-radius:14px;padding:10px 12px;margin-bottom:10px;font-weight:700"></div>
       <div class="regle-ech">🚫 <b>Le magasin ne rembourse pas.</b> Un article peut être échangé contre un article de <b>même prix</b> ou de <b>prix supérieur</b> (le client paie la différence). Pas d'échange contre un article moins cher.</div>
       <label>1. Retrouver l'achat du client</label>
       <input id="e-cherche" type="search" placeholder="Article (2-3 lettres), n° de reçu, nom ou téléphone du client" oninput="chercherVenteEch()" autocomplete="off">
@@ -957,7 +958,8 @@
       <div class="chips" style="padding-bottom:4px"><button class="chip" onclick="raccourciRapport('auj')">Aujourd’hui</button><button class="chip" onclick="raccourciRapport('hier')">Hier</button><button class="chip" onclick="raccourciRapport('semaine')">Cette semaine</button><button class="chip" onclick="raccourciRapport('mois')">Ce mois</button><button class="chip" onclick="raccourciRapport('moisPrec')">Mois dernier</button></div>
       <div id="r-lib" style="font-weight:700;margin-top:4px"></div>
       <div class="row" style="margin-top:10px"><button class="btn" onclick="ouvrirApercuRapport()">🖨️ Afficher / imprimer / envoyer</button><button class="btn alt" onclick="voirDetailRapport()">✏️ Modifier ⬇️</button></div>
-      <button class="btn full ajout-vente" id="r-ajout-vente" style="margin-top:8px" onclick="nouvelleVentePassee()">➕ Ajouter une vente à ce rapport</button>
+      <div class="row" style="margin-top:8px"><button class="btn ajout-vente" id="r-ajout-vente" style="margin-top:0" onclick="nouvelleVentePassee()">➕ Ajouter une vente à ce rapport</button>
+        <button class="btn alt" id="r-ajout-ech" style="margin-top:0" onclick="echangePasse()">🔁 Ajouter un échange</button></div>
       <div id="r-bloc-deplacer" style="margin-top:10px">
         <details><summary style="cursor:pointer;font-weight:700">📅 Changer la date de tout ce rapport</summary>
           <div class="muted" style="margin:8px 0 4px">Toutes les opérations de ce jour (ventes, acomptes, échanges, transferts, entrées) passent à la nouvelle date, à la même heure. Le stock ne change pas.</div>
@@ -1147,6 +1149,7 @@
   <div class="card" id="modif-carte">
     <div class="entete"><h2 id="modif-titre">✏️ Modifier la vente</h2><button class="btn small alt" onclick="fermerModif()">✕</button></div>
     <div id="modif-note" class="muted" style="margin-bottom:6px"></div>
+    <button class="btn full alt hide" id="m-echange" style="margin:0 0 8px" onclick="const d=$('m-date').value;fermerModif();echangePasse(d)">🔁 C’est un échange d’articles (pas une vente)</button>
     <label>Date et heure de la vente</label><input id="m-date" type="datetime-local" step="60">
     <div><div><label>Mode de paiement</label><select id="m-paie"><option>Espèces</option><option>Mobile money</option><option>Banque</option><option>Crédit</option></select></div></div>
     <label>Client</label><input id="m-client" placeholder="Nom et téléphone du client">
@@ -1219,7 +1222,7 @@
   <div class="feuille" id="apercu-feuille">
     <div id="apercu-rap-haut" class="hide" style="margin-bottom:14px">
       <div class="row"><button class="btn alt" onclick="fermerRecu()">✕ Fermer</button><button class="btn" onclick="imprimerRecu()">🖨️ Imprimer</button></div>
-      <button class="btn full ajout-vente" style="margin-top:8px" onclick="fermerRecu();nouvelleVentePassee()">➕ Ajouter une vente à ce rapport</button>
+      <div class="row" style="margin-top:8px"><button class="btn ajout-vente" style="margin-top:0" onclick="fermerRecu();nouvelleVentePassee()">➕ Ajouter une vente</button><button class="btn alt" style="margin-top:0" onclick="fermerRecu();echangePasse()">🔁 Ajouter un échange</button></div>
       <div class="row" style="margin-top:8px"><button class="btn wa" onclick="partagerRapport('pdf')">📲 WhatsApp PDF</button><button class="btn wa" onclick="partagerRapport('xlsx')">📲 WhatsApp Excel</button></div>
       <div class="row" style="margin-top:8px"><button class="btn alt" onclick="partagerRapport('pdf','mail')">✉️ Mail PDF</button><button class="btn alt" onclick="partagerRapport('xlsx','mail')">✉️ Mail Excel</button></div>
     </div>
@@ -1239,7 +1242,7 @@
 
 <script>
 const CLE = 'kevmag-v1';
-const VERSION = '2026-11-27 · ajouter une vente au rapport';
+const VERSION = '2026-11-27 · échange dans un rapport passé';
 const NUM_GERANT = '+243 810 288 890';
 const NOM_GERANT = 'Kevine Ilunga';
 const BOUTIQUE = { whatsapp:NUM_GERANT, nom:'Complast', slogan:'Leader des matelas', adresse:"Bibwa, N'sele, Kinshasa", lieu:'Kinshasa', email:'', rccm:'CD/KNM/RCCM/19-A-00091', idnat:'01-G4701-N42510X', impot:'A 1902673 C', tel:'', message:'Merci pour votre achat !\nLes marchandises vendues ne sont ni reprises ni échangées.', format:'ticket' };
@@ -2273,7 +2276,7 @@ function ouvrirModif(vid){
   $('m-date').value = versLocal(v.date); $('m-client').value = v.client || ''; $('m-paie').value = v.paiement || 'Espèces';
   $('m-dev').value = P.dev; $('m-taux').value = P.taux || db.taux || ''; $('m-paye').value = P.montant; delete $('m-paye').dataset.manuel;
   $('m-bloc-lignes').classList.toggle('hide', mv.verrou); $('m-cherche').value = ''; $('m-sugg').innerHTML = '';
-  $('m-annuler').classList.remove('hide'); $('m-ok').textContent = '💾 Enregistrer les modifications';
+  $('m-annuler').classList.remove('hide'); $('m-ok').textContent = '💾 Enregistrer les modifications'; $('m-echange').classList.add('hide');
   afficherModif(false); $('modif').classList.remove('hide'); $('modif').scrollTop = 0;
 }
 function fermerModif(){ $('modif').classList.add('hide'); mv = null; }
@@ -2289,7 +2292,7 @@ function nouvelleVentePassee(){
   $('m-date').value = dateAjoutRapport(); $('m-client').value = ''; $('m-paie').value = 'Espèces';
   $('m-dev').value = db.devise; $('m-taux').value = db.taux || ''; $('m-paye').value = ''; delete $('m-paye').dataset.manuel;
   $('m-bloc-lignes').classList.remove('hide'); $('m-cherche').value = ''; $('m-sugg').innerHTML = '';
-  $('m-annuler').classList.add('hide'); $('m-ok').textContent = '💾 Enregistrer la vente';
+  $('m-annuler').classList.add('hide'); $('m-ok').textContent = '💾 Enregistrer la vente'; $('m-echange').classList.remove('hide');
   afficherModif(true); $('modif').classList.remove('hide'); $('modif').scrollTop = 0; setTimeout(() => $('m-cherche').focus(), 50);
 }
 const totalModif = () => Math.round(mv.lignes.reduce((s,l) => s + l.qte * l.prix, 0) * 1e6) / 1e6;
@@ -3030,7 +3033,7 @@ function validerEchange(){
   if(diff > 0 && dv !== db.devise && !db.taux) return toast('Indiquez le taux du jour');
   if(!confirm(`Valider l'échange ?\nRapporté : ${argent(vr)} · Nouveau : ${argent(vn)}` + (diff>0 ? `\nLe client paie : ${fmtDev(convertir(diff, db.devise, dv, db.taux), dv)}` : '\nRien à payer'))) return;
   db.echanges = db.echanges || []; db.numEchange = (db.numEchange||0) + 1;
-  const e = { id:id(), num:db.numEchange, date:new Date().toISOString(), vente:v.id, venteNum:numero(v), venteDate:v.date, client:v.client||'',
+  const e = { id:id(), num:db.numEchange, date:(echDateForcee || new Date()).toISOString(), vente:v.id, venteNum:numero(v), venteDate:v.date, client:v.client||'',
     rendus: rendus.map(l => ({ pid:l.pid, nom:l.nom, desc:l.desc, qte:l.qte, prix:l.prix })), nouveaux: ech.nouveaux, valeurRendue:vr, valeurNouvelle:vn, difference:diff, devise:db.devise };
   // Stock : les articles rapportés reviennent, les nouveaux sortent
   rendus.forEach(l => { const p = db.produits.find(x=>x.id===l.pid); if(p) p.stock += l.qte; v.lignes[l.idx].rendu = (v.lignes[l.idx].rendu||0) + l.qte; });
@@ -3041,9 +3044,23 @@ function validerEchange(){
     vd.paye = { dev:dv, taux:db.taux||0, montant: dv==='FC' ? Math.round(convertir(diff, db.devise, dv, db.taux)) : convertir(diff, db.devise, dv, db.taux) };
     db.ventes.push(vd); e.venteDiff = vd.id; e.paye = vd.paye; e.paiement = vd.paiement;
   }
-  db.echanges.push(e); sauver(); annulerEch(); rafraichir();
-  toast('Échange ' + numEch(e) + ' enregistré'); voirBonEchange(e.id);
+  const passe = !!echDateForcee;
+  db.echanges.push(e); sauver(); annulerEch(); finEchangePasse(); rafraichir();
+  if(passe && modeRap==='jour') $('r-date').value = jour(e.date);
+  toast('Échange ' + numEch(e) + ' enregistré' + (passe ? ' au ' + new Date(e.date).toLocaleDateString('fr-FR') : '')); voirBonEchange(e.id);
 }
+// Échange oublié d'un jour passé : on ouvre les Échanges avec la date du rapport (l'échange et la différence payée y seront enregistrés)
+let echDateForcee = null;
+function echangePasse(valeurDate){
+  const d = new Date(valeurDate || dateAjoutRapport());
+  if(isNaN(d)) return toast('Date invalide');
+  if(d > new Date(Date.now() + 6e4)) return toast('La date ne peut pas être dans le futur');
+  echDateForcee = d; annulerEch();
+  $('e-date-forcee').innerHTML = `📅 Échange enregistré au <b>${d.toLocaleString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</b> (rapport de ce jour) <button class="btn small alt" style="margin-left:6px" onclick="finEchangePasse()">✕ Date du jour</button>`;
+  $('e-date-forcee').classList.remove('hide');
+  aller('echanges'); setTimeout(() => $('e-cherche').focus(), 100);
+}
+function finEchangePasse(){ echDateForcee = null; $('e-date-forcee').classList.add('hide'); }
 function afficherEchanges(){
   const L = (db.echanges||[]).slice().reverse();
   $('e-hist').innerHTML = L.length ? L.map(e => `<div class="vente"><div class="av">🔁</div><div class="tx"><b>${numEch(e)}${e.client?' · '+esc(e.client):''}</b><span class="muted">${new Date(e.date).toLocaleDateString('fr-FR')} · rendu : ${e.rendus.map(l=>l.qte+' × '+esc(l.nom)).join(', ')} → ${e.nouveaux.map(l=>l.qte+' × '+esc(l.nom)).join(', ')}</span></div>
